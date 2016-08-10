@@ -829,7 +829,6 @@ def create_tree(position):
         bpy.ops.object.editmode_toggle()
     if scene.particle:
         Create_system(obj, scene.number, scene.display, vgroups["leaf"])
-
     if scene.uv:
         test = [[False, []] for i in range(len(verts))]
         for (a, b) in Seams:
@@ -1146,6 +1145,33 @@ class LoadTreePresetOperator(Operator):
                 elif setting == "display":
                     scene.display = int(value)
 
+        return {'FINISHED'}
+
+class UpdateTreeOperator(bpy.types.Operator):
+    """Update a tree"""
+    bl_idname = "object.update_tree"
+    bl_label = "Update Selected Tree"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        scene = context.scene
+
+        seed(scene.SeedProp)
+        obj = bpy.context.active_object
+        if obj.get('prop') == "is_tree":
+            Position = obj.location
+            Scale = obj.scale
+            Rotation = obj.rotation_euler
+            
+            create_tree(Position)
+            ob = bpy.context.active_object
+            ob.scale = Scale
+            ob.rotation_euler = Rotation
+            ob.select = False
+            obj.select = True
+            bpy.ops.object.delete(use_global=False)
+            ob.select = True
+            
         return {'FINISHED'}
 
 
