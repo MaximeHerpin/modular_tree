@@ -22,7 +22,7 @@ bl_info = {
     "version": (2, 0),
     "blender": (2, 75, 0),
     "location": "View3D > Tools > Tree > Make Tree",
-    "description": "Generates an organic tree will correctly modeled branching.",
+    "description": "Generates an organic tree with correctly modeled branching.",
     "warning": "May take a long time to generate! Save your file before generating!",
     "wiki_url": "",
     "category": "Add Mesh"}
