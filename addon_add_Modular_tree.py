@@ -1,6 +1,24 @@
+# ##### BEGIN GPL LICENSE BLOCK ######
+#  This program is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; either version 2
+#  of the License, or (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# ##### END GPL LICENSE BLOCK #####
+
+
 bl_info = {
     "name": "Modular trees",
-    "author": "Herpin Maxime",
+    "author": "Herpin Maxime, Graphics_Dev",
     "version": (2, 0),
     "blender": (2, 75, 0),
     "location": "View3D > Add > Mesh > Tree",
@@ -607,7 +625,9 @@ def add_seams(indexes, seams):
         seams.append((indexes[i], indexes[(i + 1) % n]))
 
 
-def create_tree():
+def create_tree(position):
+    for select_ob in bpy.context.selected_objects:
+        select_ob.select = False
     scene = bpy.context.scene
 
     Make_roots = scene.create_roots
@@ -768,39 +788,38 @@ def create_tree():
         extremites = nextremites
 
     mesh = bpy.data.meshes.new("tree")
-    if scene.visualize:
-        mesh.from_pydata(visu_verts, [], [])
-        mesh.update(calc_edges=False)
-        obj = bpy.data.objects.new("tree", mesh)
-        obj.location = (0, 0, 0)
-        bpy.context.scene.objects.link(obj)
-
-    else:
-        mesh.from_pydata(verts, [], faces)
-        mesh.update(calc_edges=False)
-        obj = bpy.data.objects.new("tree", mesh)
-        obj.location = (0, 0, 0)
-        bpy.context.scene.objects.link(obj)
-        bpy.context.scene.objects.active = obj
-        obj.select = True
-        bpy.ops.object.shade_smooth()
-        obj.select = False
-        g = obj.vertex_groups.new("leaf")
-        vgroups = obj.vertex_groups
-        vgroups.active_index = vgroups["leaf"].index
-
-        # print(leafs_start_index)
-        g.add([i for i in range(leafs_start_index, len(verts))], 1.0, "ADD")
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.mesh.normals_make_consistent(inside=False)
-        bpy.ops.mesh.select_all(action='DESELECT')
-        bpy.ops.mesh.select_mode(type="EDGE")
+  
+    mesh.from_pydata(verts, [], faces)
+    mesh.update(calc_edges=False)
+    obj = bpy.data.objects.new("tree", mesh)
+    obj.location = position
+    bpy.context.scene.objects.link(obj)
+    bpy.context.scene.objects.active = obj
+    obj.select = True
+    bpy.ops.object.shade_smooth()
+    obj.select = False
+    g = obj.vertex_groups.new("leaf")
+    vgroups = obj.vertex_groups
+    vgroups.active_index = vgroups["leaf"].index
+    g.add([i for i in range(leafs_start_index, len(verts))], 1.0, "ADD")
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.normals_make_consistent(inside=False)
+    bpy.ops.mesh.select_all(action='DESELECT')
+    bpy.ops.mesh.select_mode(type="EDGE")
+    bpy.ops.object.editmode_toggle()
+    if obj.data.polygons[0].normal.x<0:
         bpy.ops.object.editmode_toggle()
-        if scene.particle:
-            Create_system(obj, scene.number, scene.display, vgroups["leaf"])
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.mesh.normals_make_consistent(inside=True)
+        bpy.ops.mesh.select_all(action='DESELECT')
+        bpy.ops.object.editmode_toggle()
+    if scene.particle:
+        Create_system(obj, scene.number, scene.display, vgroups["leaf"])
+    
+    
 
-    if scene.uv and not (scene.visualize):
+    if scene.uv:
         Test = [[False, []] for i in range(len(verts))]
         for (a, b) in Seams:
             a, b = min(a, b), max(a, b)
@@ -862,7 +881,7 @@ def create_tree():
             links.new(from_node.outputs[f[1]], to_node.inputs[t[1]])
         obj.active_material = mat
 
-    if scene.create_armature and not (scene.visualize):
+    if scene.create_armature:
         bpy.ops.object.add(
             type='ARMATURE',
             enter_editmode=True,
@@ -894,8 +913,14 @@ def create_tree():
         bpy.context.scene.objects.active = obj
         vgroups.active_index = vgroups["leaf"].index
         bpy.ops.paint.weight_paint_toggle()
+    obj.select = True
+    bpy.context.scene.objects.active = obj
+    bpy.ops.wm.properties_add(data_path = "object")
+    obj["prop"] = "is_tree"
+    #bpy.ops.wm.properties_edit(data_path="object", property="is_tree", value="42", min=0, max=1, use_soft_limits=False, soft_min=0, soft_max=1, description="")
 
 
+    
 class MakeTreeOperator(bpy.types.Operator):
     """Make a tree"""
     bl_idname = "object.add_tree"
@@ -906,8 +931,35 @@ class MakeTreeOperator(bpy.types.Operator):
         scene = context.scene
 
         seed(scene.SeedProp)
-        create_tree()
+        create_tree(bpy.context.scene.cursor_location)
 
+        return {'FINISHED'}
+
+class UpdateTreeOperator(bpy.types.Operator):
+    """Update a tree"""
+    bl_idname = "object.update_tree"
+    bl_label = "Update Selected Tree"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        scene = context.scene
+
+        seed(scene.SeedProp)
+        obj = bpy.context.active_object
+        if obj.get('prop') == "is_tree":
+            Position = obj.location
+            Scale = obj.scale
+            Rotation = obj.rotation_euler
+            
+            create_tree(Position)
+            ob = bpy.context.active_object
+            ob.scale = Scale
+            ob.rotation_euler = Rotation
+            ob.select = False
+            obj.select = True
+            bpy.ops.object.delete(use_global=False)
+            ob.select = True
+            
         return {'FINISHED'}
 
 
@@ -927,10 +979,14 @@ class MakeTreePanel(Panel):
         row = layout.row()
         row.scale_y = 1.5
         row.operator("object.add_tree", icon="WORLD")
+        
+        row = layout.row()
+        row.scale_y = 1.5
+        row.operator("object.update_tree", icon="FILE_REFRESH")
+
 
         box = layout.box()
         box.label("Basic")
-        box.prop(scene, "visualize")
         box.prop(scene, "SeedProp")
         box.prop(scene, "iteration")
         box.prop(scene, 'radius')
@@ -942,7 +998,8 @@ class MakeTreePanel(Panel):
         box = layout.box()
         box.label("Roots")
         box.prop(scene, 'create_roots')
-        box.prop(scene, 'roots_iteration')
+        if scene.create_roots:
+            box.prop(scene, 'roots_iteration')
 
         box = layout.box()
         box.label("Trunk")
@@ -951,9 +1008,10 @@ class MakeTreePanel(Panel):
         box.prop(scene, 'trunk_space')
         sbox = box.box()
         sbox.prop(scene, 'preserve_trunk')
-        sbox.prop(scene, 'preserve_end')
-        sbox.prop(scene, 'trunk_split_proba')
-        sbox.prop(scene, 'trunk_split_angle')
+        if scene.preserve_trunk:
+            sbox.prop(scene, 'preserve_end')
+            sbox.prop(scene, 'trunk_split_proba')
+            sbox.prop(scene, 'trunk_split_angle')
 
         box = layout.box()
         box.label("Branches")
@@ -973,17 +1031,19 @@ class MakeTreePanel(Panel):
         box = layout.box()
         box.prop(scene, 'mat')
         box.prop(scene, 'create_armature')
-        box.prop(scene, 'bones_iterations')
+        if scene.create_armature:
+            box.prop(scene, 'bones_iterations')
         box.prop(scene, 'visualize_leafs')
         box.prop(scene, 'leafs_iteration_length')
         box.prop(scene, 'particle')
-        box.prop(scene, 'number')
-        box.prop(scene, 'display')
+        if scene.particle:
+            box.prop(scene, 'number')
+            box.prop(scene, 'display')
         box.prop(scene, 'uv')
 
 
 # classes to register
-classes = [MakeTreeOperator, MakeTreePanel]
+classes = [MakeTreeOperator,UpdateTreeOperator, MakeTreePanel]
 
 
 def register():
@@ -993,7 +1053,6 @@ def register():
 
     # register props
 
-    Scene.visualize = BoolProperty(name="visualize", default=False)  # look into if you really need this in ui now (and unregister)
 
     Scene.preserve_trunk = BoolProperty(
         name="preserve trunk", default=False,
@@ -1173,7 +1232,6 @@ def unregister():
         bpy.utils.unregister_class(i)
 
     # unregister props
-    del Scene.visualize
     del Scene.preserve_trunk
 
     del Scene.trunk_split_angle
