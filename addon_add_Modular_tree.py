@@ -20,7 +20,7 @@ bl_info = {
     "name": "Modular trees",
     "author": "Herpin Maxime, Graphics_Dev",
     "version": (2, 0),
-    "blender": (2, 75, 0),
+    "blender": (2, 77, 0),
     "location": "View3D > Tools > Tree > Make Tree",
     "description": "Generates an organic tree with correctly modeled branching.",
     "warning": "May take a long time to generate! Save your file before generating!",
@@ -640,15 +640,10 @@ def create_tree(position):
     Make_roots = scene.create_roots
     Trunk = scene.preserve_trunk
     radius = scene.radius
-    visu_verts = [Vector((0, 0, 0)), (Vector((0, 0, 1)) * radius)]
-    visu_edges = [(0, 1)]
     Bones = []
-    leafs_group = []
     leafs_start_index = 0
     J = S1
     Seams = [s for s in R1.Seams]
-    verts = []
-    faces = []
     entree = [i for i in J.entree]
 
     Last_bone = (1, Vector((0, 0, 1)))
@@ -718,13 +713,14 @@ def create_tree(position):
             end = pos + direction * 10
 
             if bpy.data.objects.get(scene.obstacle) is not None:
-                obs = bpy.data.objects.get(scene.obstacle)
+                obs = scene.objects[scene.obstacle]
                 d = obs.data
                 bpy.context.scene.update()
-                (hit_pos, face_normal, face_index) = obs.ray_cast(pos, end)
-                if face_index != -1:
-                    force = abs(min(direction.dot(face_normal), 0)) * scene.repel_force / (
-                    ((hit_pos - pos).length) + 1) * 2
+
+                result, hit_pos, face_normal, face_index = obs.ray_cast(pos, end)
+                if result:
+                    force = abs(min(direction.dot(face_normal), 0)) * scene.obstacle_strength / (
+                    (hit_pos - pos).length + 1) * 2
                     direction += face_normal * force
 
             split_probability = scene.trunk_split_proba if Trunk else scene.split_proba
@@ -735,13 +731,24 @@ def create_tree(position):
                                                  direction,
                                                  scene.trunk_variation, s_index, Seams)
                 sortie = pos + direction * scene.branch_length
-                visu_verts.append(pos + direction * scene.branch_length)
                 if i <= scene.bones_iterations: Bones.append((Lb[0], len(Bones) + 2, Lb[1], sortie))
                 Nb = (len(Bones) + 1, sortie)
                 nextremites.append((ni, radius * .98, direction, nsi, Nb, Trunk, curr_rotation))
-
+            
+            elif i == scene.iteration + scene.trunk_length - 1 or random() < scene.break_chance:
+                end_verts = [Vector(v) for v in end_cap.verts]
+                end_faces = [f for f in end_cap.faces]
+                n = len(verts)
+                ni, direction, nsi = join_branch(verts, faces, indexes, radius, scene.trunk_space, end_verts, direction,
+                                                 scene.trunk_variation,
+                                                 s_index, Seams)
+                faces += [add_tuple(f, n) for f in end_faces]
+                end_seams = [(1, 0), (2, 1), (3, 2), (4, 3), (5, 4), (6, 5), (7, 6), (0, 7)]
+                Seams += [add_tuple(f, n) for f in end_seams]
+            	
+            
             elif i < (scene.iteration + scene.trunk_length - 1) and (
-                (i == scene.trunk_length + 1) or (random() < split_probability)):
+                        (i == scene.trunk_length + 1) or (random() < split_probability)):
                 variation = scene.trunk_variation if Trunk else scene.randomangle
                 randJ = 1
                 J = Joncts[randJ] if (not (Trunk)) else trunk
@@ -759,8 +766,6 @@ def create_tree(position):
                                                                 new_rotation)
                 sortie1 = (verts[ni1[0]] + verts[ni1[4]]) / 2
                 sortie2 = (verts[ni2[0]] + verts[ni2[4]]) / 2
-                visu_verts.append(sortie1)
-                visu_verts.append(sortie2)
                 Nb = len(Bones)
                 if i <= scene.bones_iterations: Bones.append((Lb[0], Nb + 2, Lb[1], sortie1))
                 if i <= scene.bones_iterations: Bones.append((Lb[0], Nb + 3, Lb[1], sortie2))
@@ -772,16 +777,7 @@ def create_tree(position):
                 nextremites.append((ni1, radius * scene.radius_dec * r1, dir1, nsi1, Nb1, Trunk, new_rotation))
                 nextremites.append((ni2, radius * scene.radius_dec * r2, dir2, nsi2, Nb2, False, new_rotation))
 
-            elif i == scene.iteration + scene.trunk_length - 1:
-                end_verts = [Vector(v) for v in end_cap.verts]
-                end_faces = [f for f in end_cap.faces]
-                n = len(verts)
-                ni, direction, nsi = join_branch(verts, faces, indexes, radius, scene.trunk_space, end_verts, direction,
-                                                 scene.trunk_variation,
-                                                 s_index, Seams)
-                faces += [add_tuple(f, n) for f in end_faces]
-                end_seams = [(1, 0), (2, 1), (3, 2), (4, 3), (5, 4), (6, 5), (7, 6), (0, 7)]
-                Seams += [add_tuple(f, n) for f in end_seams]
+            
 
             else:
                 branch_verts = [v for v in branch.verts]
@@ -791,7 +787,6 @@ def create_tree(position):
                                                  variation, s_index,
                                                  Seams)
                 sortie = pos + direction * scene.branch_length
-                visu_verts.append(sortie)
                 if i <= scene.bones_iterations: Bones.append((Lb[0], len(Bones) + 2, Lb[1], sortie))
                 Nb = (len(Bones) + 1, sortie)
                 if scene.gravity_start <= i <= scene.gravity_end:
@@ -829,7 +824,6 @@ def create_tree(position):
         bpy.ops.object.editmode_toggle()
     if scene.particle:
         Create_system(obj, scene.number, scene.display, vgroups["leaf"])
-
     if scene.uv:
         test = [[False, []] for i in range(len(verts))]
         for (a, b) in Seams:
@@ -849,12 +843,13 @@ def create_tree(position):
         bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
         bpy.ops.object.editmode_toggle()
         Rotate()
-
+    
+        
     if scene.mat:
         if not bpy.context.scene.render.engine == 'CYCLES':
             bpy.context.scene.render.engine = 'CYCLES'
 
-        mat = scene.mat = bpy.data.materials.new(name="Tree")
+        mat = bpy.data.materials.new(name="Tree")
         mat.diffuse_color = (0.214035, 0.0490235, 0.0163952)
         mat.specular_color = (0.0469617, 0.0469617, 0.0469617)
         mat.specular_hardness = 10
@@ -894,7 +889,10 @@ def create_tree(position):
             to_node = mat.node_tree.nodes[t[0]]
             links.new(from_node.outputs[f[1]], to_node.inputs[t[1]])
         obj.active_material = mat
-
+    
+    elif bpy.data.materials.get(scene.bark_material) is not None:
+        obj.active_material = bpy.data.materials.get(scene.bark_material)
+    
     if scene.create_armature:
         bpy.ops.object.add(
             type='ARMATURE',
@@ -974,7 +972,7 @@ class UpdateTreeOperator(Operator):
 
 
 class SaveTreePresetOperator(Operator):
-    """Update a tree"""
+    """Save Tree Preset"""
     bl_idname = "mod_tree.save_preset"
     bl_label = "Save Preset"
     bl_description = "Saves current settings as a preset"
@@ -1059,8 +1057,28 @@ class SaveTreePresetOperator(Operator):
         return {'FINISHED'}
 
 
+class RemoveTreePresetOperator(Operator):
+    """Remove a tree preset"""
+    bl_idname = "mod_tree.remove_preset"
+    bl_label = "Remove Preset"
+    bl_description = "Removes preset"
+    bl_options = {"REGISTER"}
+
+    filename = StringProperty(name="File Name")
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_confirm(self, event)
+
+    def execute(self, context):
+        prsets_directory = os.path.join(os.path.dirname(__file__), "mod_tree_presets")
+        prset = os.path.join(prsets_directory, self.filename)  # mtp stands for modular tree preset
+        os.remove(prset)
+
+        return {'FINISHED'}
+
+
 class LoadTreePresetOperator(Operator):
-    """Update a tree"""
+    """Load a tree preset"""
     bl_idname = "mod_tree.load_preset"
     bl_label = "Load Preset"
     bl_description = "Loads preset"
@@ -1199,6 +1217,7 @@ class MakeTreePanel(Panel):
 
         box = layout.box()
         box.label("Branches")
+        box.prop(scene, 'break_chance')
         box.prop(scene, 'branch_length')
         box.prop(scene, 'randomangle')
         box.prop(scene, 'split_proba')
@@ -1209,11 +1228,14 @@ class MakeTreePanel(Panel):
         col.prop(scene, 'gravity_strength')
         col.prop(scene, 'gravity_start')
         col.prop(scene, 'gravity_end')
-        box.prop(scene, 'obstacle')
-        box.prop(scene, 'obstacle_strength')
+        box.prop_search(scene, "obstacle", scene, "objects")
+        if bpy.data.objects.get(scene.obstacle) is not None:
+            box.prop(scene, 'obstacle_strength')
 
         box = layout.box()
         box.prop(scene, 'mat')
+        if not scene.mat:
+            box.prop_search(scene, "bark_material", bpy.data, "materials")
         box.prop(scene, 'create_armature')
         if scene.create_armature:
             box.prop(scene, 'bones_iterations')
@@ -1245,6 +1267,25 @@ class TreePresetLoadMenu(Menu):
             layout.operator("mod_tree.load_preset", text=preset[:-4]).filename = preset
 
 
+class TreePresetRemoveMenu(Menu):
+    bl_idname = "mod_tree.preset_remove_menu"
+    bl_label = "Remove Preset"
+
+    def draw(self, context):
+        scene = context.scene
+
+        # get file names
+        presets = os.listdir(os.path.join(os.path.dirname(__file__), "mod_tree_presets"))
+        presets = [a for a in presets if a[-4:] == ".mtp"]  # limit to only file ending with .mtp
+
+        layout = self.layout
+        for preset in presets:
+            # this adds a button to the menu for the preset
+            # the preset display name has the .mtp sliced off
+            # the full preset name is passed the the filename prop of the loader
+            layout.operator("mod_tree.remove_preset", text=preset[:-4]).filename = preset
+
+
 class MakeTreePresetsPanel(Panel):
     bl_label = "Presets"
     bl_idname = "3D_VIEW_PT_layout_MakeTreePresets"
@@ -1265,10 +1306,13 @@ class MakeTreePresetsPanel(Panel):
         row.prop(scene, "preset_name", text="")
         row.operator("mod_tree.save_preset", icon="SETTINGS")
 
+        row = layout.row()
+        row.menu("mod_tree.preset_remove_menu")
 
 # classes to register
-classes = [MakeTreeOperator, UpdateTreeOperator, SaveTreePresetOperator, LoadTreePresetOperator,
-           MakeTreePanel, TreePresetLoadMenu, MakeTreePresetsPanel]
+classes = [MakeTreeOperator, UpdateTreeOperator, SaveTreePresetOperator, RemoveTreePresetOperator,
+           LoadTreePresetOperator,
+           MakeTreePanel, TreePresetLoadMenu, TreePresetRemoveMenu, MakeTreePresetsPanel]
 
 
 def register():
@@ -1446,10 +1490,17 @@ def register():
     Scene.number = IntProperty(
         name="number of leaves",
         default=10000)
+    
     Scene.display = IntProperty(
         name="number of particles displayed on viewport",
         default=500)
 
+    Scene.break_chance = FloatProperty(
+        name = "break chance",
+        default = 0.02)
+    
+    Scene.bark_material = StringProperty(
+        name = "bark material")
 
 def unregister():
     # unregister all classes
