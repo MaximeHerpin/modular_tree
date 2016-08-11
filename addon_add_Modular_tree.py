@@ -1202,10 +1202,8 @@ class MakeTreePanel(Panel):
         box.prop(scene, "SeedProp")
         box.prop(scene, "iteration")
         box.prop(scene, 'radius')
-        box.prop(scene, 'radius_dec')
-        col = box.column(True)
-        col.prop(scene, 'branch_rotate')
-        col.prop(scene, 'branch_random_rotate')
+        box.prop(scene, 'mat')
+        box.prop(scene, 'uv')
 
 
 class RootsAndTrunksPanel(Panel):
@@ -1285,7 +1283,11 @@ class AdvancedSettingsPanel(Panel):
         layout = self.layout
 
         box = layout.box()
-        box.prop(scene, 'mat')
+        box.prop(scene, 'radius_dec')
+        col = box.column(True)
+        col.prop(scene, 'branch_rotate')
+        col.prop(scene, 'branch_random_rotate')
+
         if not scene.mat:
             box.prop_search(scene, "bark_material", bpy.data, "materials")
         box.prop(scene, 'create_armature')
@@ -1297,7 +1299,6 @@ class AdvancedSettingsPanel(Panel):
         if scene.particle:
             box.prop(scene, 'number')
             box.prop(scene, 'display')
-        box.prop(scene, 'uv')
 
 
 class TreePresetLoadMenu(Menu):
@@ -1377,22 +1378,22 @@ def register():
     Scene.preset_name = StringProperty(name="Preset Name", default="MyPreset")
 
     Scene.preserve_trunk = BoolProperty(
-        name="preserve trunk", default=False,
+        name="Preserve Trunk", default=False,
         description="preserves the trunk growth, check and see.")
 
     Scene.trunk_split_angle = FloatProperty(
-        name="trunk split angle",
+        name="Trunk Split Angle",
         min=0.0,
         max=1,
         default=0,
         description="how wide is the angle in a split if this split comes from the trunk",
     )
     Scene.randomangle = FloatProperty(
-        name="Branches variations",
+        name="Branch Variations",
         default=.5,
     )
     Scene.trunk_variation = FloatProperty(
-        name="trunk variation",
+        name="Trunk Variation",
         default=.1,
     )
 
@@ -1402,32 +1403,32 @@ def register():
         default=1,
     )
     Scene.radius_dec = FloatProperty(
-        name="radius decrease",
+        name="Radius Decrease",
         min=0.01,
         max=1.0,
         default=0.95,
         description="relative radius after each iteration, low value means fast radius decrease")
 
     Scene.iteration = IntProperty(
-        name="branch iterations",
+        name="Branch Iterations",
         min=1,
         default=20,
     )
 
     Scene.preserve_end = IntProperty(
-        name="trunk end",
+        name="Trunk End",
         min=0,
         default=25,
         description="iteration on which trunk preservation will end")
 
     Scene.trunk_length = IntProperty(
-        name="trunk iteration",
+        name="Trunk Iterations",
         min=0,
         default=9,
         description="iteration from from which first split occures",
     )
     Scene.trunk_split_proba = FloatProperty(
-        name="trunk split probability",
+        name="Trunk Split Probability",
         min=0.0,
         max=1.0,
         default=0.5,
@@ -1435,27 +1436,27 @@ def register():
     )
 
     Scene.split_proba = FloatProperty(
-        name="split probability",
+        name="Split Probability",
         min=0.0,
         max=1.0,
         default=0.25,
         description="probability for a branch to split. WARNING : sensitive",
     )
     Scene.trunk_space = FloatProperty(
-        name="trunk_length",
+        name="Trunk Length",
         min=0.01,
         default=.7,
         description="trunk length",
     )
 
     Scene.branch_length = FloatProperty(
-        name="branch_length",
+        name="Branch Length",
         min=0.01,
         default=.55,
         description="branch length",
     )
     Scene.split_angle = FloatProperty(
-        name="split angle",
+        name="Split Angle",
         min=0.0,
         max=1,
         default=.2,
@@ -1463,24 +1464,25 @@ def register():
     )
 
     Scene.gravity_strength = FloatProperty(
-        name="gravity factor",
+        name="Gravity Strength",
         default=0.0,
     )
 
     Scene.gravity_start = IntProperty(
-        name="gravity start iteration",
+        name="Gravity Start Iteration",
         default=0)
     Scene.gravity_end = IntProperty(
-        name="gravity end iteration",
+        name="Gravity End Iteration",
         default=40)
 
     Scene.obstacle = StringProperty(
-        name='obstacle name',
+        name='Obstacle',
         default='',
         description="the name of the obstacle to avoid. WARNING: location,rotaion and scale must be applied. Check the normals.")
 
     Scene.obstacle_strength = FloatProperty(
-        name="obstacle avoidance strength",
+        name="Obstacle Strength",
+        description='Strength with which to avoid obstacles',
         default=1)
 
     Scene.SeedProp = IntProperty(
@@ -1489,71 +1491,72 @@ def register():
     )
 
     Scene.create_armature = BoolProperty(
-        name='create armature',
+        name='Create Armature',
         default=False)
 
     Scene.bones_iterations = IntProperty(
-        name='bones iterations',
+        name='Bones Iterations',
         default=8)
 
     Scene.visualize_leafs = BoolProperty(
-        name='visualize particle weight group',
+        name='Visualize Particle Weights',
         default=False)
 
     Scene.leafs_iteration_length = IntProperty(
-        name='leafs group length',
+        name='Leafs Group Length',
         default=4,
-        description="the number of branches iterations where leafs will appear")
+        description="The number of branches iterations where leafs will appear")
 
     Scene.uv = BoolProperty(
-        name="unwrap",
+        name="Unwrap",
         default=False,
         description="unwrap tree. WARNING: takes time, check last")
     Scene.mat = BoolProperty(
-        name="Create new material",
+        name="Create New Material",
         default=False,
         description="NEEDS UV, create tree material")
 
     Scene.roots_iteration = IntProperty(
-        name="roots iteration",
+        name="Roots Iterations",
         default=4)
 
     Scene.create_roots = BoolProperty(
-        name="create roots",
+        name="Create Roots",
         default=False)
 
     Scene.branch_rotate = FloatProperty(
-        name="branches rotation angle",
+        name="Branches Rotation Angle",
         default=90,
         min=0,
         max=360,
         description="angle between new split and previous split")
 
     Scene.branch_random_rotate = FloatProperty(
-        name="branches random rotation angle",
+        name="Branches Random Rotation Angle",
         default=5,
         min=0,
         max=360,
         description="randomize the rotation of branches angle")
 
     Scene.particle = BoolProperty(
-        name="configure particle system",
+        name="Configure Particle System",
         default=False)
 
     Scene.number = IntProperty(
-        name="number of leaves",
+        name="Number of Leaves",
         default=10000)
     
     Scene.display = IntProperty(
-        name="number of particles displayed on viewport",
+        name="Particles in Viewport",
         default=500)
 
     Scene.break_chance = FloatProperty(
-        name = "break chance",
-        default = 0.02)
+        name="Break Chance",
+        default =0.02)
     
     Scene.bark_material = StringProperty(
-        name = "bark material")
+        name="Bark Material")
+
 
 def unregister():
     # unregister all classes
