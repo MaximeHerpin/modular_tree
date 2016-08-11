@@ -1015,6 +1015,7 @@ class SaveTreePresetOperator(Operator):
                   "iteration:{}\n"
                   "preserve_end:{}\n"
                   "trunk_length:{}\n"
+                  "trunk_split_proba:{}\n"
                   "split_proba:{}\n"
                   "trunk_space:{}\n"
                   "branch_length:{}\n"
@@ -1038,38 +1039,41 @@ class SaveTreePresetOperator(Operator):
                   "particle:{}\n"
                   "number:{}\n"
                   "display:{}\n".format(
-            scene.preserve_trunk,
-            scene.trunk_split_angle,
-            scene.randomangle,
-            scene.trunk_variation,
-            scene.radius,
-            scene.radius_dec,
-            scene.iteration,
-            scene.preserve_end,
-            scene.trunk_length,
-            scene.split_proba,
-            scene.trunk_space,
-            scene.branch_length,
-            scene.split_angle,
-            scene.gravity_strength,
-            scene.gravity_start,
-            scene.gravity_end,
-            scene.obstacle,
-            scene.obstacle_strength,
-            scene.SeedProp,
-            scene.create_armature,
-            scene.bones_iterations,
-            scene.visualize_leafs,
-            scene.leafs_iteration_length,
-            scene.uv,
-            scene.mat,
-            scene.roots_iteration,
-            scene.create_roots,
-            scene.branch_rotate,
-            scene.branch_random_rotate,
-            scene.particle,
-            scene.number,
-            scene.display))
+                    # bools can't be stored as "True" or "False" b/c bool(x) will evaluate to
+                    # True if x = "True" or if x = "False"...the fix is to do an int() conversion
+                    int(scene.preserve_trunk),
+                    scene.trunk_split_angle,
+                    scene.randomangle,
+                    scene.trunk_variation,
+                    scene.radius,
+                    scene.radius_dec,
+                    scene.iteration,
+                    scene.preserve_end,
+                    scene.trunk_length,
+                    scene.trunk_split_proba,
+                    scene.split_proba,
+                    scene.trunk_space,
+                    scene.branch_length,
+                    scene.split_angle,
+                    scene.gravity_strength,
+                    scene.gravity_start,
+                    scene.gravity_end,
+                    scene.obstacle,
+                    scene.obstacle_strength,
+                    scene.SeedProp,
+                    int(scene.create_armature),
+                    scene.bones_iterations,
+                    int(scene.visualize_leafs),
+                    scene.leafs_iteration_length,
+                    int(scene.uv),
+                    int(scene.mat),
+                    scene.roots_iteration,
+                    int(scene.create_roots),
+                    scene.branch_rotate,
+                    scene.branch_random_rotate,
+                    int(scene.particle),
+                    scene.number,
+                    scene.display))
 
         # write to file
         prsets_directory = os.path.join(os.path.dirname(__file__), "mod_tree_presets")
@@ -1123,7 +1127,7 @@ class LoadTreePresetOperator(Operator):
             if ":" in line:
                 setting, value = line.split(":")
                 if setting == "preserve_trunk":
-                    scene.preserve_trunk = bool(value)
+                    scene.preserve_trunk = bool(int(value))  # bools have to be converted to int first (stored as 0/1)
                 elif setting == "trunk_split_angle":
                     scene.trunk_split_angle = float(value)
                 elif setting == "randomangle":
@@ -1163,27 +1167,27 @@ class LoadTreePresetOperator(Operator):
                 elif setting == "SeedProp":
                     scene.SeedProp = int(value)
                 elif setting == "create_armature":
-                    scene.create_armature = bool(value)
+                    scene.create_armature = bool(int(value))
                 elif setting == "bones_iterations":
                     scene.bones_iterations = int(value)
                 elif setting == "visualize_leafs":
-                    scene.visualize_leafs = bool(value)
+                    scene.visualize_leafs = bool(int(value))
                 elif setting == "leafs_iteration_length":
                     scene.leafs_iteration_length = int(value)
                 elif setting == "uv":
-                    scene.uv = bool(value)
+                    scene.uv = bool(int(value))
                 elif setting == "mat":
-                    scene.mat = bool(value)
+                    scene.mat = bool(int(value))
                 elif setting == "roots_iteration":
                     scene.roots_iteration = int(value)
                 elif setting == "create_roots":
-                    scene.create_roots = bool(value)
+                    scene.create_roots = bool(int(value))
                 elif setting == "branch_rotate":
                     scene.branch_rotate = float(value)
                 elif setting == "branch_random_rotate":
                     scene.branch_random_rotate = float(value)
                 elif setting == "particle":
-                    scene.particle = bool(value)
+                    scene.particle = bool(int(value))
                 elif setting == "number":
                     scene.number = int(value)
                 elif setting == "display":
