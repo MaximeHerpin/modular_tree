@@ -640,15 +640,10 @@ def create_tree(position):
     Make_roots = scene.create_roots
     Trunk = scene.preserve_trunk
     radius = scene.radius
-    visu_verts = [Vector((0, 0, 0)), (Vector((0, 0, 1)) * radius)]
-    visu_edges = [(0, 1)]
     Bones = []
-    leafs_group = []
     leafs_start_index = 0
     J = S1
     Seams = [s for s in R1.Seams]
-    verts = []
-    faces = []
     entree = [i for i in J.entree]
 
     Last_bone = (1, Vector((0, 0, 1)))
@@ -721,10 +716,11 @@ def create_tree(position):
                 obs = scene.objects[scene.obstacle]
                 d = obs.data
                 bpy.context.scene.update()
-                (result,hit_pos, face_normal, face_index) = obs.ray_cast(pos, end)
+
+                result, hit_pos, face_normal, face_index = obs.ray_cast(pos, end)
                 if result:
                     force = abs(min(direction.dot(face_normal), 0)) * scene.obstacle_strength / (
-                    ((hit_pos - pos).length) + 1) * 2
+                    (hit_pos - pos).length + 1) * 2
                     direction += face_normal * force
 
             split_probability = scene.trunk_split_proba if Trunk else scene.split_proba
@@ -735,7 +731,6 @@ def create_tree(position):
                                                  direction,
                                                  scene.trunk_variation, s_index, Seams)
                 sortie = pos + direction * scene.branch_length
-                visu_verts.append(pos + direction * scene.branch_length)
                 if i <= scene.bones_iterations: Bones.append((Lb[0], len(Bones) + 2, Lb[1], sortie))
                 Nb = (len(Bones) + 1, sortie)
                 nextremites.append((ni, radius * .98, direction, nsi, Nb, Trunk, curr_rotation))
@@ -753,7 +748,7 @@ def create_tree(position):
             	
             
             elif i < (scene.iteration + scene.trunk_length - 1) and (
-                (i == scene.trunk_length + 1) or (random() < split_probability)):
+                        (i == scene.trunk_length + 1) or (random() < split_probability)):
                 variation = scene.trunk_variation if Trunk else scene.randomangle
                 randJ = 1
                 J = Joncts[randJ] if (not (Trunk)) else trunk
@@ -771,8 +766,6 @@ def create_tree(position):
                                                                 new_rotation)
                 sortie1 = (verts[ni1[0]] + verts[ni1[4]]) / 2
                 sortie2 = (verts[ni2[0]] + verts[ni2[4]]) / 2
-                visu_verts.append(sortie1)
-                visu_verts.append(sortie2)
                 Nb = len(Bones)
                 if i <= scene.bones_iterations: Bones.append((Lb[0], Nb + 2, Lb[1], sortie1))
                 if i <= scene.bones_iterations: Bones.append((Lb[0], Nb + 3, Lb[1], sortie2))
@@ -794,7 +787,6 @@ def create_tree(position):
                                                  variation, s_index,
                                                  Seams)
                 sortie = pos + direction * scene.branch_length
-                visu_verts.append(sortie)
                 if i <= scene.bones_iterations: Bones.append((Lb[0], len(Bones) + 2, Lb[1], sortie))
                 Nb = (len(Bones) + 1, sortie)
                 if scene.gravity_start <= i <= scene.gravity_end:
@@ -980,7 +972,7 @@ class UpdateTreeOperator(Operator):
 
 
 class SaveTreePresetOperator(Operator):
-    """Update a tree"""
+    """Save Tree Preset"""
     bl_idname = "mod_tree.save_preset"
     bl_label = "Save Preset"
     bl_description = "Saves current settings as a preset"
@@ -1065,8 +1057,28 @@ class SaveTreePresetOperator(Operator):
         return {'FINISHED'}
 
 
+class RemoveTreePresetOperator(Operator):
+    """Remove a tree preset"""
+    bl_idname = "mod_tree.remove_preset"
+    bl_label = "Remove Preset"
+    bl_description = "Removes preset"
+    bl_options = {"REGISTER"}
+
+    filename = StringProperty(name="File Name")
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_confirm(self, event)
+
+    def execute(self, context):
+        prsets_directory = os.path.join(os.path.dirname(__file__), "mod_tree_presets")
+        prset = os.path.join(prsets_directory, self.filename)  # mtp stands for modular tree preset
+        os.remove(prset)
+
+        return {'FINISHED'}
+
+
 class LoadTreePresetOperator(Operator):
-    """Update a tree"""
+    """Load a tree preset"""
     bl_idname = "mod_tree.load_preset"
     bl_label = "Load Preset"
     bl_description = "Loads preset"
@@ -1153,7 +1165,6 @@ class LoadTreePresetOperator(Operator):
                     scene.display = int(value)
 
         return {'FINISHED'}
-
 
 
 class MakeTreePanel(Panel):
@@ -1256,6 +1267,25 @@ class TreePresetLoadMenu(Menu):
             layout.operator("mod_tree.load_preset", text=preset[:-4]).filename = preset
 
 
+class TreePresetRemoveMenu(Menu):
+    bl_idname = "mod_tree.preset_remove_menu"
+    bl_label = "Remove Preset"
+
+    def draw(self, context):
+        scene = context.scene
+
+        # get file names
+        presets = os.listdir(os.path.join(os.path.dirname(__file__), "mod_tree_presets"))
+        presets = [a for a in presets if a[-4:] == ".mtp"]  # limit to only file ending with .mtp
+
+        layout = self.layout
+        for preset in presets:
+            # this adds a button to the menu for the preset
+            # the preset display name has the .mtp sliced off
+            # the full preset name is passed the the filename prop of the loader
+            layout.operator("mod_tree.remove_preset", text=preset[:-4]).filename = preset
+
+
 class MakeTreePresetsPanel(Panel):
     bl_label = "Presets"
     bl_idname = "3D_VIEW_PT_layout_MakeTreePresets"
@@ -1276,10 +1306,13 @@ class MakeTreePresetsPanel(Panel):
         row.prop(scene, "preset_name", text="")
         row.operator("mod_tree.save_preset", icon="SETTINGS")
 
+        row = layout.row()
+        row.menu("mod_tree.preset_remove_menu")
 
 # classes to register
-classes = [MakeTreeOperator, UpdateTreeOperator, SaveTreePresetOperator, LoadTreePresetOperator,
-           MakeTreePanel, TreePresetLoadMenu, MakeTreePresetsPanel]
+classes = [MakeTreeOperator, UpdateTreeOperator, SaveTreePresetOperator, RemoveTreePresetOperator,
+           LoadTreePresetOperator,
+           MakeTreePanel, TreePresetLoadMenu, TreePresetRemoveMenu, MakeTreePresetsPanel]
 
 
 def register():
