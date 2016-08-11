@@ -954,19 +954,29 @@ class UpdateTreeOperator(Operator):
 
         seed(scene.SeedProp)
         obj = bpy.context.active_object
-        if obj.get('prop') == "is_tree":
-            Position = obj.location
-            Scale = obj.scale
-            Rotation = obj.rotation_euler
 
-            create_tree(Position)
+        try:
+            prop_name = obj.get('prop')
+        except AttributeError:
+            self.report({'ERROR'}, "No active tree object!")
+            return {'CANCELLED'}
+
+        if prop_name == "is_tree":
+            pos = obj.location
+            scale = obj.scale
+            rot = obj.rotation_euler
+
+            create_tree(pos)
             ob = bpy.context.active_object
-            ob.scale = Scale
-            ob.rotation_euler = Rotation
+            ob.scale = scale
+            ob.rotation_euler = rot
             ob.select = False
             obj.select = True
             bpy.ops.object.delete(use_global=False)
             ob.select = True
+        else:
+            self.report({'ERROR'}, "No active tree object!")
+            return {'CANCELLED'}
 
         return {'FINISHED'}
 
