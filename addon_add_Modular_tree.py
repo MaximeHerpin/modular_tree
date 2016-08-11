@@ -926,6 +926,8 @@ def create_tree(position):
     bpy.context.scene.objects.active = obj
     bpy.ops.wm.properties_add(data_path="object")
     obj["prop"] = "is_tree"
+    bpy.ops.wm.properties_add(data_path="object")
+    obj["prop1"] = "armature" if scene.create_armature else "no_armature"
 
 
 class MakeTreeOperator(Operator):
@@ -954,19 +956,42 @@ class UpdateTreeOperator(Operator):
 
         seed(scene.SeedProp)
         obj = bpy.context.active_object
-        if obj.get('prop') == "is_tree":
-            Position = obj.location
-            Scale = obj.scale
-            Rotation = obj.rotation_euler
 
-            create_tree(Position)
+        try:
+            prop_name = obj.get('prop')
+        except AttributeError:
+            self.report({'ERROR'}, "No active tree object!")
+            return {'CANCELLED'}
+
+        if prop_name == "is_tree":
+            pos = obj.location
+            scale = obj.scale
+            rot = obj.rotation_euler
+
+            create_tree(pos)
             ob = bpy.context.active_object
-            ob.scale = Scale
-            ob.rotation_euler = Rotation
+            ob.scale = scale
+            ob.rotation_euler = rot
             ob.select = False
             obj.select = True
+            if obj.get('prop1') == 'armature':
+                arm_pos = obj.parent.location
+                arm_scale = obj.parent.scale
+                arm_rot = obj.parent.rotation_euler
+                obj.parent.select = True
+                if scene.create_armature:
+                    ob.parent.location = arm_pos
+                    ob.parent.scale = arm_scale
+                    ob.parent.rotation_euler = arm_rot
+                else:
+                    ob.location = arm_pos
+                    ob.scale = arm_scale
+                    ob.rotation_euler = arm_rot
             bpy.ops.object.delete(use_global=False)
             ob.select = True
+        else:
+            self.report({'ERROR'}, "No active tree object!")
+            return {'CANCELLED'}
 
         return {'FINISHED'}
 
