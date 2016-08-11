@@ -18,8 +18,8 @@
 
 bl_info = {
     "name": "Modular trees",
-    "author": "Herpin Maxime, Graphics_Dev",
-    "version": (2, 0),
+    "author": "Herpin Maxime, Jake Dube",
+    "version": (1, 1),
     "blender": (2, 77, 0),
     "location": "View3D > Tools > Tree > Make Tree",
     "description": "Generates an organic tree with correctly modeled branching.",
@@ -70,13 +70,13 @@ end_cap = Module(
 
 
 class Split:
-    def __init__(self, entree, sortie, verts1, verts2, faces, Seams):
+    def __init__(self, entree, sortie, verts1, verts2, faces, seams):
         self.entree = entree
         self.sortie = sortie
         self.verts1 = verts1
         self.verts2 = verts2
         self.faces = faces
-        self.Seams = Seams
+        self.Seams = seams
 
 
 def interpolate(verts1, verts2, t):
@@ -130,7 +130,7 @@ S1 = Split([0, 1, 2, 3, 4, 5, 6, 7], ([8, 9, 10, 11, 12, 13, 14, 15], [16, 17, 1
 
 Joncts = [S1, S2]
 
-root = Module([], ((1, [0, 1, 2, 3, 4, 5, 6, 7])), [Vector((0.0, 0.9928191900253296, 0.9806214570999146)), Vector(
+root = Module([], (1, [0, 1, 2, 3, 4, 5, 6, 7]), [Vector((0.0, 0.9928191900253296, 0.9806214570999146)), Vector(
     (-0.7020291090011597, 0.7020291090011597, 0.9806214570999146)), Vector(
     (-0.9928191900253296, -4.3397506033215905e-08, 0.9806214570999146)), Vector(
     (-0.7020291090011597, -0.7020291090011597, 0.9806214570999146)), Vector(
@@ -326,46 +326,42 @@ def initbmesh():
     uvlayer = bm.loops.layers.uv.active
 
 
-def BBoxCenter(island):
-    minX = +1000
-    minY = +1000
-    maxX = -1000
-    maxY = -1000
+def b_box_center(island):
+    min_x = +1000
+    min_y = +1000
+    max_x = -1000
+    max_y = -1000
+
     # for island in islands:
     for face_id in island:
         face = bm.faces[face_id]
         for loop in face.loops:
-            minX = min(loop[uvlayer].uv.x, minX)
-            minY = min(loop[uvlayer].uv.y, minY)
-            maxX = max(loop[uvlayer].uv.x, maxX)
-            maxY = max(loop[uvlayer].uv.y, maxY)
-    return (Vector((minX, minY)) +
-            Vector((maxX, maxY))) / 2
+            min_x = min(loop[uvlayer].uv.x, min_x)
+            min_y = min(loop[uvlayer].uv.y, min_y)
+            max_x = max(loop[uvlayer].uv.x, max_x)
+            max_y = max(loop[uvlayer].uv.y, max_y)
+
+    return (Vector((min_x, min_y)) + Vector((max_x, max_y))) / 2
 
 
-def rotateIsland(island, angle):
+def rotate_island(island, angle):
     rad = radians(angle)
-    center = BBoxCenter(island)
+    center = b_box_center(island)
     for face_id in island:
         face = bm.faces[face_id]
         for loop in face.loops:
-            # print(loop[uvlayer].uv)
             x = loop[bm.loops.layers.uv.active].uv.x
             y = loop[bm.loops.layers.uv.active].uv.y
-            # trans = mathutils.Vector((x- center.x ,y- center.y ))
             xt = x - center.x
             yt = y - center.y
             xr = (xt * cos(rad)) - (yt * sin(rad))
             yr = (xt * sin(rad)) + (yt * cos(rad))
-            # loop[bm.loops.layers.uv.active].uv = trans
             loop[bm.loops.layers.uv.active].uv.x = xr + center.x
             loop[bm.loops.layers.uv.active].uv.y = yr + center.y
-            # print('fired')
 
 
-class MakeIslands():
+class MakeIslands:
     def __init__(self):
-        # self.bm = bmesh.new()
         initbmesh()
         global bm
         global uvlayer
@@ -374,64 +370,57 @@ class MakeIslands():
         self.selectedIsland = set()
         for face in bm.faces:
             for loop in face.loops:
-                # if loop[uvlayer].select :
-                # floating point error! keep it low
-                id = '{0[0]:.5} {0[1]:.5} {1}'.format(loop[uvlayer].uv, loop.vert.index)
-                self.face_to_verts[face.index].add(id)
-                self.vert_to_faces[id].add(face.index)
+                ind = '{0[0]:.5} {0[1]:.5} {1}'.format(loop[uvlayer].uv, loop.vert.index)
+                self.face_to_verts[face.index].add(ind)
+                self.vert_to_faces[ind].add(face.index)
                 if face.select:
                     if loop[uvlayer].select:
                         self.selectedIsland.add(face.index)
 
-    def addToIsland(self, face_id):
+    def add_to_island(self, face_id):
         if face_id in self.faces_left:
             # add the face itself
             self.current_island.append(face_id)
-            # print(face_id)
             self.faces_left.remove(face_id)
+
             # and add all faces that share uvs with this face
             verts = self.face_to_verts[face_id]
             for vert in verts:
-                # print('looking at vert {}'.format(vert))
                 connected_faces = self.vert_to_faces[vert]
                 if connected_faces:
                     for face in connected_faces:
-                        self.addToIsland(face)
+                        self.add_to_island(face)
 
-    def getIslands(self):
-        self.islands = []
-        self.faces_left = set(self.face_to_verts.keys())
+    def get_islands(self):
+        self.islands = []  # instance attribute defined outside of __init__!
+        self.faces_left = set(self.face_to_verts.keys())  # instance attribute defined outside of __init__!
         while len(self.faces_left) > 0:
             face_id = list(self.faces_left)[0]
-            self.current_island = []
-            # print(self.faces_left)
-            self.addToIsland(face_id)
+            self.current_island = []  # instance attribute defined outside of __init__!
+            self.add_to_island(face_id)
             self.islands.append(self.current_island)
         return self.islands
 
-    def activeIsland(self):
+    def active_island(self):
         for island in self.islands:
             try:
                 if bm.faces.active.index in island:
                     return island
-            except:
+            except:  # broad try-except...what are you trying to catch here?
                 return None
 
-    def selectedIslands(self):
+    def selected_islands(self):
         _selectedIslands = []
-        # print('selectedIslands()')
-        # print(self.selectedIsland)
         for island in self.islands:
-            # print(island)
             if not self.selectedIsland.isdisjoint(island):
                 _selectedIslands.append(island)
-                # print('True')
         return _selectedIslands
 
 
-def Create_system(ob, number, display, vertex_group):
+def create_system(ob, number, display, vertex_group):
     # get the vertex group
     g = vertex_group
+
     # customize the particle system
     leaf = ob.modifiers.new("psys name", 'PARTICLE_SYSTEM')
     part = ob.particle_systems[0]
@@ -454,20 +443,21 @@ def Create_system(ob, number, display, vertex_group):
     set.render_type = "OBJECT"
 
 
-def Rotate():
+def rotate():
     bpy.ops.object.editmode_toggle()
-    makeIslands = MakeIslands()
+    make_islands = MakeIslands()
     bm.verts.ensure_lookup_table()
     bm.edges.ensure_lookup_table()
     bm.faces.ensure_lookup_table()
-    islands = makeIslands.getIslands()
-    selectedIslands = makeIslands.selectedIslands()
-    activeIsland = makeIslands.activeIsland()
-    if not activeIsland:
-        self.report({"ERROR"}, "No active face")
+    islands = make_islands.get_islands()  # islands is not used...does get_islands need to return anything?
+    sel_islands = make_islands.selected_islands()
+    act_island = make_islands.active_island()
+
+    if not act_island:
+        self.report({"ERROR"}, "No active face")  # self is not defined, will raise an error!
         return {"CANCELLED"}
-        activeAngle = islandAngle(activeIsland)
-    for island in selectedIslands:
+
+    for island in sel_islands:
 
         f0 = bm.faces[island[0]]
         index = f0.index
@@ -476,16 +466,17 @@ def Rotate():
             f1 = bm.faces[island[i]]
             if f1.index == index + 1:
                 break
-                # print (face.index)
-        # f.select = False
+
         x1, y1, x2, y2 = (0, 0, 0, 0)
         for i in range(4):
             x1 += .25 * f0.loops[i][bm.loops.layers.uv.active].uv.x
             x2 += .25 * f1.loops[i][bm.loops.layers.uv.active].uv.x
             y1 += .25 * f0.loops[i][bm.loops.layers.uv.active].uv.y
             y2 += .25 * f1.loops[i][bm.loops.layers.uv.active].uv.y
+
         if (abs(x2 - x1) < abs(y2 - y1)) and (len(island) % 8 == 0):
-            rotateIsland(island, 90)
+            rotate_island(island, 90)
+
     bpy.ops.uv.pack_islands(rotate=False, margin=0.001)
     bpy.ops.object.editmode_toggle()
 
@@ -497,22 +488,15 @@ def add_tuple(t, x):
     return tuple([x + i for i in t])
 
 
-def rot_scale(v_co, scale, dir, rot_z):
-    (x, y, z) = dir
-    dir = Vector((-x, -y, z))
-    d = Vector((1, 0))
-    X = Vector((z, y))
-    Y = Vector((z, x))
-    a = 0 if X == Vector((0, 0, 0)) else d.angle_signed(X)
-    b = 0 if Y == Vector((0, 0, 0)) else d.angle_signed(Y)
+def rot_scale(v_co, scale, directions, rot_z):
+    (x, y, z) = directions
+    directions = Vector((-x, -y, z))
     c = rot_z
-    q = Vector((0, 0, 1)).rotation_difference(dir)
+    q = Vector((0, 0, 1)).rotation_difference(directions)
     mat_rot = q.to_matrix()
     mat_rot.resize_4x4()
-    Mc = Matrix.Rotation(c, 4, 'Z')
-    # Ma = Matrix.Rotation(-a,4,'X')
-    # Mb = Matrix.Rotation(b,4,'Y')
-    v_co = [((v * scale) * Mc) * mat_rot for v in v_co]
+    mc = Matrix.Rotation(c, 4, 'Z')
+    v_co = [((v * scale) * mc) * mat_rot for v in v_co]
     return v_co
 
 
@@ -528,51 +512,49 @@ def joindre(verts, faces, v1_i, v2_i):
             decalage = i
     v2 = verts[v1_i[1]]
     k = 1
-    if ((verts[v2_i[(decalage + 1) % n]] - v2).length > (verts[v2_i[(decalage - 1) % n]] - v2).length):
+    if (verts[v2_i[(decalage + 1) % n]] - v2).length > (verts[v2_i[(decalage - 1) % n]] - v2).length:
         k = -1
     for i in range(n):
-        faces.append(
-            [v1_i[i], v2_i[(decalage + i * k) % (n)], v2_i[(decalage + (i + 1) * k) % (n)], v1_i[(i + 1) % (n)]])
+        faces.append([v1_i[i], v2_i[(decalage + i * k) % n], v2_i[(decalage + (i + 1) * k) % n], v1_i[(i + 1) % n]])
 
 
-def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entree, dir, branch_length, s_index, Seams,
-         Jonc_seams, random_angle, branch_rotation):
+def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entree, directions, branch_length, s_index, seams,
+         jonc_seams, random_angle, branch_rotation):
     random1 = random_angle * (random() - .5)
     random2 = random_angle * (random() - .5)
     random3 = random_angle * (random() - .5)
 
-    randX = Matrix.Rotation(random1, 4, 'X')
-    randY = Matrix.Rotation(random2, 4, 'Y')
-    randZ = Matrix.Rotation(random3, 4, 'Z')
+    rand_x = Matrix.Rotation(random1, 4, 'X')
+    rand_y = Matrix.Rotation(random2, 4, 'Y')
+    rand_z = Matrix.Rotation(random3, 4, 'Z')
 
-    dir = (((dir * randX) * randY) * randZ)
+    directions = (((directions * rand_x) * rand_y) * rand_z)
     barycentre = Vector((0, 0, 0))
     for i in indexes:
         barycentre += verts[i]
     barycentre /= len(indexes)
-    v1 = verts[indexes[0]] - verts[indexes[len(indexes) // 2]]
-    v2 = verts[indexes[-1]] - verts[indexes[3]]
-    # dir = v1.cross(v2)
-    dir.normalize()
-    barycentre += dir * branch_length
+
+    directions.normalize()
+    barycentre += directions * branch_length
     r1 = (object_verts[i1[0]] - object_verts[i1[4]]).length / 2
     r2 = (object_verts[i2[0]] - object_verts[i2[4]]).length / 2
-    # print('avt',len(object_verts))
-    v = rot_scale(object_verts, scale, dir, radians(branch_rotation))
+    v = rot_scale(object_verts, scale, directions, radians(branch_rotation))
     d2 = v[-1]
     d1 = v[-2]
+
     n = len(verts)
     nentree = [n + i for i in entree]
-    add_seams(nentree, Seams)
-    Seams += [add_tuple(f, n) for f in Jonc_seams]
+    add_seams(nentree, seams)
+    seams += [add_tuple(f, n) for f in jonc_seams]
     faces += [add_tuple(f, n) for f in object_faces]
     verts += [barycentre + i for i in v]
     joindre(verts, faces, indexes, nentree)
-    # print(len(v))
+
     i1 = [n + i for i in i1]
     i2 = [n + i for i in i2]
-    add_seams(i1, Seams)
-    add_seams(i2, Seams)
+    add_seams(i1, seams)
+    add_seams(i2, seams)
+
     dist = 1000
     ns_index = 0
     for i in nentree:
@@ -580,11 +562,11 @@ def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entre
         if length < dist:
             dist = length
             ns_index = i
-    Seams.append((s_index, ns_index))
+    seams.append((s_index, ns_index))
     return i1, i2, d1, d2, r1, r2, i1[0], i2[0]
 
 
-def join_branch(verts, faces, indexes, scale, branch_length, branch_verts, dir, rand, s_index, Seams):
+def join_branch(verts, faces, indexes, scale, branch_length, branch_verts, direction, rand, s_index, Seams):
     barycentre = Vector((0, 0, 0))
     random1 = rand * (random() - .5)
     random2 = rand * (random() - .5)
@@ -592,22 +574,20 @@ def join_branch(verts, faces, indexes, scale, branch_length, branch_verts, dir, 
     for i in indexes:
         barycentre += verts[i]
     barycentre /= len(indexes)
-    v1 = verts[indexes[0]] - verts[indexes[len(indexes) // 2]]
-    v2 = verts[indexes[-1]] - verts[indexes[3]]
-    # dir = v1.cross(v2)
-    dir.normalized()
-    randX = Matrix.Rotation(random1, 4, 'X')
-    randY = Matrix.Rotation(random2, 4, 'Y')
-    randZ = Matrix.Rotation(random3, 4, 'Z')
-    # rand = Vector((random()-.5,random()-.5,random()-.5))/4
-    # dir+=rand
-    dir = (((dir * randX) * randY) * randZ)
-    barycentre += dir * branch_length
+
+    direction.normalized()
+    rand_x = Matrix.Rotation(random1, 4, 'X')
+    rand_y = Matrix.Rotation(random2, 4, 'Y')
+    rand_z = Matrix.Rotation(random3, 4, 'Z')
+
+    direction = (((direction * rand_x) * rand_y) * rand_z)
+    barycentre += direction * branch_length
     n = len(verts)
-    v = rot_scale(branch_verts, scale, dir, ((random() + 27) / 28) * randint(0, 8) / 8 * 2 * pi)
+    v = rot_scale(branch_verts, scale, direction, ((random() + 27) / 28) * randint(0, 8) / 8 * 2 * pi)
     nentree = [n + i for i in range(8)]
     verts += [ve + barycentre for ve in v]
     joindre(verts, faces, indexes, nentree)
+
     ns_index = 0
     dist = 1000
     for i in nentree:
@@ -616,10 +596,11 @@ def join_branch(verts, faces, indexes, scale, branch_length, branch_verts, dir, 
             dist = length
             ns_index = i
     Seams.append((s_index, ns_index))
-    return nentree, dir, ns_index
+
+    return nentree, direction, ns_index
 
 
-def gravity(dir, r, gravity_strength):
+def gravity(dir, gravity_strength):
     v = Vector((0, 0, -1))
     norm = dir.length
     factor = (dir.cross(v)).length / norm / 100 * gravity_strength
@@ -637,18 +618,18 @@ def create_tree(position):
         select_ob.select = False
     scene = bpy.context.scene
 
-    Make_roots = scene.create_roots
-    Trunk = scene.preserve_trunk
+    make_roots = scene.create_roots
+    trunk2 = scene.preserve_trunk
     radius = scene.radius
-    Bones = []
+    bones = []
     leafs_start_index = 0
-    J = S1
-    Seams = [s for s in R1.Seams]
-    entree = [i for i in J.entree]
+    big_j = S1
+    seams2 = [s for s in R1.Seams]
+    entree = [i for i in big_j.entree]
 
-    Last_bone = (1, Vector((0, 0, 1)))
+    last_bone = (1, Vector((0, 0, 1)))
 
-    if not Make_roots:
+    if not make_roots:
         verts = [Vector(v) * radius for v in root.verts]
         faces = [f for f in root.faces]
         extr = [i for i in root.sortie[1]]
@@ -656,56 +637,58 @@ def create_tree(position):
         verts = [Vector(v) * radius for v in R1.verts]
         faces = [f for f in R1.faces]
         extr = [i for i in R1.stem]
-        Roots = [(i[2], i[1], i[0], i[2][0]) for i in R1.roots]
+        roots = [(i[2], i[1], i[0], i[2][0]) for i in R1.roots]
         roots_variations = .5
         roots_length = 1.4
         roots_rad_dec = .7
+
         for i in range(scene.roots_iteration):
-            nextRoots = []
-            for E in Roots:
+            next_roots = []
+            for E in roots:
                 indexes, radius, direction, s_index = E
 
-                J = Joncts[1]
-                i1 = [i for i in J.sortie[0]]
-                i2 = [i for i in J.sortie[1]]
-                Jonct_seams = [s for s in J.Seams]
+                big_j = Joncts[1]
+                i1 = [i for i in big_j.sortie[0]]
+                i2 = [i for i in big_j.sortie[1]]
+                jonct_seams = [s for s in big_j.Seams]
                 inter_fact = (i / (1.4 * max(1, i))) ** 3 * random()
-                Jonct_verts = interpolate(J.verts1, J.verts2, inter_fact)
+                jonct_verts = interpolate(big_j.verts1, big_j.verts2, inter_fact)
                 barycentre = Vector((0, 0, 0))
+
                 for k in indexes:
                     barycentre += verts[k]
                 barycentre /= len(indexes)
-                print(barycentre.z)
+
                 if i > 2:
-                    print("blah!")
                     direction += .7 * Vector((0, 0, -1)) / (max(1, 20 * abs(barycentre.z)))
-                ni1, ni2, dir1, dir2, r1, r2, nsi1, nsi2 = join(verts, faces, indexes, Jonct_verts, J.faces,
+                ni1, ni2, dir1, dir2, r1, r2, nsi1, nsi2 = join(verts, faces, indexes, jonct_verts, big_j.faces,
                                                                 radius * roots_rad_dec, i1, i2, entree, direction,
-                                                                roots_length, s_index, Seams, Jonct_seams,
+                                                                roots_length, s_index, seams2, jonct_seams,
                                                                 roots_variations,
                                                                 ((random() + 27) / 28) * randint(0, 8) / 8 * 2 * pi)
-                dir1 = gravity(dir1, radius, -2)
-                dir2 = gravity(dir2, radius, -2)
-                nextRoots.append((ni1, radius * roots_rad_dec * r1, dir1, nsi1))
-                nextRoots.append((ni2, radius * roots_rad_dec * r2, dir2, nsi2))
-            Roots = nextRoots
+                dir1 = gravity(dir1, -2)
+                dir2 = gravity(dir2, -2)
+                next_roots.append((ni1, radius * roots_rad_dec * r1, dir1, nsi1))
+                next_roots.append((ni2, radius * roots_rad_dec * r2, dir2, nsi2))
+            roots = next_roots
 
     radius = scene.radius
-    extremites = [(extr, radius, Vector((0, 0, 1)), extr[0], Last_bone, Trunk, 0)]
+    extremites = [(extr, radius, Vector((0, 0, 1)), extr[0], last_bone, trunk2, 0)]
 
     for i in range(scene.iteration + scene.trunk_length):
-        n = len(extremites)
         if i == scene.iteration + scene.trunk_length - scene.leafs_iteration_length:
             leafs_start_index = len(verts)
 
         nextremites = []
 
         for E in extremites:
-            indexes, radius, direction, s_index, Lb, Trunk, curr_rotation = E
+            indexes, radius, direction, s_index, Lb, trunk2, curr_rotation = E
             new_rotation = (curr_rotation + scene.branch_rotate + 2 * (1 - random()) * scene.branch_random_rotate) % 360
+
             if i > scene.preserve_end:
-                Trunk = False
+                trunk2 = False
             pos = Vector((0, 0, 0))
+
             for k in indexes:
                 pos += verts[k]
             pos /= len(indexes)
@@ -714,84 +697,90 @@ def create_tree(position):
 
             if bpy.data.objects.get(scene.obstacle) is not None:
                 obs = scene.objects[scene.obstacle]
-                d = obs.data
                 bpy.context.scene.update()
 
                 result, hit_pos, face_normal, face_index = obs.ray_cast(pos, end)
                 if result:
                     force = abs(min(direction.dot(face_normal), 0)) * scene.obstacle_strength / (
-                    (hit_pos - pos).length + 1) * 2
+                        (hit_pos - pos).length + 1) * 2
                     direction += face_normal * force
 
-            split_probability = scene.trunk_split_proba if Trunk else scene.split_proba
+            split_probability = scene.trunk_split_proba if trunk2 else scene.split_proba
 
             if i <= scene.trunk_length:
                 branch_verts = [v for v in branch.verts]
                 ni, direction, nsi = join_branch(verts, faces, indexes, radius, scene.trunk_space, branch_verts,
                                                  direction,
-                                                 scene.trunk_variation, s_index, Seams)
+                                                 scene.trunk_variation, s_index, seams2)
                 sortie = pos + direction * scene.branch_length
-                if i <= scene.bones_iterations: Bones.append((Lb[0], len(Bones) + 2, Lb[1], sortie))
-                Nb = (len(Bones) + 1, sortie)
-                nextremites.append((ni, radius * .98, direction, nsi, Nb, Trunk, curr_rotation))
-            
+
+                if i <= scene.bones_iterations:
+                    bones.append((Lb[0], len(bones) + 2, Lb[1], sortie))
+
+                nb = (len(bones) + 1, sortie)
+                nextremites.append((ni, radius * .98, direction, nsi, nb, trunk2, curr_rotation))
+
             elif i == scene.iteration + scene.trunk_length - 1 or random() < scene.break_chance:
                 end_verts = [Vector(v) for v in end_cap.verts]
                 end_faces = [f for f in end_cap.faces]
                 n = len(verts)
+                # ni, direction, and nsi are not used...does join_branch need to return anything?
                 ni, direction, nsi = join_branch(verts, faces, indexes, radius, scene.trunk_space, end_verts, direction,
                                                  scene.trunk_variation,
-                                                 s_index, Seams)
+                                                 s_index, seams2)
                 faces += [add_tuple(f, n) for f in end_faces]
                 end_seams = [(1, 0), (2, 1), (3, 2), (4, 3), (5, 4), (6, 5), (7, 6), (0, 7)]
-                Seams += [add_tuple(f, n) for f in end_seams]
-            	
-            
-            elif i < (scene.iteration + scene.trunk_length - 1) and (
-                        (i == scene.trunk_length + 1) or (random() < split_probability)):
-                variation = scene.trunk_variation if Trunk else scene.randomangle
-                randJ = 1
-                J = Joncts[randJ] if (not (Trunk)) else trunk
-                i1 = [i for i in J.sortie[0]]
-                i2 = [i for i in J.sortie[1]]
-                Jonct_seams = [s for s in J.Seams]
+                seams2 += [add_tuple(f, n) for f in end_seams]
 
-                inter_fact = scene.trunk_split_angle if Trunk else scene.split_angle
-                Jonct_verts = interpolate(J.verts1, J.verts2, inter_fact)
-                Length = scene.trunk_space if Trunk else scene.branch_length
-                ni1, ni2, dir1, dir2, r1, r2, nsi1, nsi2 = join(verts, faces, indexes, Jonct_verts, J.faces,
+            elif i < scene.iteration + scene.trunk_length - 1 and i == scene.trunk_length + 1 or random() < split_probability:
+                variation = scene.trunk_variation if trunk2 else scene.randomangle
+                rand_j = 1
+                big_j = Joncts[rand_j] if (not trunk2) else trunk
+                i1 = [i for i in big_j.sortie[0]]
+                i2 = [i for i in big_j.sortie[1]]
+                jonct_seams = [s for s in big_j.Seams]
+
+                inter_fact = scene.trunk_split_angle if trunk2 else scene.split_angle
+                jonct_verts = interpolate(big_j.verts1, big_j.verts2, inter_fact)
+                length = scene.trunk_space if trunk2 else scene.branch_length
+                ni1, ni2, dir1, dir2, r1, r2, nsi1, nsi2 = join(verts, faces, indexes, jonct_verts, big_j.faces,
                                                                 radius * (1 + scene.radius_dec) / 2, i1, i2, entree,
                                                                 direction,
-                                                                Length, s_index, Seams, Jonct_seams, variation,
+                                                                length, s_index, seams2, jonct_seams, variation,
                                                                 new_rotation)
                 sortie1 = (verts[ni1[0]] + verts[ni1[4]]) / 2
                 sortie2 = (verts[ni2[0]] + verts[ni2[4]]) / 2
-                Nb = len(Bones)
-                if i <= scene.bones_iterations: Bones.append((Lb[0], Nb + 2, Lb[1], sortie1))
-                if i <= scene.bones_iterations: Bones.append((Lb[0], Nb + 3, Lb[1], sortie2))
-                Nb1 = (Nb + 2, sortie1)
-                Nb2 = (Nb + 3, sortie2)
-                if scene.gravity_start <= i <= scene.gravity_end:
-                    dir1 = gravity(dir1, radius, scene.gravity_strength)
-                    dir2 = gravity(dir2, radius, scene.gravity_strength)
-                nextremites.append((ni1, radius * scene.radius_dec * r1, dir1, nsi1, Nb1, Trunk, new_rotation))
-                nextremites.append((ni2, radius * scene.radius_dec * r2, dir2, nsi2, Nb2, False, new_rotation))
+                nb = len(bones)
 
-            
+                if i <= scene.bones_iterations:
+                    bones.append((Lb[0], nb + 2, Lb[1], sortie1))
+                    bones.append((Lb[0], nb + 3, Lb[1], sortie2))
+
+                nb1 = (nb + 2, sortie1)
+                nb2 = (nb + 3, sortie2)
+                if scene.gravity_start <= i <= scene.gravity_end:
+                    dir1 = gravity(dir1, scene.gravity_strength)
+                    dir2 = gravity(dir2, scene.gravity_strength)
+
+                nextremites.append((ni1, radius * scene.radius_dec * r1, dir1, nsi1, nb1, trunk2, new_rotation))
+                nextremites.append((ni2, radius * scene.radius_dec * r2, dir2, nsi2, nb2, False, new_rotation))
 
             else:
                 branch_verts = [v for v in branch.verts]
-                variation = scene.trunk_variation if Trunk else scene.randomangle
-                Length = scene.trunk_space if Trunk else scene.branch_length
-                ni, direction, nsi = join_branch(verts, faces, indexes, radius, Length, branch_verts, direction,
+                variation = scene.trunk_variation if trunk2 else scene.randomangle
+                length = scene.trunk_space if trunk2 else scene.branch_length
+                ni, direction, nsi = join_branch(verts, faces, indexes, radius, length, branch_verts, direction,
                                                  variation, s_index,
-                                                 Seams)
+                                                 seams2)
                 sortie = pos + direction * scene.branch_length
-                if i <= scene.bones_iterations: Bones.append((Lb[0], len(Bones) + 2, Lb[1], sortie))
-                Nb = (len(Bones) + 1, sortie)
+
+                if i <= scene.bones_iterations:
+                    bones.append((Lb[0], len(bones) + 2, Lb[1], sortie))
+
+                nb = (len(bones) + 1, sortie)
                 if scene.gravity_start <= i <= scene.gravity_end:
-                    direction = gravity(direction, radius, scene.gravity_strength)
-                nextremites.append((ni, radius * scene.radius_dec, direction, nsi, Nb, Trunk, curr_rotation))
+                    direction = gravity(direction, scene.gravity_strength)
+                nextremites.append((ni, radius * scene.radius_dec, direction, nsi, nb, trunk2, curr_rotation))
 
         extremites = nextremites
 
@@ -816,17 +805,20 @@ def create_tree(position):
     bpy.ops.mesh.select_all(action='DESELECT')
     bpy.ops.mesh.select_mode(type="EDGE")
     bpy.ops.object.editmode_toggle()
+
     if obj.data.polygons[0].normal.x < 0:
         bpy.ops.object.editmode_toggle()
         bpy.ops.mesh.select_all(action='SELECT')
         bpy.ops.mesh.normals_make_consistent(inside=True)
         bpy.ops.mesh.select_all(action='DESELECT')
         bpy.ops.object.editmode_toggle()
+
     if scene.particle:
-        Create_system(obj, scene.number, scene.display, vgroups["leaf"])
+        create_system(obj, scene.number, scene.display, vgroups["leaf"])
+
     if scene.uv:
         test = [[False, []] for i in range(len(verts))]
-        for (a, b) in Seams:
+        for (a, b) in seams2:
             a, b = min(a, b), max(a, b)
             test[a][0] = True
             test[b][0] = True
@@ -837,14 +829,14 @@ def create_tree(position):
             v0, v1 = edge.vertices[0], edge.vertices[1]
             if test[v0][0] and v1 in test[v0][1]:
                 edge.select = True
+
         bpy.ops.object.editmode_toggle()
         bpy.ops.mesh.mark_seam(clear=False)
         bpy.ops.mesh.select_all(action='SELECT')
         bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
         bpy.ops.object.editmode_toggle()
-        Rotate()
-    
-        
+        rotate()
+
     if scene.mat:
         if not bpy.context.scene.render.engine == 'CYCLES':
             bpy.context.scene.render.engine = 'CYCLES'
@@ -857,8 +849,8 @@ def create_tree(position):
         mat.node_tree.nodes.remove(mat.node_tree.nodes.get('Diffuse BSDF'))
         mat.node_tree.nodes.remove(mat.node_tree.nodes.get('Material Output'))
 
-        for (type, loc, name, label) in Nodes:
-            new_node = mat.node_tree.nodes.new(type)
+        for (n_type, loc, name, label) in Nodes:
+            new_node = mat.node_tree.nodes.new(n_type)
             new_node.location = loc
             new_node.name = name
             new_node.label = label
@@ -889,10 +881,10 @@ def create_tree(position):
             to_node = mat.node_tree.nodes[t[0]]
             links.new(from_node.outputs[f[1]], to_node.inputs[t[1]])
         obj.active_material = mat
-    
+
     elif bpy.data.materials.get(scene.bark_material) is not None:
         obj.active_material = bpy.data.materials.get(scene.bark_material)
-    
+
     if scene.create_armature:
         bpy.ops.object.add(
             type='ARMATURE',
@@ -905,12 +897,14 @@ def create_tree(position):
         bone = amt.edit_bones.new('1')
         bone.head = Vector((0, 0, 0))
         bone.tail = Vector((0, 0, 1))
-        for (pname, name, h, t) in Bones:
+
+        for (pname, name, h, t) in bones:
             bone = amt.edit_bones.new(str(name))
             bone.parent = arm.data.edit_bones[str(pname)]
             bone.use_connect = True
             bone.head = h
             bone.tail = t
+
         bpy.ops.object.editmode_toggle()
         bpy.ops.object.select_all(action='DESELECT')
         obj.select = True
@@ -918,14 +912,18 @@ def create_tree(position):
         bpy.context.scene.objects.active = arm
         bpy.ops.object.parent_set(type='ARMATURE_AUTO')
         bpy.ops.object.select_all(action='DESELECT')
+
     if scene.visualize_leafs:
         bpy.context.scene.objects.active = obj
         vgroups.active_index = vgroups["leaf"].index
         bpy.ops.paint.weight_paint_toggle()
+
     obj.select = True
     bpy.context.scene.objects.active = obj
     bpy.ops.wm.properties_add(data_path="object")
     obj["prop"] = "is_tree"
+    bpy.ops.wm.properties_add(data_path="object")
+    obj["prop1"] = "armature" if scene.create_armature else "no_armature"
 
 
 class MakeTreeOperator(Operator):
@@ -972,8 +970,25 @@ class UpdateTreeOperator(Operator):
             ob.rotation_euler = rot
             ob.select = False
             obj.select = True
+
+            if obj.get('prop1') == 'armature':
+                arm_pos = obj.parent.location
+                arm_scale = obj.parent.scale
+                arm_rot = obj.parent.rotation_euler
+                obj.parent.select = True
+
+                if scene.create_armature:
+                    ob.parent.location = arm_pos
+                    ob.parent.scale = arm_scale
+                    ob.parent.rotation_euler = arm_rot
+                else:
+                    ob.location = arm_pos
+                    ob.scale = arm_scale
+                    ob.rotation_euler = arm_rot
+
             bpy.ops.object.delete(use_global=False)
             ob.select = True
+
         else:
             self.report({'ERROR'}, "No active tree object!")
             return {'CANCELLED'}
@@ -1287,7 +1302,7 @@ class AdvancedSettingsPanel(Panel):
         col = box.column(True)
         col.prop(scene, 'branch_rotate')
         col.prop(scene, 'branch_random_rotate')
-
+        box.prop(scene, 'mat')
         if not scene.mat:
             box.prop_search(scene, "bark_material", bpy.data, "materials")
         box.prop(scene, 'create_armature')
@@ -1306,8 +1321,6 @@ class TreePresetLoadMenu(Menu):
     bl_label = "Load Preset"
 
     def draw(self, context):
-        scene = context.scene
-
         # get file names
         presets = os.listdir(os.path.join(os.path.dirname(__file__), "mod_tree_presets"))
         presets = [a for a in presets if a[-4:] == ".mtp"]  # limit to only file ending with .mtp
@@ -1325,8 +1338,6 @@ class TreePresetRemoveMenu(Menu):
     bl_label = "Remove Preset"
 
     def draw(self, context):
-        scene = context.scene
-
         # get file names
         presets = os.listdir(os.path.join(os.path.dirname(__file__), "mod_tree_presets"))
         presets = [a for a in presets if a[-4:] == ".mtp"]  # limit to only file ending with .mtp
@@ -1362,6 +1373,7 @@ class MakeTreePresetsPanel(Panel):
         row = layout.row()
         row.menu("mod_tree.preset_remove_menu")
 
+
 # classes to register
 classes = [MakeTreeOperator, UpdateTreeOperator, SaveTreePresetOperator, RemoveTreePresetOperator,
            LoadTreePresetOperator,
@@ -1386,34 +1398,32 @@ def register():
         min=0.0,
         max=1,
         default=0,
-        description="how wide is the angle in a split if this split comes from the trunk",
-    )
+        description="how wide is the angle in a split if this split comes from the trunk")
+
     Scene.randomangle = FloatProperty(
         name="Branch Variations",
-        default=.5,
-    )
+        default=.5)
+
     Scene.trunk_variation = FloatProperty(
         name="Trunk Variation",
-        default=.1,
-    )
+        default=.1)
 
     Scene.radius = FloatProperty(
         name="Radius",
         min=0.01,
-        default=1,
-    )
+        default=1)
+
     Scene.radius_dec = FloatProperty(
         name="Radius Decrease",
         min=0.01,
         max=1.0,
         default=0.95,
-        description="relative radius after each iteration, low value means fast radius decrease")
+        description="Relative radius after each iteration, low value means fast radius decrease")
 
     Scene.iteration = IntProperty(
         name="Branch Iterations",
         min=1,
-        default=20,
-    )
+        default=20)
 
     Scene.preserve_end = IntProperty(
         name="Trunk End",
@@ -1425,52 +1435,49 @@ def register():
         name="Trunk Iterations",
         min=0,
         default=9,
-        description="iteration from from which first split occures",
-    )
+        description="Iteration from from which first split occurs")
+
     Scene.trunk_split_proba = FloatProperty(
         name="Trunk Split Probability",
         min=0.0,
         max=1.0,
         default=0.5,
-        description="probability for a branch to split. WARNING : sensitive",
-    )
+        description="probability for a branch to split. WARNING : sensitive")
 
     Scene.split_proba = FloatProperty(
         name="Split Probability",
         min=0.0,
         max=1.0,
         default=0.25,
-        description="probability for a branch to split. WARNING : sensitive",
-    )
+        description="Probability for a branch to split. \nWARNING : sensitive")
+
     Scene.trunk_space = FloatProperty(
         name="Trunk Length",
         min=0.01,
         default=.7,
-        description="trunk length",
-    )
+        description="Length of the trunk")
 
     Scene.branch_length = FloatProperty(
         name="Branch Length",
         min=0.01,
         default=.55,
-        description="branch length",
-    )
+        description="Branch length")
+
     Scene.split_angle = FloatProperty(
         name="Split Angle",
         min=0.0,
         max=1,
         default=.2,
-        description="how wide is the angle in a split",
-    )
+        description="Width of the angle in a split")
 
     Scene.gravity_strength = FloatProperty(
         name="Gravity Strength",
-        default=0.0,
-    )
+        default=0.0)
 
     Scene.gravity_start = IntProperty(
         name="Gravity Start Iteration",
         default=0)
+
     Scene.gravity_end = IntProperty(
         name="Gravity End Iteration",
         default=40)
@@ -1478,7 +1485,7 @@ def register():
     Scene.obstacle = StringProperty(
         name='Obstacle',
         default='',
-        description="the name of the obstacle to avoid. WARNING: location,rotaion and scale must be applied. Check the normals.")
+        description="Obstacle to avoid. \nWARNING: location,rotaion and scale must be applied. Check the normals.")
 
     Scene.obstacle_strength = FloatProperty(
         name="Obstacle Strength",
@@ -1487,8 +1494,7 @@ def register():
 
     Scene.SeedProp = IntProperty(
         name="Seed",
-        default=randint(0, 1000),
-    )
+        default=randint(0, 1000))
 
     Scene.create_armature = BoolProperty(
         name='Create Armature',
@@ -1511,6 +1517,7 @@ def register():
         name="Unwrap",
         default=False,
         description="unwrap tree. WARNING: takes time, check last")
+
     Scene.mat = BoolProperty(
         name="Create New Material",
         default=False,
@@ -1545,15 +1552,15 @@ def register():
     Scene.number = IntProperty(
         name="Number of Leaves",
         default=10000)
-    
+
     Scene.display = IntProperty(
         name="Particles in Viewport",
         default=500)
 
     Scene.break_chance = FloatProperty(
         name="Break Chance",
-        default =0.02)
-    
+        default=0.02)
+
     Scene.bark_material = StringProperty(
         name="Bark Material")
 
