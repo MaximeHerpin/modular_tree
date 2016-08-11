@@ -40,7 +40,22 @@ from collections import defaultdict
 
 
 class Module:
+    """TODO - Summary
+
+    Methods:
+        __init__ - TODO: this can be a copy of the method's summary
+        __repr__ - TODO
+    """
+
     def __init__(self, entree, sortie, verts, faces):
+        """TODO - Summary
+
+        Args:
+            entree - TODO
+            sortie - TODO
+            verts - TODO
+            faces - TODO
+        """
         self.entree = entree
         self.sortie = sortie
         self.verts = verts
@@ -70,7 +85,23 @@ end_cap = Module(
 
 
 class Split:
+    """TODO - Summary
+
+    Methods:
+        __init__ - TODO: this can be a copy of the method's summary
+    """
+
     def __init__(self, entree, sortie, verts1, verts2, faces, seams):
+        """TODO - Summary
+
+        Args:
+            entree - TODO
+            sortie - TODO
+            verts1 - TODO
+            verts2 - TODO
+            faces - TODO
+            seams - TODO
+        """
         self.entree = entree
         self.sortie = sortie
         self.verts1 = verts1
@@ -80,6 +111,16 @@ class Split:
 
 
 def interpolate(verts1, verts2, t):
+    """TODO - Summary
+
+    Args:
+        verts1 - TODO
+        verts2 - TODO
+        t - TODO
+
+    Returns:
+        TODO
+    """
     return [Vector(verts1[i]) * (1 - t) + Vector(verts2[i]) * t for i in range(len(verts1))]
 
 
@@ -216,12 +257,22 @@ trunk = Split(
 
 
 class Trunk:
-    def __init__(self, roots, stem, verts, faces, Seams):
+    """TODO - Summary"""
+    def __init__(self, roots, stem, verts, faces, seams):
+        """TODO - Summary
+
+        Args:
+            roots - TODO
+            stem - TODO
+            verts - TODO
+            faces - TODO
+            seams - TODO
+        """
         self.roots = roots
         self.stem = stem
         self.verts = verts
         self.faces = faces
-        self.Seams = Seams
+        self.Seams = seams
 
 
 R1 = Trunk(
@@ -320,6 +371,11 @@ Nodes, Links = (
 
 # This part is heavilly inspired by the "UV Align\Distribute" addon made by Rebellion (Luca Carella)
 def initbmesh():
+    """Initializes bmesh.
+
+    Details:
+        Gets bmesh from current object's mesh? TODO
+    """
     global bm
     global uvlayer
     bm = bmesh.from_edit_mesh(bpy.context.edit_object.data)
@@ -327,6 +383,14 @@ def initbmesh():
 
 
 def b_box_center(island):
+    """TODO - Summary
+
+    Args:
+        island - TODO
+
+    Returns:
+        TODO
+    """
     min_x = +1000
     min_y = +1000
     max_x = -1000
@@ -345,6 +409,12 @@ def b_box_center(island):
 
 
 def rotate_island(island, angle):
+    """TODO - Summary
+
+    Args:
+        island - TODO
+        angle - TODO
+    """
     rad = radians(angle)
     center = b_box_center(island)
     for face_id in island:
@@ -361,7 +431,17 @@ def rotate_island(island, angle):
 
 
 class MakeIslands:
+    """TODO - Summary
+
+    Methods:
+        __init__ - TODO: this can be a copy of the method's summary
+        add_to_island - TODO
+        get_islands - TODO
+        active_island - TODO
+        selected_islands - TODO
+    """
     def __init__(self):
+        """TODO - Summary"""
         initbmesh()
         global bm
         global uvlayer
@@ -378,6 +458,11 @@ class MakeIslands:
                         self.selectedIsland.add(face.index)
 
     def add_to_island(self, face_id):
+        """TODO - Summary
+
+        Args:
+            face_id - TODO
+        """
         if face_id in self.faces_left:
             # add the face itself
             self.current_island.append(face_id)
@@ -391,7 +476,13 @@ class MakeIslands:
                     for face in connected_faces:
                         self.add_to_island(face)
 
-    def get_islands(self):
+    def get_islands(self):  # I think this function may need to go and just be done in __init__?
+        """TODO - Summary
+
+        Returns:
+            self.islands -
+        """
+
         self.islands = []  # instance attribute defined outside of __init__!
         self.faces_left = set(self.face_to_verts.keys())  # instance attribute defined outside of __init__!
         while len(self.faces_left) > 0:
@@ -402,6 +493,13 @@ class MakeIslands:
         return self.islands
 
     def active_island(self):
+        """TODO - Summary
+
+        Returns:
+            island - TODO
+            OR
+            None
+        """
         for island in self.islands:
             try:
                 if bm.faces.active.index in island:
@@ -410,6 +508,12 @@ class MakeIslands:
                 return None
 
     def selected_islands(self):
+        """TODO - Summary
+
+        Returns:
+            _selectedIslands - TODO
+        """
+
         _selectedIslands = []
         for island in self.islands:
             if not self.selectedIsland.isdisjoint(island):
@@ -418,6 +522,14 @@ class MakeIslands:
 
 
 def create_system(ob, number, display, vertex_group):
+    """TODO - Summary
+
+    Args:
+        ob - TODO
+        number - TODO
+        display - TODO
+        vertex_group - TODO
+    """
     # get the vertex group
     g = vertex_group
 
@@ -444,6 +556,7 @@ def create_system(ob, number, display, vertex_group):
 
 
 def rotate():
+    """TODO - Summary"""
     bpy.ops.object.editmode_toggle()
     make_islands = MakeIslands()
     bm.verts.ensure_lookup_table()
@@ -485,10 +598,30 @@ def rotate():
 
 
 def add_tuple(t, x):
+    """TODO - Summary
+
+    Args:
+        t - TODO
+        x - TODO
+
+    Returns:
+         TODO - tuple in the form (x + 0, x + 1, x + 2,...for i in t)"""
     return tuple([x + i for i in t])
 
 
 def rot_scale(v_co, scale, directions, rot_z):
+    """TODO - Summary
+
+    Args:
+        v_co - TODO
+        scale - TODO
+        directions - TODO
+        rot_z - TODO
+
+    Returns:
+        v_co - TODO
+    """
+
     (x, y, z) = directions
     directions = Vector((-x, -y, z))
     c = rot_z
@@ -501,6 +634,14 @@ def rot_scale(v_co, scale, directions, rot_z):
 
 
 def joindre(verts, faces, v1_i, v2_i):
+    """TODO - Summary
+
+    Args:
+        verts - TODO
+        faces - TODO
+        v1_i - TODO
+        v2_i - TODO
+    """
     v1 = verts[v1_i[0]]
     n = len(v2_i)
     d = float('inf')
@@ -520,6 +661,36 @@ def joindre(verts, faces, v1_i, v2_i):
 
 def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entree, directions, branch_length, s_index, seams,
          jonc_seams, random_angle, branch_rotation):
+    """TODO - Summary
+
+    Args:
+        verts - TODO
+        faces - TODO
+        indexes - TODO
+        object_verts - TODO
+        object_faces - TODO
+        scale - TODO
+        i1 - TODO
+        i2 - TODO
+        entree - TODO
+        directions - TODO
+        branch_length - TODO
+        s_index - TODO
+        seams - TODO
+        jonc_seams - TODO
+        random_angle - TODO
+        branch_rotation - TODO
+
+    Returns:
+        i1 - TODO
+        i2 - TODO
+        d1 - TODO
+        d2 - TODO
+        r1 - TODO
+        r2 - TODO
+        i1[0] - TODO
+        i2[0] - TODO
+    """
     random1 = random_angle * (random() - .5)
     random2 = random_angle * (random() - .5)
     random3 = random_angle * (random() - .5)
@@ -563,10 +734,29 @@ def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entre
             dist = length
             ns_index = i
     seams.append((s_index, ns_index))
-    return i1, i2, d1, d2, r1, r2, i1[0], i2[0]
+    return i1, i2, d1, d2, r1, r2, i1[0], i2[0]  # no need to return i1[0] and i2[0]...just do that outside of the func
 
 
-def join_branch(verts, faces, indexes, scale, branch_length, branch_verts, direction, rand, s_index, Seams):
+def join_branch(verts, faces, indexes, scale, branch_length, branch_verts, direction, rand, s_index, seams):
+    """TODO - Summary
+
+    Args:
+        verts - TODO
+        faces - TODO
+        indexes - TODO
+        scale - TODO
+        branch_length - TODO
+        branch_verts - TODO
+        direction - TODO
+        rand - TODO
+        s_index - TODO
+        seams - TODO
+
+    Returns:
+        nentree - TODO
+        direction - TODO
+        ns_index - TODO
+    """
     barycentre = Vector((0, 0, 0))
     random1 = rand * (random() - .5)
     random2 = rand * (random() - .5)
@@ -595,25 +785,49 @@ def join_branch(verts, faces, indexes, scale, branch_length, branch_verts, direc
         if length < dist:
             dist = length
             ns_index = i
-    Seams.append((s_index, ns_index))
+    seams.append((s_index, ns_index))
 
     return nentree, direction, ns_index
 
 
-def gravity(dir, gravity_strength):
+def gravity(direction, gravity_strength):
+    """TODO - Summary
+
+    Args:
+        direction - TODO
+        gravity_strength - TODO
+
+    Returns:
+        TODO
+    """
     v = Vector((0, 0, -1))
-    norm = dir.length
-    factor = (dir.cross(v)).length / norm / 100 * gravity_strength
-    return dir + v * factor
+    norm = direction.length
+    factor = (direction.cross(v)).length / norm / 100 * gravity_strength
+    return direction + v * factor
 
 
 def add_seams(indexes, seams):
+    """TODO - Summary
+
+    Args:
+        indexes - TODO
+        seams - TODO
+    """
     n = len(indexes)
     for i in range(n):
         seams.append((indexes[i], indexes[(i + 1) % n]))
 
 
 def create_tree(position):
+    """TODO - Summary
+
+    Details:
+        TODO - This is so big! Please add some notes here as to the general process and add some comments in the code.
+
+    Args:
+        position - Position to generate tree at?
+    """
+
     for select_ob in bpy.context.selected_objects:
         select_ob.select = False
     scene = bpy.context.scene
@@ -1117,13 +1331,15 @@ class LoadTreePresetOperator(Operator):
         prsets_directory = os.path.join(os.path.dirname(__file__), "mod_tree_presets")
         prset = os.path.join(prsets_directory, self.filename)  # mtp stands for modular tree preset
         with open(prset, 'r') as p:
-            preset = p.readlines()
+            preset = p.readlines()  # readlines will make a list ie. "a\nb\nc\nd\n" is ["a", "b", "c", "d"]
 
+        # each line should be a preset
         for line in preset:
+            # verify that a colon is in the line to avoid an error with line.split(":")
             if ":" in line:
                 setting, value = line.split(":")
                 if setting == "preserve_trunk":
-                    scene.preserve_trunk = bool(value)
+                    scene.preserve_trunk = bool(value)  # the value is a string so cast to the correct type first
                 elif setting == "trunk_split_angle":
                     scene.trunk_split_angle = float(value)
                 elif setting == "randomangle":
