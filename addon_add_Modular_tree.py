@@ -1207,6 +1207,20 @@ class MakeTreePanel(Panel):
         col.prop(scene, 'branch_rotate')
         col.prop(scene, 'branch_random_rotate')
 
+
+class RootsAndTrunksPanel(Panel):
+    bl_label = "Roots and Trunk"
+    bl_idname = "3D_VIEW_PT_layout_MakeTreeRootsAndTrunks"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'TOOLS'
+    bl_context = "objectmode"
+    bl_category = 'Tree'
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        scene = context.scene
+        layout = self.layout
+
         box = layout.box()
         box.label("Roots")
         box.prop(scene, 'create_roots')
@@ -1225,6 +1239,20 @@ class MakeTreePanel(Panel):
             sbox.prop(scene, 'trunk_split_proba')
             sbox.prop(scene, 'trunk_split_angle')
 
+
+class TreeBranchesPanel(Panel):
+    bl_label = "Branches"
+    bl_idname = "3D_VIEW_PT_layout_MakeTreeBranches"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'TOOLS'
+    bl_context = "objectmode"
+    bl_category = 'Tree'
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        scene = context.scene
+        layout = self.layout
+
         box = layout.box()
         box.label("Branches")
         box.prop(scene, 'break_chance')
@@ -1241,6 +1269,20 @@ class MakeTreePanel(Panel):
         box.prop_search(scene, "obstacle", scene, "objects")
         if bpy.data.objects.get(scene.obstacle) is not None:
             box.prop(scene, 'obstacle_strength')
+
+
+class AdvancedSettingsPanel(Panel):
+    bl_label = "Advanced Settings"
+    bl_idname = "3D_VIEW_PT_layout_MakeTreeAdvancedSettings"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'TOOLS'
+    bl_context = "objectmode"
+    bl_category = 'Tree'
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        scene = context.scene
+        layout = self.layout
 
         box = layout.box()
         box.prop(scene, 'mat')
@@ -1322,7 +1364,8 @@ class MakeTreePresetsPanel(Panel):
 # classes to register
 classes = [MakeTreeOperator, UpdateTreeOperator, SaveTreePresetOperator, RemoveTreePresetOperator,
            LoadTreePresetOperator,
-           MakeTreePanel, TreePresetLoadMenu, TreePresetRemoveMenu, MakeTreePresetsPanel]
+           MakeTreePanel, RootsAndTrunksPanel, TreeBranchesPanel, AdvancedSettingsPanel,
+           TreePresetLoadMenu, TreePresetRemoveMenu, MakeTreePresetsPanel]
 
 
 def register():
