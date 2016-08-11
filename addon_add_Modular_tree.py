@@ -724,7 +724,7 @@ def create_tree(position):
                 (hit_pos, face_normal, face_index) = obs.ray_cast(pos, end)
                 if face_index != -1:
                     force = abs(min(direction.dot(face_normal), 0)) * scene.repel_force / (
-                    ((hit_pos - pos).length) + 1) * 2
+                        ((hit_pos - pos).length) + 1) * 2
                     direction += face_normal * force
 
             split_probability = scene.trunk_split_proba if Trunk else scene.split_proba
@@ -741,7 +741,7 @@ def create_tree(position):
                 nextremites.append((ni, radius * .98, direction, nsi, Nb, Trunk, curr_rotation))
 
             elif i < (scene.iteration + scene.trunk_length - 1) and (
-                (i == scene.trunk_length + 1) or (random() < split_probability)):
+                        (i == scene.trunk_length + 1) or (random() < split_probability)):
                 variation = scene.trunk_variation if Trunk else scene.randomangle
                 randJ = 1
                 J = Joncts[randJ] if (not (Trunk)) else trunk
@@ -829,7 +829,6 @@ def create_tree(position):
         bpy.ops.object.editmode_toggle()
     if scene.particle:
         Create_system(obj, scene.number, scene.display, vgroups["leaf"])
-
     if scene.uv:
         test = [[False, []] for i in range(len(verts))]
         for (a, b) in Seams:
@@ -1145,6 +1144,34 @@ class LoadTreePresetOperator(Operator):
                     scene.number = int(value)
                 elif setting == "display":
                     scene.display = int(value)
+
+        return {'FINISHED'}
+
+
+class UpdateTreeOperator(bpy.types.Operator):
+    """Update a tree"""
+    bl_idname = "object.update_tree"
+    bl_label = "Update Selected Tree"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        scene = context.scene
+
+        seed(scene.SeedProp)
+        obj = bpy.context.active_object
+        if obj.get('prop') == "is_tree":
+            Position = obj.location
+            Scale = obj.scale
+            Rotation = obj.rotation_euler
+
+            create_tree(Position)
+            ob = bpy.context.active_object
+            ob.scale = Scale
+            ob.rotation_euler = Rotation
+            ob.select = False
+            obj.select = True
+            bpy.ops.object.delete(use_global=False)
+            ob.select = True
 
         return {'FINISHED'}
 
