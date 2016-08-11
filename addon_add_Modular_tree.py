@@ -1287,7 +1287,7 @@ class AdvancedSettingsPanel(Panel):
         col = box.column(True)
         col.prop(scene, 'branch_rotate')
         col.prop(scene, 'branch_random_rotate')
-
+        box.prop(scene, 'mat')
         if not scene.mat:
             box.prop_search(scene, "bark_material", bpy.data, "materials")
         box.prop(scene, 'create_armature')
