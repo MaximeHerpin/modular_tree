@@ -40,21 +40,21 @@ from collections import defaultdict
 
 
 class Module:
-    """TODO - Summary
+    """This is used to represent a branch
 
     Methods:
-        __init__ - TODO: this can be a copy of the method's summary
-        __repr__ - TODO
+        __init__ - Initialises the variables
+        __repr__ - How the Module is represented
     """
 
     def __init__(self, entree, sortie, verts, faces):
-        """TODO - Summary
+        """Initialises the variables
 
         Args:
-            entree - TODO
-            sortie - TODO
-            verts - TODO
-            faces - TODO
+            entree - (list of int) The indexes of the entry vertices
+            sortie - (list of int) The indexes of the exit vertices
+            verts - (list of vector) The vertices of the Module 
+            faces - (list of (int, int, int, int)) The faces of the Module
         """
         self.entree = entree
         self.sortie = sortie
@@ -85,22 +85,22 @@ end_cap = Module(
 
 
 class Split:
-    """TODO - Summary
+    """This is used to represent a branch split, each vertex position is an interpolation of two vectors, which allows more variation
 
     Methods:
-        __init__ - TODO: this can be a copy of the method's summary
+        __init__ - Initialises the variables
     """
 
     def __init__(self, entree, sortie, verts1, verts2, faces, seams):
-        """TODO - Summary
+        """Initialises the variables
 
         Args:
-            entree - TODO
-            sortie - TODO
-            verts1 - TODO
-            verts2 - TODO
-            faces - TODO
-            seams - TODO
+            entree - (list of int) The indexes of the entry vertices
+            sortie - ((list of int, list of int)) The indexes of the exit vertices
+            verts1 - (list of vector) The vertices of the split in one form
+            verts2 - (list of vector) The vertices of the split in the second form
+            faces - (list of (int, int, int, int)) The faces of the Split
+            seams - (list of (int, int)) The seams of the Split
         """
         self.entree = entree
         self.sortie = sortie
@@ -111,15 +111,15 @@ class Split:
 
 
 def interpolate(verts1, verts2, t):
-    """TODO - Summary
+    """Linearly interpolates the vertices positions
 
     Args:
-        verts1 - TODO
-        verts2 - TODO
-        t - TODO
+        verts1 - (list of vector) The first positions
+        verts2 - (list of vector) The second positions
+        t - (float) The interpolation factor
 
     Returns:
-        TODO
+        (list of vector) The interpolated positions
     """
     return [Vector(verts1[i]) * (1 - t) + Vector(verts2[i]) * t for i in range(len(verts1))]
 
@@ -257,16 +257,16 @@ trunk = Split(
 
 
 class Trunk:
-    """TODO - Summary"""
+    """This is used to represent the base of a trunk with roots"""
     def __init__(self, roots, stem, verts, faces, seams):
-        """TODO - Summary
+        """Initializes the varaibles
 
         Args:
-            roots - TODO
-            stem - TODO
-            verts - TODO
-            faces - TODO
-            seams - TODO
+            roots - (list of (Vector, list of int)) The directions and indexes of roots exits 
+            stem - (list of int) The indexes of the trunk exit
+            verts - (list of Vector) The vertices
+            faces - (list of (int, int, int, int)) The faces 
+            seams - (list of (int, int)) The seams
         """
         self.roots = roots
         self.stem = stem
@@ -522,13 +522,13 @@ class MakeIslands:
 
 
 def create_system(ob, number, display, vertex_group):
-    """TODO - Summary
+    """ Creates a particle system
 
     Args:
-        ob - TODO
-        number - TODO
-        display - TODO
-        vertex_group - TODO
+        ob - (object) The object on which the particle system is created
+        number - (int) The number of particles that will be rendered
+        display - (int) The number of particles displayed on the viewport
+        vertex_group - (vertex group) The vertex group controlling the density of particles
     """
     # get the vertex group
     g = vertex_group
@@ -556,7 +556,7 @@ def create_system(ob, number, display, vertex_group):
 
 
 def rotate():
-    """TODO - Summary"""
+    """After automatic unwrap, the uv islands are not corectly oriented, this function corrects it by rotating them acordingly"""
     bpy.ops.object.editmode_toggle()
     make_islands = MakeIslands()
     bm.verts.ensure_lookup_table()
@@ -598,28 +598,28 @@ def rotate():
 
 
 def add_tuple(t, x):
-    """TODO - Summary
+    """Adds a value x to each component of the tuple
 
     Args:
-        t - TODO
-        x - TODO
+        t - (tupe)
+        x - (int,float)
 
     Returns:
-         TODO - tuple in the form (x + 0, x + 1, x + 2,...for i in t)"""
+         tuple in the form (x + a, x + b, x + c,...) where t is in the form (a, b, c,...)"""
     return tuple([x + i for i in t])
 
 
 def rot_scale(v_co, scale, directions, rot_z):
-    """TODO - Summary
+    """ Rotates and scales a set of vectors
 
     Args:
-        v_co - TODO
-        scale - TODO
-        directions - TODO
-        rot_z - TODO
+        v_co - (list of (float, float, float))  The coordinates of the vectors
+        scale - (foat) The scalar by xhich each vector is multiplied
+        directions - (tuple) A vector that would be collinear whith a former (0,0,1) vector after the rotation
+        rot_z - (float) The rotation of the set of vector around directions
 
     Returns:
-        v_co - TODO
+        A set of coordinates representing all vectors of v_co after rotation and scaling
     """
 
     (x, y, z) = directions
@@ -634,13 +634,13 @@ def rot_scale(v_co, scale, directions, rot_z):
 
 
 def joindre(verts, faces, v1_i, v2_i):
-    """TODO - Summary
+    """ Takes two sets of eight vertices, a list of vertices, a list of faces, and adds new faces as the bridge edge loops operator would do.
 
     Args:
-        verts - TODO
-        faces - TODO
-        v1_i - TODO
-        v2_i - TODO
+        verts - (list of (Vector, Vector, Vector)) The list of vertices
+        faces - (list of (int, int, int, int)) The list of faces
+        v1_i - (int, int, int, int, int, int, int, int) The indexes of the first group of vertices
+        v2_i - (int, int, int, int, int, int, int, int) The indexes of the second group of vertices
     """
     v1 = verts[v1_i[0]]
     n = len(v2_i)
@@ -661,35 +661,36 @@ def joindre(verts, faces, v1_i, v2_i):
 
 def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entree, directions, branch_length, s_index, seams,
          jonc_seams, random_angle, branch_rotation):
-    """TODO - Summary
-
+    """ The goal is to add a split to the tree. To do that, there is the list of existing vertices, the list of existing faces, the list of vertices to add and the list of faces to add.
+        To know where to add the split, the indexes of eight vertices is given.
+        
     Args:
-        verts - TODO
-        faces - TODO
-        indexes - TODO
-        object_verts - TODO
-        object_faces - TODO
-        scale - TODO
-        i1 - TODO
-        i2 - TODO
-        entree - TODO
-        directions - TODO
-        branch_length - TODO
-        s_index - TODO
-        seams - TODO
-        jonc_seams - TODO
-        random_angle - TODO
-        branch_rotation - TODO
+        verts - (list of (Vector, Vector, Vector)) The existing vertices
+        faces - (list of (int, int, int, int)) The existing faces
+        indexes - ((int, int, int, int, int, int, int, int)) the indexes of the end of the branch on which the split will be added
+        object_verts - (list of (Vector, Vector, Vector)) The vertices to add
+        object_faces - (list of (int, int, int, int)) The faces to add
+        scale - (float) the scale of which the split must be
+        i1 - ((int, int, int, int, int, int, int, int))The indexes of the first end of the split
+        i2 - ((int, int, int, int, int, int, int, int)) The indexes of the second end of the split
+        entree - ((int, int, int, int, int, int, int, int)) the indexes of the base of the split
+        directions - (Vector) The direction the split will be pointing at
+        branch_length - (float) the distance between the branch end and the split base
+        s_index - (int) The index of the last vertex that is part of a seam 
+        seams - (list of (int, int)) The seams of the tree
+        jonc_seams - (list of (int, int)) The seams of the split
+        random_angle - (float) The amount of possible deviation between directions and the actual split direction
+        branch_rotation - (float) The rotation of the split around directions
 
     Returns:
-        i1 - TODO
-        i2 - TODO
-        d1 - TODO
-        d2 - TODO
-        r1 - TODO
-        r2 - TODO
-        i1[0] - TODO
-        i2[0] - TODO
+        i1 - ((int, int, int, int, int, int, int, int)) The indexes of the first end of the split
+        i2 - ((int, int, int, int, int, int, int, int)) The indexes of the second end of the split
+        d1 - (Vector) The direction of the first end of the split
+        d2 - (Vector) The direction of the second end of the split
+        r1 - (float) The radius of the first end of the split
+        r2 - (float) The radius of the second end of the split
+        i1[0] - (int) The index of the last vertex that is part of a seam on the first end of the split
+        i2[0] - (int) The index of the last vertex that is part of a seam on the second end of the split
     """
     random1 = random_angle * (random() - .5)
     random2 = random_angle * (random() - .5)
@@ -738,24 +739,25 @@ def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entre
 
 
 def join_branch(verts, faces, indexes, scale, branch_length, branch_verts, direction, rand, s_index, seams):
-    """TODO - Summary
+    """ The goal is to add a Module to the tree. To do that, there is the list of existing vertices, the list of existing faces, the list of vertices to add and the list of faces to add.
+        To know where to add the Module, the indexes of eight vertices is given.
 
     Args:
-        verts - TODO
-        faces - TODO
-        indexes - TODO
-        scale - TODO
-        branch_length - TODO
-        branch_verts - TODO
-        direction - TODO
-        rand - TODO
-        s_index - TODO
-        seams - TODO
+        verts - (list of (Vector, Vector, Vector)) The existing vertices
+        faces - (list of (int, int, int, int)) The existing faces
+        indexes - ((int, int, int, int, int, int, int, int)) the indexes of the end of the branch on which the Module will be added
+        scale - (float) the scale of which the Module must be
+        branch_length - (float) the distance between the branch end and the Module base
+        branch_verts - (list of (Vector, Vector, Vector)) The vertices to add
+        direction - (Vector) The direction the Module will be pointing at
+        rand - (float) The amount of possible deviation between direction and the actual Module direction
+        s_index - (int) The index of the last vertex that is part of a seam 
+        seams - (list of (int, int)) The seams of the tree
 
     Returns:
-        nentree - TODO
-        direction - TODO
-        ns_index - TODO
+        nentree - ((int, int, int, int, int, int, int, int)) The indexes of the end of the Module
+        direction - (Vector) The direction of the end of the Module
+        ns_index - (int) The index of the last vertex that is part of a seam on the end of the Module
     """
     barycentre = Vector((0, 0, 0))
     random1 = rand * (random() - .5)
@@ -791,14 +793,14 @@ def join_branch(verts, faces, indexes, scale, branch_length, branch_verts, direc
 
 
 def gravity(direction, gravity_strength):
-    """TODO - Summary
+    """ Applies a down translation to a vector to simulate gravity
 
     Args:
-        direction - TODO
-        gravity_strength - TODO
+        direction - (Vector) The Vector to apply gravity to
+        gravity_strength - (float)
 
     Returns:
-        TODO
+        (Vector) The vector direction translated downward
     """
     v = Vector((0, 0, -1))
     norm = direction.length
@@ -807,11 +809,11 @@ def gravity(direction, gravity_strength):
 
 
 def add_seams(indexes, seams):
-    """TODO - Summary
+    """Takes a list of indexes and couples them
 
     Args:
-        indexes - TODO
-        seams - TODO
+        indexes - (list of int)
+        seams - (list of (int, int))
     """
     n = len(indexes)
     for i in range(n):
@@ -819,22 +821,33 @@ def add_seams(indexes, seams):
 
 
 def create_tree(position):
-    """TODO - Summary
+    """Creates a tree
 
     Details:
-        TODO - This is so big! Please add some notes here as to the general process and add some comments in the code.
+        There is a list of vertices, a list of faces and a list of seams.
+        There is a list of all current end of the tree. At each iteration all those ends can evolve in three diferent ways:
+            -The end can continue to grow as a branch, with a new end
+            -The end can be splited in two branches, with a new end each
+            -The end can break
+        Depending on this choice, vertices and faces of a Module, Split or end cap will be added to the vertices and faces list.
+        This processus is executed for both roots and branches generation.
+        After this, the tree object itself is created, the vertices, faces and seams are applied.
+        Once the object is created, it can be unwrapped, a material is asigned or created, and an armature is created.
+        
 
     Args:
-        position - Position to generate tree at?
+        position - (Vector) Position to generate tree at
     """
-
+    
+    #deselecting all objects
     for select_ob in bpy.context.selected_objects:
         select_ob.select = False
     scene = bpy.context.scene
-
+    
     make_roots = scene.create_roots
     trunk2 = scene.preserve_trunk
     radius = scene.radius
+    #The list of bones is a list of (string : parent name, string : bone name, Vector : tail position, Vector : head position)
     bones = []
     leafs_start_index = 0
     big_j = S1
@@ -843,6 +856,7 @@ def create_tree(position):
 
     last_bone = (1, Vector((0, 0, 1)))
 
+    # Roots generation
     if not make_roots:
         verts = [Vector(v) * radius for v in root.verts]
         faces = [f for f in root.faces]
@@ -888,7 +902,7 @@ def create_tree(position):
 
     radius = scene.radius
     extremites = [(extr, radius, Vector((0, 0, 1)), extr[0], last_bone, trunk2, 0)]
-
+    #Branchs generation
     for i in range(scene.iteration + scene.trunk_length):
         if i == scene.iteration + scene.trunk_length - scene.leafs_iteration_length:
             leafs_start_index = len(verts)
@@ -997,7 +1011,7 @@ def create_tree(position):
                 nextremites.append((ni, radius * scene.radius_dec, direction, nsi, nb, trunk2, curr_rotation))
 
         extremites = nextremites
-
+    #Mesh and object creation
     mesh = bpy.data.meshes.new("tree")
 
     mesh.from_pydata(verts, [], faces)
@@ -1013,23 +1027,24 @@ def create_tree(position):
     vgroups = obj.vertex_groups
     vgroups.active_index = vgroups["leaf"].index
     g.add([i for i in range(leafs_start_index, len(verts))], 1.0, "ADD")
+    # Normals are a bit messy, they are made consistent
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.mesh.normals_make_consistent(inside=False)
     bpy.ops.mesh.select_all(action='DESELECT')
     bpy.ops.mesh.select_mode(type="EDGE")
     bpy.ops.object.editmode_toggle()
-
+    #Sometimes the make normals consistent puts them all in the wrong direction, this fixes it
     if obj.data.polygons[0].normal.x < 0:
         bpy.ops.object.editmode_toggle()
         bpy.ops.mesh.select_all(action='SELECT')
         bpy.ops.mesh.normals_make_consistent(inside=True)
         bpy.ops.mesh.select_all(action='DESELECT')
         bpy.ops.object.editmode_toggle()
-
+    #Particle setup
     if scene.particle:
         create_system(obj, scene.number, scene.display, vgroups["leaf"])
-
+    #UV unwrapping
     if scene.uv:
         test = [[False, []] for i in range(len(verts))]
         for (a, b) in seams2:
@@ -1050,7 +1065,7 @@ def create_tree(position):
         bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
         bpy.ops.object.editmode_toggle()
         rotate()
-
+    #Material creation
     if scene.mat:
         if not bpy.context.scene.render.engine == 'CYCLES':
             bpy.context.scene.render.engine = 'CYCLES'
@@ -1098,7 +1113,7 @@ def create_tree(position):
 
     elif bpy.data.materials.get(scene.bark_material) is not None:
         obj.active_material = bpy.data.materials.get(scene.bark_material)
-
+    #Armature creation
     if scene.create_armature:
         bpy.ops.object.add(
             type='ARMATURE',
