@@ -318,7 +318,7 @@ Nodes, Links = (
      ([21, 'Location'], [18, 'Vector'])])
 
 
-# This part is heavilly inspired by the "UV Align\Distribute" addon made by Rebellion (Luca Carella)
+# This part is heavily inspired by the "UV Align\Distribute" addon made by Rebellion (Luca Carella)
 def initbmesh():
     global bm
     global uvlayer
