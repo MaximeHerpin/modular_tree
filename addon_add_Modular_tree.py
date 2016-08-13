@@ -620,6 +620,52 @@ def fix_normals(inside):
     bpy.ops.mesh.select_all(action='DESELECT')
     bpy.ops.object.mode_set(mode='OBJECT')
 
+def build_material():
+    if not bpy.context.scene.render.engine == 'CYCLES':
+        bpy.context.scene.render.engine = 'CYCLES'
+
+    mat = bpy.data.materials.new(name="Tree")
+    mat.diffuse_color = (0.214035, 0.0490235, 0.0163952)
+    mat.specular_color = (0.0469617, 0.0469617, 0.0469617)
+    mat.specular_hardness = 10
+    mat.use_nodes = True
+    mat.node_tree.nodes.remove(mat.node_tree.nodes.get('Diffuse BSDF'))
+    mat.node_tree.nodes.remove(mat.node_tree.nodes.get('Material Output'))
+
+    for (n_type, loc, name, label) in Nodes:
+        new_node = mat.node_tree.nodes.new(n_type)
+        new_node.location = loc
+        new_node.name = name
+        new_node.label = label
+
+    nodes = mat.node_tree.nodes
+    nodes['Mapping'].scale = (15, 15, 15)
+    nodes["Noise Texture"].inputs[1].default_value = 2
+    nodes["Noise Texture"].inputs[2].default_value = 10
+    nodes["Mix"].blend_type = 'MULTIPLY'
+    nodes["Mix.002"].blend_type = 'MULTIPLY'
+    nodes["Mix.002"].inputs[0].default_value = 0.95
+    nodes["Math.001"].operation = 'MULTIPLY'
+    nodes["Math.001"].inputs[1].default_value = 30
+    nodes["moss height"].color_ramp.elements[0].position = 0.3
+    nodes["moss height"].color_ramp.elements[1].position = 0.5
+    nodes["Noise Texture.001"].inputs[1].default_value = 0.7
+    nodes["Noise Texture.001"].inputs[2].default_value = 10
+    nodes["Bright/Contrast"].inputs[2].default_value = 5
+    nodes["moss color"].blend_type = 'MULTIPLY'
+    nodes["moss color"].inputs[2].default_value = [0.342, 0.526, 0.353, 1.0]
+    nodes["color variation"].blend_type = 'OVERLAY'
+    nodes["color variation"].inputs[2].default_value = [0.610, 0.648, 0.462, 1.0]
+
+    mat.node_tree.links.new(nodes["Texture Coordinate"].outputs[3], nodes["Vector Math"].inputs[1])
+    links = mat.node_tree.links
+    for (f, t) in Links:
+        from_node = mat.node_tree.nodes[f[0]]
+        to_node = mat.node_tree.nodes[t[0]]
+        links.new(from_node.outputs[f[1]], to_node.inputs[t[1]])
+
+    return mat
+
 
 def create_tree(position):
     for select_ob in bpy.context.selected_objects:
@@ -668,7 +714,7 @@ def create_tree(position):
                 barycentre /= len(indexes)
 
                 if i > 2:
-                    direction += .7 * Vector((0, 0, -1)) / (max(1, 20 * abs(barycentre.z)))
+                    direction += 0.7 * Vector((0, 0, -1)) / (max(1, 20 * abs(barycentre.z)))
                 ni1, ni2, dir1, dir2, r1, r2, nsi1, nsi2 = join(verts, faces, indexes, jonct_verts, big_j.faces,
                                                                 radius * roots_rad_dec, i1, i2, entree, direction,
                                                                 roots_length, s_index, seams2, jonct_seams,
@@ -726,7 +772,7 @@ def create_tree(position):
                     bones.append((Lb[0], len(bones) + 2, Lb[1], sortie))
 
                 nb = (len(bones) + 1, sortie)
-                nextremites.append((ni, radius * .98, direction, nsi, nb, trunk2, curr_rotation))
+                nextremites.append((ni, radius * 0.98, direction, nsi, nb, trunk2, curr_rotation))
 
             elif i == scene.iteration + scene.trunk_length - 1 or random() < scene.break_chance:
                 end_verts = [Vector(v) for v in end_cap.verts]
@@ -817,7 +863,7 @@ def create_tree(position):
         create_system(obj, scene.number, scene.display, vgroups["leaf"])
 
     if scene.uv:
-        test = [[False, []] for i in range(len(verts))]
+        test = [[False, []] for _ in range(len(verts))]
         for (a, b) in seams2:
             a, b = min(a, b), max(a, b)
             test[a][0] = True
@@ -838,49 +884,7 @@ def create_tree(position):
         rotate()
 
     if scene.mat:
-        if not bpy.context.scene.render.engine == 'CYCLES':
-            bpy.context.scene.render.engine = 'CYCLES'
-
-        mat = bpy.data.materials.new(name="Tree")
-        mat.diffuse_color = (0.214035, 0.0490235, 0.0163952)
-        mat.specular_color = (0.0469617, 0.0469617, 0.0469617)
-        mat.specular_hardness = 10
-        mat.use_nodes = True
-        mat.node_tree.nodes.remove(mat.node_tree.nodes.get('Diffuse BSDF'))
-        mat.node_tree.nodes.remove(mat.node_tree.nodes.get('Material Output'))
-
-        for (n_type, loc, name, label) in Nodes:
-            new_node = mat.node_tree.nodes.new(n_type)
-            new_node.location = loc
-            new_node.name = name
-            new_node.label = label
-
-        nodes = mat.node_tree.nodes
-        nodes['Mapping'].scale = (15, 15, 15)
-        nodes["Noise Texture"].inputs[1].default_value = 2
-        nodes["Noise Texture"].inputs[2].default_value = 10
-        nodes["Mix"].blend_type = 'MULTIPLY'
-        nodes["Mix.002"].blend_type = 'MULTIPLY'
-        nodes["Mix.002"].inputs[0].default_value = .95
-        nodes["Math.001"].operation = 'MULTIPLY'
-        nodes["Math.001"].inputs[1].default_value = 30
-        nodes["moss height"].color_ramp.elements[0].position = .3
-        nodes["moss height"].color_ramp.elements[1].position = .5
-        nodes["Noise Texture.001"].inputs[1].default_value = .7
-        nodes["Noise Texture.001"].inputs[2].default_value = 10
-        nodes["Bright/Contrast"].inputs[2].default_value = 5
-        nodes["moss color"].blend_type = 'MULTIPLY'
-        nodes["moss color"].inputs[2].default_value = [0.342, 0.526, 0.353, 1.0]
-        nodes["color variation"].blend_type = 'OVERLAY'
-        nodes["color variation"].inputs[2].default_value = [0.610, 0.648, 0.462, 1.0]
-
-        mat.node_tree.links.new(nodes["Texture Coordinate"].outputs[3], nodes["Vector Math"].inputs[1])
-        links = mat.node_tree.links
-        for (f, t) in Links:
-            from_node = mat.node_tree.nodes[f[0]]
-            to_node = mat.node_tree.nodes[t[0]]
-            links.new(from_node.outputs[f[1]], to_node.inputs[t[1]])
-        obj.active_material = mat
+        obj.active_material = build_material()
 
     elif bpy.data.materials.get(scene.bark_material) is not None:
         obj.active_material = bpy.data.materials.get(scene.bark_material)
