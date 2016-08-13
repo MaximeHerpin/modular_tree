@@ -799,19 +799,17 @@ def create_tree(position):
     vgroups = obj.vertex_groups
     vgroups.active_index = vgroups["leaf"].index
     g.add([i for i in range(leafs_start_index, len(verts))], 1.0, "ADD")
-    bpy.ops.object.mode_set(mode='EDIT')
-    bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.mesh.normals_make_consistent(inside=False)
-    bpy.ops.mesh.select_all(action='DESELECT')
-    bpy.ops.mesh.select_mode(type="EDGE")
-    bpy.ops.object.editmode_toggle()
 
-    if obj.data.polygons[0].normal.x < 0:
-        bpy.ops.object.editmode_toggle()
+    # fix normals and make sure they are fixed
+    def fix_normals(inside):
+        bpy.ops.object.mode_set(mode='EDIT')
         bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.mesh.normals_make_consistent(inside=True)
+        bpy.ops.mesh.normals_make_consistent(inside=inside)
         bpy.ops.mesh.select_all(action='DESELECT')
-        bpy.ops.object.editmode_toggle()
+        bpy.ops.object.mode_set(mode='OBJECT')
+    fix_normals(False)
+    if obj.data.polygons[0].normal.x < 0:
+        fix_normals(True)
 
     if scene.particle:
         create_system(obj, scene.number, scene.display, vgroups["leaf"])
