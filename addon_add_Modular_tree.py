@@ -28,12 +28,12 @@ bl_info = {
     "category": "Add Mesh"}
 
 import os
-from mathutils import *
-from random import *
-from math import *
+from mathutils import Vector, Matrix
+from random import random, seed, randint
+from math import pi, radians, cos, sin
 
 import bpy
-from bpy.props import *
+from bpy.props import StringProperty, BoolProperty, FloatProperty, IntProperty, EnumProperty
 from bpy.types import Operator, Panel, Scene, Menu
 import bmesh
 from collections import defaultdict
@@ -216,12 +216,12 @@ trunk = Split(
 
 
 class Trunk:
-    def __init__(self, roots, stem, verts, faces, Seams):
+    def __init__(self, roots, stem, verts, faces, seams):
         self.roots = roots
         self.stem = stem
         self.verts = verts
         self.faces = faces
-        self.Seams = Seams
+        self.Seams = seams
 
 
 R1 = Trunk(
@@ -778,10 +778,9 @@ def create_tree(position):
                 end_verts = [Vector(v) for v in end_cap.verts]
                 end_faces = [f for f in end_cap.faces]
                 n = len(verts)
-                # ni, direction, and nsi are not used...does join_branch need to return anything?
-                ni, direction, nsi = join_branch(verts, faces, indexes, radius, scene.trunk_space, end_verts, direction,
-                                                 scene.trunk_variation,
-                                                 s_index, seams2)
+                join_branch(verts, faces, indexes, radius, scene.trunk_space, end_verts, direction,
+                                                 scene.trunk_variation, s_index, seams2)
+
                 faces += [add_tuple(f, n) for f in end_faces]
                 end_seams = [(1, 0), (2, 1), (3, 2), (4, 3), (5, 4), (6, 5), (7, 6), (0, 7)]
                 seams2 += [add_tuple(f, n) for f in end_seams]
@@ -799,9 +798,8 @@ def create_tree(position):
                 length = scene.trunk_space if trunk2 else scene.branch_length
                 ni1, ni2, dir1, dir2, r1, r2, nsi1, nsi2 = join(verts, faces, indexes, jonct_verts, big_j.faces,
                                                                 radius * (1 + scene.radius_dec) / 2, i1, i2, entree,
-                                                                direction,
-                                                                length, s_index, seams2, jonct_seams, variation,
-                                                                new_rotation)
+                                                                direction, length, s_index, seams2, jonct_seams,
+                                                                variation, new_rotation)
                 sortie1 = (verts[ni1[0]] + verts[ni1[4]]) / 2
                 sortie2 = (verts[ni2[0]] + verts[ni2[4]]) / 2
                 nb = len(bones)
@@ -824,8 +822,7 @@ def create_tree(position):
                 variation = scene.trunk_variation if trunk2 else scene.randomangle
                 length = scene.trunk_space if trunk2 else scene.branch_length
                 ni, direction, nsi = join_branch(verts, faces, indexes, radius, length, branch_verts, direction,
-                                                 variation, s_index,
-                                                 seams2)
+                                                 variation, s_index, seams2)
                 sortie = pos + direction * scene.branch_length
 
                 if i <= scene.bones_iterations:
@@ -890,10 +887,7 @@ def create_tree(position):
         obj.active_material = bpy.data.materials.get(scene.bark_material)
 
     if scene.create_armature:
-        bpy.ops.object.add(
-            type='ARMATURE',
-            enter_editmode=True,
-            location=Vector((0, 0, 0)))
+        bpy.ops.object.add(type='ARMATURE', enter_editmode=True, location=Vector((0, 0, 0)))
         arm = bpy.context.object
         arm.show_x_ray = True
         amt = arm.data
