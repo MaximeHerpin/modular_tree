@@ -613,6 +613,14 @@ def add_seams(indexes, seams):
         seams.append((indexes[i], indexes[(i + 1) % n]))
 
 
+def fix_normals(inside):
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.normals_make_consistent(inside=inside)
+    bpy.ops.mesh.select_all(action='DESELECT')
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+
 def create_tree(position):
     for select_ob in bpy.context.selected_objects:
         select_ob.select = False
@@ -800,16 +808,10 @@ def create_tree(position):
     vgroups.active_index = vgroups["leaf"].index
     g.add([i for i in range(leafs_start_index, len(verts))], 1.0, "ADD")
 
-    # fix normals and make sure they are fixed
-    def fix_normals(inside):
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.mesh.normals_make_consistent(inside=inside)
-        bpy.ops.mesh.select_all(action='DESELECT')
-        bpy.ops.object.mode_set(mode='OBJECT')
-    fix_normals(False)
+    # fix normals, then make sure they are fixed :)
+    fix_normals(inside=False)
     if obj.data.polygons[0].normal.x < 0:
-        fix_normals(True)
+        fix_normals(inside=True)
 
     if scene.particle:
         create_system(obj, scene.number, scene.display, vgroups["leaf"])
