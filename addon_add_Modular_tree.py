@@ -924,10 +924,8 @@ def create_tree(position):
 
     obj.select = True
     bpy.context.scene.objects.active = obj
-    bpy.ops.wm.properties_add(data_path="object")
-    obj["prop"] = "is_tree"
-    bpy.ops.wm.properties_add(data_path="object")
-    obj["prop1"] = "armature" if scene.create_armature else "no_armature"
+    obj["is_tree"] = True
+    obj["has_armature"] = True if scene.create_armature else False
 
 
 class MakeTreeOperator(Operator):
@@ -958,12 +956,13 @@ class UpdateTreeOperator(Operator):
         obj = bpy.context.active_object
 
         try:
-            prop_name = obj.get('prop')
+            is_tree_prop = obj.get('is_tree')
+            has_arm_prop = obj.get('has_armature')
         except AttributeError:
             self.report({'ERROR'}, "No active tree object!")
             return {'CANCELLED'}
 
-        if prop_name == "is_tree":
+        if is_tree_prop:
             pos = obj.location
             scale = obj.scale
             rot = obj.rotation_euler
@@ -975,7 +974,7 @@ class UpdateTreeOperator(Operator):
             ob.select = False
             obj.select = True
 
-            if obj.get('prop1') == 'armature':
+            if has_arm_prop:
                 arm_pos = obj.parent.location
                 arm_scale = obj.parent.scale
                 arm_rot = obj.parent.rotation_euler
