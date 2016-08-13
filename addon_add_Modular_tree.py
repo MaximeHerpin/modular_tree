@@ -600,11 +600,11 @@ def join_branch(verts, faces, indexes, scale, branch_length, branch_verts, direc
     return nentree, direction, ns_index
 
 
-def gravity(dir, gravity_strength):
+def gravity(direction, gravity_strength):
     v = Vector((0, 0, -1))
-    norm = dir.length
-    factor = (dir.cross(v)).length / norm / 100 * gravity_strength
-    return dir + v * factor
+    norm = direction.length
+    factor = (direction.cross(v)).length / norm / 100 * gravity_strength
+    return direction + v * factor
 
 
 def add_seams(indexes, seams):
