@@ -751,7 +751,7 @@ def create_tree(position):
 
             if bpy.data.objects.get(scene.obstacle) is not None:
                 obs = scene.objects[scene.obstacle]
-                bpy.context.scene.update()
+                scene.update()
 
                 result, hit_pos, face_normal, face_index = obs.ray_cast(pos, end)
                 if result:
@@ -844,8 +844,8 @@ def create_tree(position):
     mesh.update(calc_edges=False)
     obj = bpy.data.objects.new("tree", mesh)
     obj.location = position
-    bpy.context.scene.objects.link(obj)
-    bpy.context.scene.objects.active = obj
+    scene.objects.link(obj)
+    scene.objects.active = obj
     obj.select = True
     bpy.ops.object.shade_smooth()
     obj.select = False
@@ -913,17 +913,17 @@ def create_tree(position):
         bpy.ops.object.select_all(action='DESELECT')
         obj.select = True
         arm.select = True
-        bpy.context.scene.objects.active = arm
+        scene.objects.active = arm
         bpy.ops.object.parent_set(type='ARMATURE_AUTO')
         bpy.ops.object.select_all(action='DESELECT')
 
     if scene.visualize_leafs:
-        bpy.context.scene.objects.active = obj
+        scene.objects.active = obj
         vgroups.active_index = vgroups["leaf"].index
         bpy.ops.paint.weight_paint_toggle()
 
     obj.select = True
-    bpy.context.scene.objects.active = obj
+    scene.objects.active = obj
     obj["is_tree"] = True
     obj["has_armature"] = True if scene.create_armature else False
 
@@ -968,7 +968,7 @@ class UpdateTreeOperator(Operator):
             rot = obj.rotation_euler
 
             create_tree(pos)
-            ob = bpy.context.active_object
+            ob = bpy.context.active_object  # this is the new object that has been set active by 'create_tree'
             ob.scale = scale
             ob.rotation_euler = rot
             ob.select = False
