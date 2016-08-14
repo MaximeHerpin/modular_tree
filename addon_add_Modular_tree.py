@@ -492,11 +492,10 @@ def add_tuple(t, x):
 def rot_scale(v_co, scale, directions, rot_z):
     (x, y, z) = directions
     directions = Vector((-x, -y, z))
-    c = rot_z
     q = Vector((0, 0, 1)).rotation_difference(directions)
     mat_rot = q.to_matrix()
     mat_rot.resize_4x4()
-    mc = Matrix.Rotation(c, 4, 'Z')
+    mc = Matrix.Rotation(rot_z, 4, 'Z')
     v_co = [((v * scale) * mc) * mat_rot for v in v_co]
     return v_co
 
@@ -620,6 +619,7 @@ def fix_normals(inside):
     bpy.ops.mesh.normals_make_consistent(inside=inside)
     bpy.ops.mesh.select_all(action='DESELECT')
     bpy.ops.object.mode_set(mode='OBJECT')
+
 
 def build_material():
     if not bpy.context.scene.render.engine == 'CYCLES':
@@ -1619,6 +1619,28 @@ class AddTuple(unittest.TestCase):
         self.assertEqual(result, expected)
 
 
+class Gravity(unittest.TestCase):
+    maxDiff = 10000
+
+    def test_positive_gravity(self):
+        direction = Vector((1, 1, 1))
+        strength = -100
+        expected = Vector((1, 1, 1.8164966106414795))
+
+        result = gravity(direction, strength)
+
+        self.assertEqual(result, expected)
+
+    def test_negative_gravity(self):
+        direction = Vector((1, 1, 1))
+        strength = 100
+        expected = Vector((1, 1, 0.1835033893585205))
+
+        result = gravity(direction, strength)
+
+        self.assertEqual(result, expected)
+
+
 def load_tests(test_cases):
     loader = unittest.TestLoader()
     test_suite = unittest.TestSuite()
@@ -1630,7 +1652,7 @@ def load_tests(test_cases):
 
 if __name__ == "__main__":
     # run test cases
-    suite = load_tests([AddTuple, RotScale])
+    suite = load_tests([AddTuple, Gravity])
     unittest.TextTestRunner(verbosity=2).run(suite)
     # register addon
     register()
