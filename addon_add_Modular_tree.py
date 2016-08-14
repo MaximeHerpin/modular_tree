@@ -28,6 +28,7 @@ bl_info = {
     "category": "Add Mesh"}
 
 import os
+import unittest
 from mathutils import Vector, Matrix
 from random import random, seed, randint
 from math import pi, radians, cos, sin
@@ -1604,5 +1605,32 @@ def unregister():
     del Scene.display
 
 
+# Unit tests
+class AddTuple(unittest.TestCase):
+    maxDiff = 10000
+
+    def test_add_integers(self):
+        a = 1
+        b = (5, 6, 7)
+        expected = (6, 7, 8)
+
+        result = add_tuple(b, a)
+
+        self.assertEqual(result, expected)
+
+
+def load_tests(test_cases):
+    loader = unittest.TestLoader()
+    test_suite = unittest.TestSuite()
+    for test_class in test_cases:
+        tests = loader.loadTestsFromTestCase(test_class)
+        test_suite.addTests(tests)
+    return test_suite
+
+
 if __name__ == "__main__":
+    # run test cases
+    suite = load_tests([AddTuple, RotScale])
+    unittest.TextTestRunner(verbosity=2).run(suite)
+    # register addon
     register()
