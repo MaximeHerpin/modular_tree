@@ -28,15 +28,76 @@ bl_info = {
     "category": "Add Mesh"}
 
 import os
-from mathutils import *
-from random import *
-from math import *
+import unittest
+from mathutils import Vector, Matrix
+from random import random, seed, randint
+from math import pi, radians, cos, sin
+from time import time
 
 import bpy
-from bpy.props import *
+from bpy.props import StringProperty, BoolProperty, FloatProperty, IntProperty, EnumProperty
 from bpy.types import Operator, Panel, Scene, Menu
 import bmesh
 from collections import defaultdict
+
+
+class Clock:
+    """A quick and easy to use performance measuring tool.
+
+    Methods:
+        __init__ - Clocks the start time to measure performance.
+        add_sub_job - Adds a sub-job to the job list.
+        stop - Stops the specified job.
+        display - Displays the final statistics.
+    """
+    def __init__(self, main_job):
+        """Clocks the start time to measure performance.
+
+        Args:
+            job - (string) the name of the job to print out when finished
+
+        """
+        self.jobs = [[main_job, {"sublvl": 0,  "start": time(), "finish": 0}]]
+
+    def add_sub_job(self, sub_job, sub=1):
+        """Adds a sub-job to the job list.
+
+        Args:
+            sub_job - (string) the name of the sub_job to make
+            sub - (int) the sub level (see details)
+
+        Details:
+            The sub property is used for if you want to time an entire function, but also
+            a few lines in that function. The lines in the middle can be given a sub
+            value of 1 to indicate that they are in the 2nd sub-level and they will be indented
+            in the final printout.
+        """
+        self.jobs.append([sub_job, {"sublvl": sub, "start": time(), "finish": 0}])
+
+    def stop(self, job):
+        """Stops the specified job.
+
+        Args:
+            job - (string) the name of the job to stop
+        """
+        for i, j in enumerate(self.jobs):
+            if j[0] == job:
+                if self.jobs[i][1]["finish"]:
+                    print("Job already finished!")
+                else:
+                    self.jobs[i][1]["finish"] = time()
+                return
+
+    def display(self):
+        """Displays the final statistics."""
+        for job in self.jobs:
+            name = job[0]
+            info = job[1]
+            string = "{sub}{name} took {tm} seconds".format(
+                name=name,
+                sub="    " * info["sublvl"],
+                tm=info["finish"] - info["start"])
+            print(string)
 
 
 class Module:
@@ -66,8 +127,11 @@ class Module:
 
 
 end_cap = Module(
+    # entree
     [0, 1, 2, 3, 4, 5, 6, 7],
+    # sortie
     [],
+    # verts
     [(0.0, 1.0, 0.02), (-0.71, 0.71, 0.02), (-1.0, -0.0, 0.04), (-0.71, -0.71, 0.04), (0.0, -1.0, 0.02),
      (0.71, -0.71, 0.02), (1.0, 0.0, 0.04), (0.71, 0.71, 0.04), (0.0, 0.98, 0.14), (-0.69, 0.69, 0.14),
      (-0.98, -0.0, 0.21), (-0.69, -0.69, 0.21), (0.0, -0.98, 0.14), (0.69, -0.69, 0.14), (0.98, 0.0, 0.21),
@@ -76,6 +140,7 @@ end_cap = Module(
      (-0.52, 0.52, 0.32), (-0.74, -0.0, 0.41), (-0.52, -0.52, 0.41), (0.0, -0.74, 0.32), (0.52, -0.52, 0.32),
      (0.74, 0.0, 0.41), (0.52, 0.52, 0.41), (0.0, 0.33, 0.59), (-0.23, 0.23, 0.59), (-0.26, 0.02, 0.67),
      (-0.16, -0.2, 0.67), (0.0, -0.33, 0.59), (0.23, -0.23, 0.59), (0.26, -0.02, 0.67), (0.16, 0.2, 0.67)],
+    # faces
     [(7, 15, 14, 6), (5, 13, 12, 4), (3, 11, 10, 2), (0, 8, 15, 7), (6, 14, 13, 5), (4, 12, 11, 3), (2, 10, 9, 1),
      (15, 8, 16, 23), (13, 14, 22, 21), (11, 12, 20, 19), (9, 10, 18, 17), (14, 15, 23, 22), (12, 13, 21, 20),
      (10, 11, 19, 18), (8, 9, 17, 16), (18, 19, 27, 26), (16, 17, 25, 24), (23, 16, 24, 31), (21, 22, 30, 29),
@@ -124,100 +189,137 @@ def interpolate(verts1, verts2, t):
     return [Vector(verts1[i]) * (1 - t) + Vector(verts2[i]) * t for i in range(len(verts1))]
 
 
-S2 = Split([0, 1, 2, 3, 4, 5, 6, 7], ([8, 9, 10, 11, 12, 13, 14, 15], [16, 17, 18, 19, 20, 21, 22, 23]),
-           [(-0.0, 1.0, -0.01), (-0.71, 0.71, -0.01), (-1.0, -0.0, -0.01), (-0.71, -0.71, -0.01), (0.0, -1.0, -0.01),
-            (0.71, -0.71, -0.01), (1.0, -0.0, -0.02), (0.71, 0.71, -0.02), (-0.98, 0.89, 1.84), (-1.49, 0.74, 1.62),
-            (-1.78, 0.24, 1.53), (-1.67, -0.33, 1.64), (-1.23, -0.64, 1.87), (-0.73, -0.51, 2.09), (-0.46, 0.0, 2.18),
-            (-0.56, 0.59, 2.07), (0.72, 1.02, 1.8), (1.3, 0.65, 1.8), (1.29, -0.07, 1.93), (0.81, -0.6, 2.07),
-            (0.12, -0.57, 2.13), (-0.37, -0.06, 2.17), (-0.46, 0.62, 2.06), (0.03, 1.05, 1.88), (-1.19, -0.63, 0.6),
-            (-1.42, -0.01, 0.52), (-0.71, -1.0, 0.98), (-0.39, -0.91, 1.36), (0.63, -0.72, 1.11), (-0.2, -0.73, 1.49),
-            (0.85, 0.64, 0.64), (1.12, 0.01, 0.68), (0.28, 0.97, 0.69), (-0.72, 0.91, 0.89), (-1.21, 0.7, 0.6),
-            (-0.36, 0.92, 1.36), (-0.43, -1.0, 0.68), (0.13, -1.05, 0.69), (-.42, .09, .90), (.13, .16, .97)],
-           [(-0.0, 1.0, 0.0), (-0.71, 0.71, 0.0), (-1.0, -0.0, 0.0), (-0.71, -0.71, 0.0), (0.0, -1.0, 0.0),
-            (0.71, -0.71, 0.0), (1.0, -0.0, -0.0), (0.71, 0.71, -0.01), (-1.34, 0.76, 0.99), (-1.43, 0.53, 0.47),
-            (-1.47, -0.01, 0.25), (-1.43, -0.56, 0.48), (-1.33, -0.79, 1.0), (-1.24, -0.58, 1.51), (-1.21, -0.03, 1.72),
-            (-1.26, 0.57, 1.53), (0.73, 1.02, 1.08), (1.08, 0.65, 0.61), (1.18, -0.07, 0.7), (1.0, -0.6, 1.16),
-            (0.63, -0.57, 1.75), (0.35, -0.06, 2.16), (0.21, 0.62, 2.16), (0.38, 1.05, 1.67), (-0.94, -0.63, 0.26),
-            (-1.12, -0.01, 0.09), (-0.8, -1.0, 0.78), (-0.59, -0.81, 1.45), (0.75, -0.72, 0.94), (-0.07, -0.51, 1.66),
-            (0.84, 0.64, 0.42), (1.12, 0.01, 0.39), (0.31, 0.97, 0.63), (-0.79, 0.91, 0.69), (-0.96, 0.7, 0.25),
-            (-0.38, 0.92, 1.37), (-0.43, -1.0, 0.69), (0.13, -1.05, 0.7), (-.98, 0, .16), (.85, .16, .49)],
-           [(25, 24, 11, 10), (15, 14, 21, 22), (2, 3, 24, 25), (12, 26, 27, 13), (12, 11, 24, 26), (20, 29, 28, 19),
-            (20, 21, 14, 29), (14, 13, 27, 29), (31, 30, 17, 18), (30, 32, 16, 17), (7, 0, 32, 30), (6, 7, 30, 31),
-            (18, 19, 28, 31), (8, 33, 34, 9), (9, 34, 25, 10), (1, 2, 25, 34), (15, 35, 33, 8), (23, 35, 15, 22),
-            (35, 23, 16, 32), (33, 35, 32, 0), (34, 33, 0, 1), (5, 6, 31, 28), (36, 26, 24, 3), (37, 36, 3, 4),
-            (4, 5, 28, 37), (27, 26, 36, 37), (28, 29, 27, 37)],
-           [(4, 37), (36, 37), (26, 36), (12, 26), (28, 37), (19, 28), (14, 21)])
+S2 = Split(
+    # entree
+    [0, 1, 2, 3, 4, 5, 6, 7],
+    # sortie
+    ([8, 9, 10, 11, 12, 13, 14, 15], [16, 17, 18, 19, 20, 21, 22, 23]),
+    # verts1
+    [(-0.0, 1.0, -0.01), (-0.71, 0.71, -0.01), (-1.0, -0.0, -0.01), (-0.71, -0.71, -0.01), (0.0, -1.0, -0.01),
+     (0.71, -0.71, -0.01), (1.0, -0.0, -0.02), (0.71, 0.71, -0.02), (-0.98, 0.89, 1.84), (-1.49, 0.74, 1.62),
+     (-1.78, 0.24, 1.53), (-1.67, -0.33, 1.64), (-1.23, -0.64, 1.87), (-0.73, -0.51, 2.09), (-0.46, 0.0, 2.18),
+     (-0.56, 0.59, 2.07), (0.72, 1.02, 1.8), (1.3, 0.65, 1.8), (1.29, -0.07, 1.93), (0.81, -0.6, 2.07),
+     (0.12, -0.57, 2.13), (-0.37, -0.06, 2.17), (-0.46, 0.62, 2.06), (0.03, 1.05, 1.88), (-1.19, -0.63, 0.6),
+     (-1.42, -0.01, 0.52), (-0.71, -1.0, 0.98), (-0.39, -0.91, 1.36), (0.63, -0.72, 1.11), (-0.2, -0.73, 1.49),
+     (0.85, 0.64, 0.64), (1.12, 0.01, 0.68), (0.28, 0.97, 0.69), (-0.72, 0.91, 0.89), (-1.21, 0.7, 0.6),
+     (-0.36, 0.92, 1.36), (-0.43, -1.0, 0.68), (0.13, -1.05, 0.69), (-.42, 0.09, 0.90), (0.13, 0.16, 0.97)],
+    # verts2
+    [(-0.0, 1.0, 0.0), (-0.71, 0.71, 0.0), (-1.0, -0.0, 0.0), (-0.71, -0.71, 0.0), (0.0, -1.0, 0.0),
+     (0.71, -0.71, 0.0), (1.0, -0.0, -0.0), (0.71, 0.71, -0.01), (-1.34, 0.76, 0.99), (-1.43, 0.53, 0.47),
+     (-1.47, -0.01, 0.25), (-1.43, -0.56, 0.48), (-1.33, -0.79, 1.0), (-1.24, -0.58, 1.51), (-1.21, -0.03, 1.72),
+     (-1.26, 0.57, 1.53), (0.73, 1.02, 1.08), (1.08, 0.65, 0.61), (1.18, -0.07, 0.7), (1.0, -0.6, 1.16),
+     (0.63, -0.57, 1.75), (0.35, -0.06, 2.16), (0.21, 0.62, 2.16), (0.38, 1.05, 1.67), (-0.94, -0.63, 0.26),
+     (-1.12, -0.01, 0.09), (-0.8, -1.0, 0.78), (-0.59, -0.81, 1.45), (0.75, -0.72, 0.94), (-0.07, -0.51, 1.66),
+     (0.84, 0.64, 0.42), (1.12, 0.01, 0.39), (0.31, 0.97, 0.63), (-0.79, 0.91, 0.69), (-0.96, 0.7, 0.25),
+     (-0.38, 0.92, 1.37), (-0.43, -1.0, 0.69), (0.13, -1.05, 0.7), (-.98, 0, 0.16), (0.85, 0.16, 0.49)],
+    # faces
+    [(25, 24, 11, 10), (15, 14, 21, 22), (2, 3, 24, 25), (12, 26, 27, 13), (12, 11, 24, 26), (20, 29, 28, 19),
+     (20, 21, 14, 29), (14, 13, 27, 29), (31, 30, 17, 18), (30, 32, 16, 17), (7, 0, 32, 30), (6, 7, 30, 31),
+     (18, 19, 28, 31), (8, 33, 34, 9), (9, 34, 25, 10), (1, 2, 25, 34), (15, 35, 33, 8), (23, 35, 15, 22),
+     (35, 23, 16, 32), (33, 35, 32, 0), (34, 33, 0, 1), (5, 6, 31, 28), (36, 26, 24, 3), (37, 36, 3, 4),
+     (4, 5, 28, 37), (27, 26, 36, 37), (28, 29, 27, 37)],
+    # seams
+    [(4, 37), (36, 37), (26, 36), (12, 26), (28, 37), (19, 28), (14, 21)])
 
-S1 = Split([0, 1, 2, 3, 4, 5, 6, 7], ([8, 9, 10, 11, 12, 13, 14, 15], [16, 17, 18, 19, 20, 21, 22, 23]),
-           [(0.0, 1.0, 0.0), (-0.71, 0.71, 0.0), (-1.0, -0.0, 0.0), (-0.71, -0.71, 0.0), (0.0, -1.0, 0.0),
-            (0.71, -0.71, 0.0), (1.0, 0.0, 0.0), (0.71, 0.71, 0.0), (-0.0, -0.17, 1.01), (-0.42, -0.29, 0.88),
-            (-0.59, -0.58, 0.58), (-0.42, -0.88, 0.29), (0.0, -1.0, 0.16), (0.42, -0.88, 0.29), (0.59, -0.58, 0.58),
-            (0.42, -0.29, 0.88), (-0.0, 1.0, 0.17), (-0.43, 0.88, 0.29), (-0.61, 0.57, 0.6), (-0.43, 0.26, 0.9),
-            (0.0, 0.13, 1.02), (0.43, 0.26, 0.9), (0.61, 0.57, 0.6), (0.43, 0.88, 0.29), (0.85, 0.44, 0.37),
-            (0.91, -0.38, 0.42), (0.79, 0.04, 0.65), (0.0, -0.02, 1.02), (0.43, -0.02, 0.89), (-0.43, -0.02, 0.89),
-            (-0.91, -0.38, 0.41), (-0.82, 0.04, 0.65), (-0.91, 0.44, 0.37), (0, -1, 1), (0, 1, 1)],
-           [(0.0, 1.0, 0.0), (-0.71, 0.71, 0.0), (-1.0, -0.0, 0.0), (-0.71, -0.71, 0.0), (0.0, -1.0, 0.0),
-            (0.71, -0.71, 0.0), (1.0, 0.0, 0.0), (0.71, 0.71, 0.0), (-0.0, -0.17, 1.01), (-0.42, -0.29, 0.88),
-            (-0.59, -0.58, 0.58), (-0.42, -0.88, 0.29), (0.0, -1.0, 0.16), (0.42, -0.88, 0.29), (0.59, -0.58, 0.58),
-            (0.42, -0.29, 0.88), (-0.0, 1.0, 0.17), (-0.43, 0.88, 0.29), (-0.61, 0.57, 0.6), (-0.43, 0.26, 0.9),
-            (0.0, 0.13, 1.02), (0.43, 0.26, 0.9), (0.61, 0.57, 0.6), (0.43, 0.88, 0.29), (0.85, 0.44, 0.37),
-            (0.91, -0.38, 0.42), (0.79, 0.04, 0.65), (0.0, -0.02, 1.02), (0.43, -0.02, 0.89), (-0.43, -0.02, 0.89),
-            (-0.91, -0.38, 0.41), (-0.82, 0.04, 0.65), (-0.91, 0.44, 0.37), (0, -1, 1), (0, 1, 1)],
-           [(4, 5, 13, 12), (3, 4, 12, 11), (7, 0, 16, 23), (0, 1, 17, 16), (27, 28, 21, 20), (29, 27, 20, 19),
-            (25, 13, 5, 6), (6, 7, 23, 24), (22, 26, 24, 23), (14, 13, 25, 26), (24, 26, 25, 6), (9, 8, 27, 29),
-            (8, 15, 28, 27), (22, 21, 28, 26), (14, 26, 28, 15), (30, 31, 32, 2), (2, 32, 17, 1), (2, 3, 11, 30),
-            (10, 31, 30, 11), (17, 32, 31, 18), (10, 9, 29, 31), (18, 31, 29, 19)],
-           [(4, 37), (36, 37), (26, 36), (12, 26), (28, 37), (19, 28), (14, 21)])
+S1 = Split(
+    # entree
+    [0, 1, 2, 3, 4, 5, 6, 7],
+    # sortie
+    ([8, 9, 10, 11, 12, 13, 14, 15], [16, 17, 18, 19, 20, 21, 22, 23]),
+    # verts1
+    [(0.0, 1.0, 0.0), (-0.71, 0.71, 0.0), (-1.0, -0.0, 0.0), (-0.71, -0.71, 0.0), (0.0, -1.0, 0.0),
+     (0.71, -0.71, 0.0), (1.0, 0.0, 0.0), (0.71, 0.71, 0.0), (-0.0, -0.17, 1.01), (-0.42, -0.29, 0.88),
+     (-0.59, -0.58, 0.58), (-0.42, -0.88, 0.29), (0.0, -1.0, 0.16), (0.42, -0.88, 0.29), (0.59, -0.58, 0.58),
+     (0.42, -0.29, 0.88), (-0.0, 1.0, 0.17), (-0.43, 0.88, 0.29), (-0.61, 0.57, 0.6), (-0.43, 0.26, 0.9),
+     (0.0, 0.13, 1.02), (0.43, 0.26, 0.9), (0.61, 0.57, 0.6), (0.43, 0.88, 0.29), (0.85, 0.44, 0.37),
+     (0.91, -0.38, 0.42), (0.79, 0.04, 0.65), (0.0, -0.02, 1.02), (0.43, -0.02, 0.89), (-0.43, -0.02, 0.89),
+     (-0.91, -0.38, 0.41), (-0.82, 0.04, 0.65), (-0.91, 0.44, 0.37), (0, -1, 1), (0, 1, 1)],
+    # verts2
+    [(0.0, 1.0, 0.0), (-0.71, 0.71, 0.0), (-1.0, -0.0, 0.0), (-0.71, -0.71, 0.0), (0.0, -1.0, 0.0),
+     (0.71, -0.71, 0.0), (1.0, 0.0, 0.0), (0.71, 0.71, 0.0), (-0.0, -0.17, 1.01), (-0.42, -0.29, 0.88),
+     (-0.59, -0.58, 0.58), (-0.42, -0.88, 0.29), (0.0, -1.0, 0.16), (0.42, -0.88, 0.29), (0.59, -0.58, 0.58),
+     (0.42, -0.29, 0.88), (-0.0, 1.0, 0.17), (-0.43, 0.88, 0.29), (-0.61, 0.57, 0.6), (-0.43, 0.26, 0.9),
+     (0.0, 0.13, 1.02), (0.43, 0.26, 0.9), (0.61, 0.57, 0.6), (0.43, 0.88, 0.29), (0.85, 0.44, 0.37),
+     (0.91, -0.38, 0.42), (0.79, 0.04, 0.65), (0.0, -0.02, 1.02), (0.43, -0.02, 0.89), (-0.43, -0.02, 0.89),
+     (-0.91, -0.38, 0.41), (-0.82, 0.04, 0.65), (-0.91, 0.44, 0.37), (0, -1, 1), (0, 1, 1)],
+    # faces
+    [(4, 5, 13, 12), (3, 4, 12, 11), (7, 0, 16, 23), (0, 1, 17, 16), (27, 28, 21, 20), (29, 27, 20, 19),
+     (25, 13, 5, 6), (6, 7, 23, 24), (22, 26, 24, 23), (14, 13, 25, 26), (24, 26, 25, 6), (9, 8, 27, 29),
+     (8, 15, 28, 27), (22, 21, 28, 26), (14, 26, 28, 15), (30, 31, 32, 2), (2, 32, 17, 1), (2, 3, 11, 30),
+     (10, 31, 30, 11), (17, 32, 31, 18), (10, 9, 29, 31), (18, 31, 29, 19)],
+    # seams
+    [(4, 37), (36, 37), (26, 36), (12, 26), (28, 37), (19, 28), (14, 21)])
 
 Joncts = [S1, S2]
 
-root = Module([], (1, [0, 1, 2, 3, 4, 5, 6, 7]), [Vector((0.0, 0.9928191900253296, 0.9806214570999146)), Vector(
-    (-0.7020291090011597, 0.7020291090011597, 0.9806214570999146)), Vector(
-    (-0.9928191900253296, -4.3397506033215905e-08, 0.9806214570999146)), Vector(
-    (-0.7020291090011597, -0.7020291090011597, 0.9806214570999146)), Vector(
-    (8.679501206643181e-08, -0.9928191900253296, 0.9806214570999146)), Vector(
-    (0.7020292282104492, -0.7020290493965149, 0.9806214570999146)), Vector(
-    (0.9928191900253296, 1.1839250468881346e-08, 0.9806214570999146)), Vector(
-    (0.7020292282104492, 0.7020291090011597, 0.9806214570999146)),
-                                                    Vector((0.0, 1.0136922597885132, 0.45493215322494507)), Vector(
-        (-0.716788649559021, 0.716788649559021, 0.45493215322494507)), Vector(
-        (-1.0136922597885132, -4.4309896196637055e-08, 0.45493215322494507)), Vector(
-        (-0.716788649559021, -0.716788649559021, 0.45493215322494507)), Vector(
-        (8.861979239327411e-08, -1.0136922597885132, 0.45493215322494507)), Vector(
-        (0.7167887687683105, -0.7167885303497314, 0.45493215322494507)), Vector(
-        (1.0136922597885132, 1.2088158918288627e-08, 0.45493215322494507)), Vector(
-        (0.7167887687683105, 0.7167885899543762, 0.45493215322494507)),
-                                                    Vector((0.0, 1.1711314916610718, 0.011928796768188477)), Vector(
-        (-0.8281149864196777, 0.8281149864196777, 0.011928796768188477)), Vector(
-        (-1.1711314916610718, -5.119178325685425e-08, 0.011928796768188477)), Vector(
-        (-0.8281149864196777, -0.8281149864196777, 0.011928796768188477)), Vector(
-        (1.023835665137085e-07, -1.1711314916610718, 0.011928796768188477)), Vector(
-        (0.8281151056289673, -0.8281148672103882, 0.011928796768188477)), Vector(
-        (1.1711314916610718, 1.3965602896348628e-08, 0.011928796768188477)), Vector(
-        (0.8281151056289673, 0.828114926815033, 0.011928796768188477)),
-                                                    Vector((0.0, 1.416882872581482, -0.3086543381214142)), Vector(
-        (-1.0018874406814575, 1.0018874406814575, -0.3086543381214142)), Vector(
-        (-1.416882872581482, -6.19339104446226e-08, -0.3086543381214142)), Vector(
-        (-1.0018874406814575, -1.0018874406814575, -0.3086543381214142)), Vector(
-        (1.238678208892452e-07, -1.416882872581482, -0.3086543381214142)), Vector(
-        (1.001887559890747, -1.0018872022628784, -0.3086543381214142)), Vector(
-        (1.416882872581482, 1.6896155585754968e-08, -0.3086543381214142)), Vector(
-        (1.001887559890747, 1.001887321472168, -0.3086543381214142))],
-              [(7, 6, 14, 15), (5, 4, 12, 13), (3, 2, 10, 11), (1, 0, 8, 9), (0, 7, 15, 8), (6, 5, 13, 14),
-               (4, 3, 11, 12), (2, 1, 9, 10), (9, 8, 16, 17), (8, 15, 23, 16), (14, 13, 21, 22), (12, 11, 19, 20),
-               (10, 9, 17, 18), (15, 14, 22, 23), (13, 12, 20, 21), (11, 10, 18, 19), (16, 23, 31, 24),
-               (22, 21, 29, 30), (20, 19, 27, 28), (18, 17, 25, 26), (23, 22, 30, 31), (21, 20, 28, 29),
-               (19, 18, 26, 27), (17, 16, 24, 25)])
+root = Module(
+    # entree
+    [],
+    # sortie
+    (1, [0, 1, 2, 3, 4, 5, 6, 7]),
+    # verts
+    [Vector((0.0, 0.9928191900253296, 0.9806214570999146)),
+     Vector((-0.7020291090011597, 0.7020291090011597, 0.9806214570999146)),
+     Vector((-0.9928191900253296, -4.3397506033215905e-08, 0.9806214570999146)),
+     Vector((-0.7020291090011597, -0.7020291090011597, 0.9806214570999146)),
+     Vector((8.679501206643181e-08, -0.9928191900253296, 0.9806214570999146)),
+     Vector((0.7020292282104492, -0.7020290493965149, 0.9806214570999146)),
+     Vector((0.9928191900253296, 1.1839250468881346e-08, 0.9806214570999146)),
+     Vector((0.7020292282104492, 0.7020291090011597, 0.9806214570999146)),
+     Vector((0.0, 1.0136922597885132, 0.45493215322494507)),
+     Vector((-0.716788649559021, 0.716788649559021, 0.45493215322494507)),
+     Vector((-1.0136922597885132, -4.4309896196637055e-08, 0.45493215322494507)),
+     Vector((-0.716788649559021, -0.716788649559021, 0.45493215322494507)),
+     Vector((8.861979239327411e-08, -1.0136922597885132, 0.45493215322494507)),
+     Vector((0.7167887687683105, -0.7167885303497314, 0.45493215322494507)),
+     Vector((1.0136922597885132, 1.2088158918288627e-08, 0.45493215322494507)),
+     Vector((0.7167887687683105, 0.7167885899543762, 0.45493215322494507)),
+     Vector((0.0, 1.1711314916610718, 0.011928796768188477)),
+     Vector((-0.8281149864196777, 0.8281149864196777, 0.011928796768188477)),
+     Vector((-1.1711314916610718, -5.119178325685425e-08, 0.011928796768188477)),
+     Vector((-0.8281149864196777, -0.8281149864196777, 0.011928796768188477)),
+     Vector((1.023835665137085e-07, -1.1711314916610718, 0.011928796768188477)),
+     Vector((0.8281151056289673, -0.8281148672103882, 0.011928796768188477)),
+     Vector((1.1711314916610718, 1.3965602896348628e-08, 0.011928796768188477)),
+     Vector((0.8281151056289673, 0.828114926815033, 0.011928796768188477)),
+     Vector((0.0, 1.416882872581482, -0.3086543381214142)),
+     Vector((-1.0018874406814575, 1.0018874406814575, -0.3086543381214142)),
+     Vector((-1.416882872581482, -6.19339104446226e-08, -0.3086543381214142)),
+     Vector((-1.0018874406814575, -1.0018874406814575, -0.3086543381214142)),
+     Vector((1.238678208892452e-07, -1.416882872581482, -0.3086543381214142)),
+     Vector((1.001887559890747, -1.0018872022628784, -0.3086543381214142)),
+     Vector((1.416882872581482, 1.6896155585754968e-08, -0.3086543381214142)),
+     Vector((1.001887559890747, 1.001887321472168, -0.3086543381214142))],
+    # faces
+    [(7, 6, 14, 15), (5, 4, 12, 13), (3, 2, 10, 11), (1, 0, 8, 9), (0, 7, 15, 8), (6, 5, 13, 14),
+     (4, 3, 11, 12), (2, 1, 9, 10), (9, 8, 16, 17), (8, 15, 23, 16), (14, 13, 21, 22), (12, 11, 19, 20),
+     (10, 9, 17, 18), (15, 14, 22, 23), (13, 12, 20, 21), (11, 10, 18, 19), (16, 23, 31, 24),
+     (22, 21, 29, 30), (20, 19, 27, 28), (18, 17, 25, 26), (23, 22, 30, 31), (21, 20, 28, 29),
+     (19, 18, 26, 27), (17, 16, 24, 25)])
 
-branch = Module([0, 1, 2, 3, 4, 5, 6, 7], (1, [0, 1, 2, 3, 4, 5, 6, 7]),
-                [Vector((0.0, 1.0, 0.0)), Vector((-0.7071067690849304, 0.7071067690849304, 0.0)),
-                 Vector((-1.0, -4.371138828673793e-08, 0.0)), Vector((-0.7071067690849304, -0.7071067690849304, 0.0)),
-                 Vector((8.742277657347586e-08, -1.0, 0.0)), Vector((0.70710688829422, -0.7071066498756409, 0.0)),
-                 Vector((1.0, 1.1924880638503055e-08, 0.0)), Vector((0.70710688829422, 0.7071067094802856, 0.0))], [])
+branch = Module(
+    # entree
+    [0, 1, 2, 3, 4, 5, 6, 7],
+    # sortie
+    (1, [0, 1, 2, 3, 4, 5, 6, 7]),
+    # verts
+    [Vector((0.0, 1.0, 0.0)),
+     Vector((-0.7071067690849304, 0.7071067690849304, 0.0)),
+     Vector((-1.0, -4.371138828673793e-08, 0.0)),
+     Vector((-0.7071067690849304, -0.7071067690849304, 0.0)),
+     Vector((8.742277657347586e-08, -1.0, 0.0)),
+     Vector((0.70710688829422, -0.7071066498756409, 0.0)),
+     Vector((1.0, 1.1924880638503055e-08, 0.0)),
+     Vector((0.70710688829422, 0.7071067094802856, 0.0))],
+    # faces
+    [])
 
 trunk = Split(
+    # entree
     [0, 1, 2, 3, 4, 5, 6, 7],
+    # sortie
     ([8, 9, 10, 11, 12, 13, 14, 15], [55, 56, 57, 58, 59, 60, 61, 62]),
+    # verts1
     [(0.0, 1.0, -0.0), (-0.71, 0.71, -0.0), (-1.0, -0.0, -0.0), (-0.71, -0.71, -0.0), (0.0, -1.0, -0.0),
      (0.71, -0.71, -0.0), (1.0, 0.0, -0.0), (0.71, 0.71, -0.0), (0.0, 0.98, 1.37), (-0.69, 0.69, 1.37),
      (-0.98, -0.0, 1.37), (-0.75, -0.64, 1.38), (0.0, -0.91, 1.4), (0.75, -0.64, 1.38), (0.98, 0.0, 1.37),
@@ -230,7 +332,8 @@ trunk = Split(
      (0.0, 0.99, 0.62), (-0.7, 0.7, 0.62), (0.0, -1.0, 1.43), (-0.43, -1.09, 1.3), (-0.6, -1.38, 0.99),
      (-0.41, -1.66, 0.69), (0.0, -1.78, 0.57), (0.41, -1.66, 0.69), (0.6, -1.38, 0.99), (0.43, -1.09, 1.3),
      (0.0, -1.08, 1.49), (-0.42, -1.23, 1.41), (-0.59, -1.6, 1.22), (-0.42, -1.98, 1.03), (0.0, -2.13, 0.95),
-     (0.42, -1.98, 1.03), (0.59, -1.6, 1.22), (0.42, -1.23, 1.41), (0, 0, 1), (0, -.35, .59)],
+     (0.42, -1.98, 1.03), (0.59, -1.6, 1.22), (0.42, -1.23, 1.41), (0, 0, 1), (0, -0.35, 0.59)],
+    # verts2
     [(0.0, 1.0, -0.04), (-0.71, 0.71, -0.04), (-1.0, -0.0, -0.04), (-0.71, -0.71, -0.04), (0.0, -0.98, -0.04),
      (0.71, -0.71, -0.04), (1.0, 0.0, -0.04), (0.71, 0.71, -0.04), (0.0, 0.98, 1.31), (-0.69, 0.69, 1.31),
      (-0.98, -0.0, 1.31), (-0.69, -0.69, 1.31), (0.0, -0.95, 1.31), (0.69, -0.69, 1.31), (0.98, 0.0, 1.31),
@@ -244,6 +347,7 @@ trunk = Split(
      (-0.39, -1.11, 0.25), (0.0, -1.1, 0.09), (0.39, -1.11, 0.25), (0.55, -1.11, 0.64), (0.39, -1.11, 1.03),
      (0.0, -1.27, 1.18), (-0.38, -1.27, 1.02), (-0.54, -1.26, 0.65), (-0.38, -1.25, 0.27), (0.0, -1.25, 0.11),
      (0.38, -1.25, 0.27), (0.54, -1.26, 0.65), (0.38, -1.27, 1.02), (0, 0, 1), (0, -1, 0)],
+    # faces
     [(26, 15, 14, 25), (30, 13, 12, 29), (34, 11, 10, 33), (38, 9, 8, 37), (37, 8, 15, 26), (25, 14, 13, 30),
      (29, 12, 11, 34), (33, 10, 9, 38), (2, 32, 39, 1), (43, 33, 38, 46), (4, 28, 35, 3), (6, 24, 31, 5),
      (40, 25, 30, 42), (0, 36, 27, 7), (45, 37, 26, 41), (1, 39, 36, 0), (46, 38, 37, 45), (3, 35, 32, 2),
@@ -253,13 +357,14 @@ trunk = Split(
      (16, 47, 54, 23), (23, 54, 53, 22), (22, 53, 52, 21), (21, 52, 51, 20), (20, 51, 50, 19), (19, 50, 49, 18),
      (18, 49, 48, 17), (17, 48, 47, 16), (53, 54, 62, 61), (51, 52, 60, 59), (49, 50, 58, 57), (47, 48, 56, 55),
      (54, 47, 55, 62), (52, 53, 61, 60), (50, 51, 59, 58), (48, 49, 57, 56)],
+    # seams
     [(29, 12), (4, 28), (28, 20), (29, 16), (16, 47), (51, 20), (59, 51), (55, 47)])
 
 
 class Trunk:
     """This is used to represent the base of a trunk with roots"""
     def __init__(self, roots, stem, verts, faces, seams):
-        """Initializes the varaibles
+        """Initializes the variables
 
         Args:
             roots - (list of (Vector, list of int)) The directions and indexes of roots exits 
@@ -276,17 +381,16 @@ class Trunk:
 
 
 R1 = Trunk(
-    [(Vector((-6.293336696217011e-08, -0.6988458633422852, -0.3152722477912903)), .69,
-      [110, 111, 112, 113, 114, 115, 116, 117]),
-     (Vector((0.6009913086891174, -0.04263520613312721, -0.3981175780296326)), .34, [55, 56, 57, 58, 59, 60, 61, 62]),
-     (Vector((0.5693859457969666, 0.49961066246032715, -0.352831494808197)), .34, [47, 48, 49, 50, 51, 52, 53, 54]), (
-         Vector((-0.779069721698761, 0.455067813396454, -0.24110554456710815)), .34,
-         [63, 64, 65, 66, 67, 68, 69, 70, 101]),
-     (Vector((-0.7720233201980591, -0.09697314351797104, -0.3281529068946838)), .56, [71, 72, 73, 74, 75, 76, 77, 78]),
-     (
-         Vector((-1.859164768802657e-07, 0.2071729600429535, -0.4783042669296265)), .60,
-         [39, 40, 41, 42, 43, 44, 45, 46])],
+    # roots
+    [(Vector((-6.293336696217011e-08, -0.6988458633422852, -0.3152722477912903)), 0.69, [110, 111, 112, 113, 114, 115, 116, 117]),
+     (Vector((0.6009913086891174, -0.04263520613312721, -0.3981175780296326)), 0.34, [55, 56, 57, 58, 59, 60, 61, 62]),
+     (Vector((0.5693859457969666, 0.49961066246032715, -0.352831494808197)), 0.34, [47, 48, 49, 50, 51, 52, 53, 54]),
+     (Vector((-0.779069721698761, 0.455067813396454, -0.24110554456710815)), 0.34, [63, 64, 65, 66, 67, 68, 69, 70, 101]),
+     (Vector((-0.7720233201980591, -0.09697314351797104, -0.3281529068946838)), 0.56, [71, 72, 73, 74, 75, 76, 77, 78]),
+     (Vector((-1.859164768802657e-07, 0.2071729600429535, -0.4783042669296265)), 0.60, [39, 40, 41, 42, 43, 44, 45, 46])],
+    # stem
     [0, 1, 2, 3, 4, 5, 6, 7],
+    # verts
     [(0.0, 0.99, 0.98), (-0.7, 0.7, 0.98), (-0.99, -0.0, 0.98), (-0.7, -0.7, 0.98), (0.0, -0.99, 0.98),
      (0.7, -0.7, 0.98), (0.99, 0.0, 0.98), (0.7, 0.7, 0.98), (0.01, 1.07, 0.58), (-0.74, 0.76, 0.57),
      (-1.06, 0.0, 0.58), (-0.75, -0.75, 0.58), (0.01, -1.07, 0.58), (0.76, -0.75, 0.58), (1.08, 0.0, 0.58),
@@ -311,8 +415,9 @@ R1 = Trunk(
      (-0.84, 0.26, -1.27), (-1.21, -0.94, -0.76), (-1.45, -0.6, -0.59), (-1.56, -0.12, -0.62), (-1.52, 0.22, -0.66),
      (0.03, -0.95, -1.39), (-0.37, -1.06, -1.27), (-0.54, -1.33, -0.97), (-0.37, -1.6, -0.67), (0.03, -1.71, -0.55),
      (0.43, -1.6, -0.67), (0.6, -1.33, -0.97), (0.43, -1.06, -1.27)],
+    # faces
     [(7, 6, 14, 15), (5, 4, 12, 13), (3, 2, 10, 11), (1, 0, 8, 9), (0, 7, 15, 8), (6, 5, 13, 14), (4, 3, 11, 12),
-     (2, 1, 9, 10), (9, 8, 16, 17), (8, 15, 23, 16), (14, 13, 21, 22), (12, 11, 19, 20), (10, 9, 17, 18),
+     (2, 1, 9, 10), (9, 8, 16, 17), (8, 15, 23,  16), (14,  13,  21, 22), (12, 11, 19, 20), (10, 9, 17, 18),
      (15, 14, 22, 23), (13, 12, 20, 21), (11, 10, 18, 19), (16, 23, 31, 24), (22, 21, 29, 30), (20, 19, 27, 28),
      (18, 17, 25, 26), (23, 22, 30, 31), (21, 20, 28, 29), (19, 18, 26, 27), (17, 16, 24, 25), (32, 43, 44, 38),
      (33, 42, 43, 32), (103, 102, 78, 77), (104, 42, 33, 103), (105, 104, 76, 75), (45, 56, 57, 44), (57, 58, 38, 44),
@@ -328,6 +433,7 @@ R1 = Trunk(
      (76, 104, 103, 77), (33, 34, 102, 103), (68, 105, 75, 69), (41, 105, 68, 84), (36, 115, 116, 37),
      (114, 115, 36, 28), (35, 113, 114, 28), (34, 112, 113, 35), (111, 112, 34, 33), (32, 110, 111, 33),
      (38, 117, 110, 32), (37, 116, 117, 38)],
+    # seams
     [(0, 8), (8, 16), (24, 16), (80, 79), (24, 79), (39, 86), (80, 86), (40, 39), (41, 40), (42, 41), (43, 42),
      (44, 43), (45, 44), (46, 45), (39, 46), (48, 47), (49, 48), (50, 49), (51, 50), (52, 51), (53, 52), (54, 53),
      (47, 54), (56, 55), (57, 56), (58, 57), (59, 58), (60, 59), (61, 60), (62, 61), (55, 62), (64, 63), (65, 64),
@@ -369,67 +475,7 @@ Nodes, Links = (
      ([21, 'Location'], [18, 'Vector'])])
 
 
-# This part is heavilly inspired by the "UV Align\Distribute" addon made by Rebellion (Luca Carella)
-def initbmesh():
-    """Initializes bmesh.
-
-    Details:
-        Gets bmesh from current object's mesh? TODO
-    """
-    global bm
-    global uvlayer
-    bm = bmesh.from_edit_mesh(bpy.context.edit_object.data)
-    uvlayer = bm.loops.layers.uv.active
-
-
-def b_box_center(island):
-    """TODO - Summary
-
-    Args:
-        island - TODO
-
-    Returns:
-        TODO
-    """
-    min_x = +1000
-    min_y = +1000
-    max_x = -1000
-    max_y = -1000
-
-    # for island in islands:
-    for face_id in island:
-        face = bm.faces[face_id]
-        for loop in face.loops:
-            min_x = min(loop[uvlayer].uv.x, min_x)
-            min_y = min(loop[uvlayer].uv.y, min_y)
-            max_x = max(loop[uvlayer].uv.x, max_x)
-            max_y = max(loop[uvlayer].uv.y, max_y)
-
-    return (Vector((min_x, min_y)) + Vector((max_x, max_y))) / 2
-
-
-def rotate_island(island, angle):
-    """TODO - Summary
-
-    Args:
-        island - TODO
-        angle - TODO
-    """
-    rad = radians(angle)
-    center = b_box_center(island)
-    for face_id in island:
-        face = bm.faces[face_id]
-        for loop in face.loops:
-            x = loop[bm.loops.layers.uv.active].uv.x
-            y = loop[bm.loops.layers.uv.active].uv.y
-            xt = x - center.x
-            yt = y - center.y
-            xr = (xt * cos(rad)) - (yt * sin(rad))
-            yr = (xt * sin(rad)) + (yt * cos(rad))
-            loop[bm.loops.layers.uv.active].uv.x = xr + center.x
-            loop[bm.loops.layers.uv.active].uv.y = yr + center.y
-
-
+# This part is heavily inspired by the "UV Align\Distribute" addon made by Rebellion (Luca Carella)
 class MakeIslands:
     """TODO - Summary
 
@@ -441,21 +487,32 @@ class MakeIslands:
         selected_islands - TODO
     """
     def __init__(self):
-        """TODO - Summary"""
-        initbmesh()
-        global bm
-        global uvlayer
+        self.uvlayer = None
+        self.bm = None
+        self.initbmesh()
         self.face_to_verts = defaultdict(set)
         self.vert_to_faces = defaultdict(set)
         self.selectedIsland = set()
-        for face in bm.faces:
+        for face in self.bm.faces:
             for loop in face.loops:
-                ind = '{0[0]:.5} {0[1]:.5} {1}'.format(loop[uvlayer].uv, loop.vert.index)
+                ind = '{0[0]:.5} {0[1]:.5} {1}'.format(loop[self.uvlayer].uv, loop.vert.index)
                 self.face_to_verts[face.index].add(ind)
                 self.vert_to_faces[ind].add(face.index)
                 if face.select:
-                    if loop[uvlayer].select:
+                    if loop[self.uvlayer].select:
                         self.selectedIsland.add(face.index)
+
+        self.islands = []
+        self.faces_left = set(self.face_to_verts.keys())
+        while len(self.faces_left) > 0:
+            face_id = list(self.faces_left)[0]
+            self.current_island = []
+            self.add_to_island(face_id)
+            self.islands.append(self.current_island)
+
+    def initbmesh(self):
+        self.bm = bmesh.from_edit_mesh(bpy.context.edit_object.data)
+        self.uvlayer = self.bm.loops.layers.uv.active
 
     def add_to_island(self, face_id):
         """TODO - Summary
@@ -476,37 +533,6 @@ class MakeIslands:
                     for face in connected_faces:
                         self.add_to_island(face)
 
-    def get_islands(self):  # I think this function may need to go and just be done in __init__?
-        """TODO - Summary
-
-        Returns:
-            self.islands -
-        """
-
-        self.islands = []  # instance attribute defined outside of __init__!
-        self.faces_left = set(self.face_to_verts.keys())  # instance attribute defined outside of __init__!
-        while len(self.faces_left) > 0:
-            face_id = list(self.faces_left)[0]
-            self.current_island = []  # instance attribute defined outside of __init__!
-            self.add_to_island(face_id)
-            self.islands.append(self.current_island)
-        return self.islands
-
-    def active_island(self):
-        """TODO - Summary
-
-        Returns:
-            island - TODO
-            OR
-            None
-        """
-        for island in self.islands:
-            try:
-                if bm.faces.active.index in island:
-                    return island
-            except:  # broad try-except...what are you trying to catch here?
-                return None
-
     def selected_islands(self):
         """TODO - Summary
 
@@ -519,6 +545,40 @@ class MakeIslands:
             if not self.selectedIsland.isdisjoint(island):
                 _selectedIslands.append(island)
         return _selectedIslands
+
+    def b_box_center(self, island):
+        min_x = 1000
+        min_y = 1000
+        max_x = -1000
+        max_y = -1000
+
+        for face_id in island:
+            face = self.bm.faces[face_id]
+            for loop in face.loops:
+                min_x = min(loop[self.uvlayer].uv.x, min_x)
+                min_y = min(loop[self.uvlayer].uv.y, min_y)
+                max_x = max(loop[self.uvlayer].uv.x, max_x)
+                max_y = max(loop[self.uvlayer].uv.y, max_y)
+
+        return (Vector((min_x, min_y)) + Vector((max_x, max_y))) / 2
+
+    def rotate_island(self, island, angle):
+        rad = radians(angle)
+        center = self.b_box_center(island)
+        for face_id in island:
+            face = self.bm.faces[face_id]
+            for loop in face.loops:
+                x = loop[self.bm.loops.layers.uv.active].uv.x
+                y = loop[self.bm.loops.layers.uv.active].uv.y
+                xt = x - center.x
+                yt = y - center.y
+                xr = (xt * cos(rad)) - (yt * sin(rad))
+                yr = (xt * sin(rad)) + (yt * cos(rad))
+                loop[self.bm.loops.layers.uv.active].uv.x = xr + center.x
+                loop[self.bm.loops.layers.uv.active].uv.y = yr + center.y
+
+    def get_bm(self):
+        return self.bm
 
 
 def create_system(ob, number, display, vertex_group):
@@ -537,41 +597,35 @@ def create_system(ob, number, display, vertex_group):
     leaf = ob.modifiers.new("psys name", 'PARTICLE_SYSTEM')
     part = ob.particle_systems[0]
     part.vertex_group_density = g.name
-    set = leaf.particle_system.settings
-    set.name = "leaf"
-    set.type = "HAIR"
-    set.use_advanced_hair = True
-    set.draw_percentage = 100 * display / number
-    set.count = number
-    set.distribution = "RAND"
-    set.normal_factor = .250
-    set.factor_random = .7
-    set.use_rotations = True
-    set.phase_factor = 1
-    set.phase_factor_random = 1
-    set.particle_size = .015
-    set.size_random = .25
-    set.brownian_factor = 1
-    set.render_type = "OBJECT"
+    settings = leaf.particle_system.settings
+    settings.name = "leaf"
+    settings.type = "HAIR"
+    settings.use_advanced_hair = True
+    settings.draw_percentage = 100 * display / number
+    settings.count = number
+    settings.distribution = "RAND"
+    settings.normal_factor = 0.250
+    settings.factor_random = 0.7
+    settings.use_rotations = True
+    settings.phase_factor = 1
+    settings.phase_factor_random = 1
+    settings.particle_size = 0.015
+    settings.size_random = 0.25
+    settings.brownian_factor = 1
+    settings.render_type = "OBJECT"
 
 
 def rotate():
     """After automatic unwrap, the uv islands are not corectly oriented, this function corrects it by rotating them acordingly"""
     bpy.ops.object.editmode_toggle()
     make_islands = MakeIslands()
+    bm = make_islands.get_bm()
     bm.verts.ensure_lookup_table()
     bm.edges.ensure_lookup_table()
     bm.faces.ensure_lookup_table()
-    islands = make_islands.get_islands()  # islands is not used...does get_islands need to return anything?
     sel_islands = make_islands.selected_islands()
-    act_island = make_islands.active_island()
-
-    if not act_island:
-        self.report({"ERROR"}, "No active face")  # self is not defined, will raise an error!
-        return {"CANCELLED"}
 
     for island in sel_islands:
-
         f0 = bm.faces[island[0]]
         index = f0.index
         f1 = bm.faces[island[0]]
@@ -582,13 +636,13 @@ def rotate():
 
         x1, y1, x2, y2 = (0, 0, 0, 0)
         for i in range(4):
-            x1 += .25 * f0.loops[i][bm.loops.layers.uv.active].uv.x
-            x2 += .25 * f1.loops[i][bm.loops.layers.uv.active].uv.x
-            y1 += .25 * f0.loops[i][bm.loops.layers.uv.active].uv.y
-            y2 += .25 * f1.loops[i][bm.loops.layers.uv.active].uv.y
+            x1 += 0.25 * f0.loops[i][bm.loops.layers.uv.active].uv.x
+            x2 += 0.25 * f1.loops[i][bm.loops.layers.uv.active].uv.x
+            y1 += 0.25 * f0.loops[i][bm.loops.layers.uv.active].uv.y
+            y2 += 0.25 * f1.loops[i][bm.loops.layers.uv.active].uv.y
 
         if (abs(x2 - x1) < abs(y2 - y1)) and (len(island) % 8 == 0):
-            rotate_island(island, 90)
+            make_islands.rotate_island(island, 90)
 
     bpy.ops.uv.pack_islands(rotate=False, margin=0.001)
     bpy.ops.object.editmode_toggle()
@@ -624,11 +678,10 @@ def rot_scale(v_co, scale, directions, rot_z):
 
     (x, y, z) = directions
     directions = Vector((-x, -y, z))
-    c = rot_z
     q = Vector((0, 0, 1)).rotation_difference(directions)
     mat_rot = q.to_matrix()
     mat_rot.resize_4x4()
-    mc = Matrix.Rotation(c, 4, 'Z')
+    mc = Matrix.Rotation(rot_z, 4, 'Z')
     v_co = [((v * scale) * mc) * mat_rot for v in v_co]
     return v_co
 
@@ -692,9 +745,9 @@ def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entre
         i1[0] - (int) The index of the last vertex that is part of a seam on the first end of the split
         i2[0] - (int) The index of the last vertex that is part of a seam on the second end of the split
     """
-    random1 = random_angle * (random() - .5)
-    random2 = random_angle * (random() - .5)
-    random3 = random_angle * (random() - .5)
+    random1 = random_angle * (random() - 0.5)
+    random2 = random_angle * (random() - 0.5)
+    random3 = random_angle * (random() - 0.5)
 
     rand_x = Matrix.Rotation(random1, 4, 'X')
     rand_y = Matrix.Rotation(random2, 4, 'Y')
@@ -760,9 +813,9 @@ def join_branch(verts, faces, indexes, scale, branch_length, branch_verts, direc
         ns_index - (int) The index of the last vertex that is part of a seam on the end of the Module
     """
     barycentre = Vector((0, 0, 0))
-    random1 = rand * (random() - .5)
-    random2 = rand * (random() - .5)
-    random3 = rand * (random() - .5)
+    random1 = rand * (random() - 0.5)
+    random2 = rand * (random() - 0.5)
+    random3 = rand * (random() - 0.5)
     for i in indexes:
         barycentre += verts[i]
     barycentre /= len(indexes)
@@ -820,6 +873,61 @@ def add_seams(indexes, seams):
         seams.append((indexes[i], indexes[(i + 1) % n]))
 
 
+def fix_normals(inside):
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.normals_make_consistent(inside=inside)
+    bpy.ops.mesh.select_all(action='DESELECT')
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+
+def build_material():
+    if not bpy.context.scene.render.engine == 'CYCLES':
+        bpy.context.scene.render.engine = 'CYCLES'
+
+    mat = bpy.data.materials.new(name="Tree")
+    mat.diffuse_color = (0.214035, 0.0490235, 0.0163952)
+    mat.specular_color = (0.0469617, 0.0469617, 0.0469617)
+    mat.specular_hardness = 10
+    mat.use_nodes = True
+    mat.node_tree.nodes.remove(mat.node_tree.nodes.get('Diffuse BSDF'))
+    mat.node_tree.nodes.remove(mat.node_tree.nodes.get('Material Output'))
+
+    for (n_type, loc, name, label) in Nodes:
+        new_node = mat.node_tree.nodes.new(n_type)
+        new_node.location = loc
+        new_node.name = name
+        new_node.label = label
+
+    nodes = mat.node_tree.nodes
+    nodes['Mapping'].scale = (15, 15, 15)
+    nodes["Noise Texture"].inputs[1].default_value = 2
+    nodes["Noise Texture"].inputs[2].default_value = 10
+    nodes["Mix"].blend_type = 'MULTIPLY'
+    nodes["Mix.002"].blend_type = 'MULTIPLY'
+    nodes["Mix.002"].inputs[0].default_value = 0.95
+    nodes["Math.001"].operation = 'MULTIPLY'
+    nodes["Math.001"].inputs[1].default_value = 30
+    nodes["moss height"].color_ramp.elements[0].position = 0.3
+    nodes["moss height"].color_ramp.elements[1].position = 0.5
+    nodes["Noise Texture.001"].inputs[1].default_value = 0.7
+    nodes["Noise Texture.001"].inputs[2].default_value = 10
+    nodes["Bright/Contrast"].inputs[2].default_value = 5
+    nodes["moss color"].blend_type = 'MULTIPLY'
+    nodes["moss color"].inputs[2].default_value = [0.342, 0.526, 0.353, 1.0]
+    nodes["color variation"].blend_type = 'OVERLAY'
+    nodes["color variation"].inputs[2].default_value = [0.610, 0.648, 0.462, 1.0]
+
+    mat.node_tree.links.new(nodes["Texture Coordinate"].outputs[3], nodes["Vector Math"].inputs[1])
+    links = mat.node_tree.links
+    for f, t in Links:
+        from_node = mat.node_tree.nodes[f[0]]
+        to_node = mat.node_tree.nodes[t[0]]
+        links.new(from_node.outputs[f[1]], to_node.inputs[t[1]])
+
+    return mat
+
+
 def create_tree(position):
     """Creates a tree
 
@@ -838,7 +946,8 @@ def create_tree(position):
     Args:
         position - (Vector) Position to generate tree at
     """
-    
+    clock = Clock("create_tree")
+
     #deselecting all objects
     for select_ob in bpy.context.selected_objects:
         select_ob.select = False
@@ -866,9 +975,9 @@ def create_tree(position):
         faces = [f for f in R1.faces]
         extr = [i for i in R1.stem]
         roots = [(i[2], i[1], i[0], i[2][0]) for i in R1.roots]
-        roots_variations = .5
+        roots_variations = 0.5
         roots_length = 1.4
-        roots_rad_dec = .7
+        roots_rad_dec = 0.7
 
         for i in range(scene.roots_iteration):
             next_roots = []
@@ -888,7 +997,7 @@ def create_tree(position):
                 barycentre /= len(indexes)
 
                 if i > 2:
-                    direction += .7 * Vector((0, 0, -1)) / (max(1, 20 * abs(barycentre.z)))
+                    direction += 0.7 * Vector((0, 0, -1)) / (max(1, 20 * abs(barycentre.z)))
                 ni1, ni2, dir1, dir2, r1, r2, nsi1, nsi2 = join(verts, faces, indexes, jonct_verts, big_j.faces,
                                                                 radius * roots_rad_dec, i1, i2, entree, direction,
                                                                 roots_length, s_index, seams2, jonct_seams,
@@ -925,7 +1034,7 @@ def create_tree(position):
 
             if bpy.data.objects.get(scene.obstacle) is not None:
                 obs = scene.objects[scene.obstacle]
-                bpy.context.scene.update()
+                scene.update()
 
                 result, hit_pos, face_normal, face_index = obs.ray_cast(pos, end)
                 if result:
@@ -946,16 +1055,15 @@ def create_tree(position):
                     bones.append((Lb[0], len(bones) + 2, Lb[1], sortie))
 
                 nb = (len(bones) + 1, sortie)
-                nextremites.append((ni, radius * .98, direction, nsi, nb, trunk2, curr_rotation))
+                nextremites.append((ni, radius * 0.98, direction, nsi, nb, trunk2, curr_rotation))
 
             elif i == scene.iteration + scene.trunk_length - 1 or random() < scene.break_chance:
                 end_verts = [Vector(v) for v in end_cap.verts]
                 end_faces = [f for f in end_cap.faces]
                 n = len(verts)
-                # ni, direction, and nsi are not used...does join_branch need to return anything?
-                ni, direction, nsi = join_branch(verts, faces, indexes, radius, scene.trunk_space, end_verts, direction,
-                                                 scene.trunk_variation,
-                                                 s_index, seams2)
+                join_branch(verts, faces, indexes, radius, scene.trunk_space, end_verts, direction,
+                                                 scene.trunk_variation, s_index, seams2)
+
                 faces += [add_tuple(f, n) for f in end_faces]
                 end_seams = [(1, 0), (2, 1), (3, 2), (4, 3), (5, 4), (6, 5), (7, 6), (0, 7)]
                 seams2 += [add_tuple(f, n) for f in end_seams]
@@ -973,9 +1081,8 @@ def create_tree(position):
                 length = scene.trunk_space if trunk2 else scene.branch_length
                 ni1, ni2, dir1, dir2, r1, r2, nsi1, nsi2 = join(verts, faces, indexes, jonct_verts, big_j.faces,
                                                                 radius * (1 + scene.radius_dec) / 2, i1, i2, entree,
-                                                                direction,
-                                                                length, s_index, seams2, jonct_seams, variation,
-                                                                new_rotation)
+                                                                direction, length, s_index, seams2, jonct_seams,
+                                                                variation, new_rotation)
                 sortie1 = (verts[ni1[0]] + verts[ni1[4]]) / 2
                 sortie2 = (verts[ni2[0]] + verts[ni2[4]]) / 2
                 nb = len(bones)
@@ -998,8 +1105,7 @@ def create_tree(position):
                 variation = scene.trunk_variation if trunk2 else scene.randomangle
                 length = scene.trunk_space if trunk2 else scene.branch_length
                 ni, direction, nsi = join_branch(verts, faces, indexes, radius, length, branch_verts, direction,
-                                                 variation, s_index,
-                                                 seams2)
+                                                 variation, s_index, seams2)
                 sortie = pos + direction * scene.branch_length
 
                 if i <= scene.bones_iterations:
@@ -1018,8 +1124,8 @@ def create_tree(position):
     mesh.update(calc_edges=False)
     obj = bpy.data.objects.new("tree", mesh)
     obj.location = position
-    bpy.context.scene.objects.link(obj)
-    bpy.context.scene.objects.active = obj
+    scene.objects.link(obj)
+    scene.objects.active = obj
     obj.select = True
     bpy.ops.object.shade_smooth()
     obj.select = False
@@ -1027,26 +1133,20 @@ def create_tree(position):
     vgroups = obj.vertex_groups
     vgroups.active_index = vgroups["leaf"].index
     g.add([i for i in range(leafs_start_index, len(verts))], 1.0, "ADD")
-    # Normals are a bit messy, they are made consistent
-    bpy.ops.object.mode_set(mode='EDIT')
-    bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.mesh.normals_make_consistent(inside=False)
-    bpy.ops.mesh.select_all(action='DESELECT')
-    bpy.ops.mesh.select_mode(type="EDGE")
-    bpy.ops.object.editmode_toggle()
-    #Sometimes the make normals consistent puts them all in the wrong direction, this fixes it
+
+    # fix normals, then make sure they are fixed :)
+    fix_normals(inside=False)
     if obj.data.polygons[0].normal.x < 0:
-        bpy.ops.object.editmode_toggle()
-        bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.mesh.normals_make_consistent(inside=True)
-        bpy.ops.mesh.select_all(action='DESELECT')
-        bpy.ops.object.editmode_toggle()
-    #Particle setup
+        fix_normals(inside=True)
+
+    # particle setup
     if scene.particle:
         create_system(obj, scene.number, scene.display, vgroups["leaf"])
-    #UV unwrapping
+
+    # uv unwrapping
     if scene.uv:
-        test = [[False, []] for i in range(len(verts))]
+        clock.add_sub_job("uv")
+        test = [[False, []] for _ in range(len(verts))]
         for (a, b) in seams2:
             a, b = min(a, b), max(a, b)
             test[a][0] = True
@@ -1065,60 +1165,19 @@ def create_tree(position):
         bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
         bpy.ops.object.editmode_toggle()
         rotate()
-    #Material creation
+        clock.stop("uv")
+
+    # material creation
     if scene.mat:
-        if not bpy.context.scene.render.engine == 'CYCLES':
-            bpy.context.scene.render.engine = 'CYCLES'
-
-        mat = bpy.data.materials.new(name="Tree")
-        mat.diffuse_color = (0.214035, 0.0490235, 0.0163952)
-        mat.specular_color = (0.0469617, 0.0469617, 0.0469617)
-        mat.specular_hardness = 10
-        mat.use_nodes = True
-        mat.node_tree.nodes.remove(mat.node_tree.nodes.get('Diffuse BSDF'))
-        mat.node_tree.nodes.remove(mat.node_tree.nodes.get('Material Output'))
-
-        for (n_type, loc, name, label) in Nodes:
-            new_node = mat.node_tree.nodes.new(n_type)
-            new_node.location = loc
-            new_node.name = name
-            new_node.label = label
-
-        nodes = mat.node_tree.nodes
-        nodes['Mapping'].scale = (15, 15, 15)
-        nodes["Noise Texture"].inputs[1].default_value = 2
-        nodes["Noise Texture"].inputs[2].default_value = 10
-        nodes["Mix"].blend_type = 'MULTIPLY'
-        nodes["Mix.002"].blend_type = 'MULTIPLY'
-        nodes["Mix.002"].inputs[0].default_value = .95
-        nodes["Math.001"].operation = 'MULTIPLY'
-        nodes["Math.001"].inputs[1].default_value = 30
-        nodes["moss height"].color_ramp.elements[0].position = .3
-        nodes["moss height"].color_ramp.elements[1].position = .5
-        nodes["Noise Texture.001"].inputs[1].default_value = .7
-        nodes["Noise Texture.001"].inputs[2].default_value = 10
-        nodes["Bright/Contrast"].inputs[2].default_value = 5
-        nodes["moss color"].blend_type = 'MULTIPLY'
-        nodes["moss color"].inputs[2].default_value = [0.342, 0.526, 0.353, 1.0]
-        nodes["color variation"].blend_type = 'OVERLAY'
-        nodes["color variation"].inputs[2].default_value = [0.610, 0.648, 0.462, 1.0]
-
-        mat.node_tree.links.new(nodes["Texture Coordinate"].outputs[3], nodes["Vector Math"].inputs[1])
-        links = mat.node_tree.links
-        for (f, t) in Links:
-            from_node = mat.node_tree.nodes[f[0]]
-            to_node = mat.node_tree.nodes[t[0]]
-            links.new(from_node.outputs[f[1]], to_node.inputs[t[1]])
-        obj.active_material = mat
+        obj.active_material = build_material()
 
     elif bpy.data.materials.get(scene.bark_material) is not None:
         obj.active_material = bpy.data.materials.get(scene.bark_material)
-    #Armature creation
+
+    # armature creation
     if scene.create_armature:
-        bpy.ops.object.add(
-            type='ARMATURE',
-            enter_editmode=True,
-            location=Vector((0, 0, 0)))
+        clock.add_sub_job("armature")
+        bpy.ops.object.add(type='ARMATURE', enter_editmode=True, location=Vector((0, 0, 0)))
         arm = bpy.context.object
         arm.show_x_ray = True
         amt = arm.data
@@ -1138,21 +1197,25 @@ def create_tree(position):
         bpy.ops.object.select_all(action='DESELECT')
         obj.select = True
         arm.select = True
-        bpy.context.scene.objects.active = arm
+        scene.objects.active = arm
         bpy.ops.object.parent_set(type='ARMATURE_AUTO')
         bpy.ops.object.select_all(action='DESELECT')
+        clock.stop("armature")
 
     if scene.visualize_leafs:
-        bpy.context.scene.objects.active = obj
+        clock.add_sub_job("vis leaves")
+        scene.objects.active = obj
         vgroups.active_index = vgroups["leaf"].index
         bpy.ops.paint.weight_paint_toggle()
+        clock.stop("vis leaves")
 
     obj.select = True
-    bpy.context.scene.objects.active = obj
-    bpy.ops.wm.properties_add(data_path="object")
-    obj["prop"] = "is_tree"
-    bpy.ops.wm.properties_add(data_path="object")
-    obj["prop1"] = "armature" if scene.create_armature else "no_armature"
+    scene.objects.active = obj
+    obj["is_tree"] = True
+    obj["has_armature"] = True if scene.create_armature else False
+
+    clock.stop("create_tree")
+    clock.display()
 
 
 class MakeTreeOperator(Operator):
@@ -1183,24 +1246,24 @@ class UpdateTreeOperator(Operator):
         obj = bpy.context.active_object
 
         try:
-            prop_name = obj.get('prop')
+            is_tree_prop = obj.get('is_tree')
+            has_arm_prop = obj.get('has_armature')
         except AttributeError:
             self.report({'ERROR'}, "No active tree object!")
             return {'CANCELLED'}
 
-        if prop_name == "is_tree":
+        if is_tree_prop:
             pos = obj.location
             scale = obj.scale
             rot = obj.rotation_euler
-
             create_tree(pos)
-            ob = bpy.context.active_object
+            ob = bpy.context.active_object  # this is the new object that has been set active by 'create_tree'
             ob.scale = scale
             ob.rotation_euler = rot
             ob.select = False
             obj.select = True
 
-            if obj.get('prop1') == 'armature':
+            if has_arm_prop:
                 arm_pos = obj.parent.location
                 arm_scale = obj.parent.scale
                 arm_rot = obj.parent.rotation_euler
@@ -1244,6 +1307,7 @@ class SaveTreePresetOperator(Operator):
                   "iteration:{}\n"
                   "preserve_end:{}\n"
                   "trunk_length:{}\n"
+                  "trunk_split_proba:{}\n"
                   "split_proba:{}\n"
                   "trunk_space:{}\n"
                   "branch_length:{}\n"
@@ -1267,38 +1331,41 @@ class SaveTreePresetOperator(Operator):
                   "particle:{}\n"
                   "number:{}\n"
                   "display:{}\n".format(
-            scene.preserve_trunk,
-            scene.trunk_split_angle,
-            scene.randomangle,
-            scene.trunk_variation,
-            scene.radius,
-            scene.radius_dec,
-            scene.iteration,
-            scene.preserve_end,
-            scene.trunk_length,
-            scene.split_proba,
-            scene.trunk_space,
-            scene.branch_length,
-            scene.split_angle,
-            scene.gravity_strength,
-            scene.gravity_start,
-            scene.gravity_end,
-            scene.obstacle,
-            scene.obstacle_strength,
-            scene.SeedProp,
-            scene.create_armature,
-            scene.bones_iterations,
-            scene.visualize_leafs,
-            scene.leafs_iteration_length,
-            scene.uv,
-            scene.mat,
-            scene.roots_iteration,
-            scene.create_roots,
-            scene.branch_rotate,
-            scene.branch_random_rotate,
-            scene.particle,
-            scene.number,
-            scene.display))
+                    # bools can't be stored as "True" or "False" b/c bool(x) will evaluate to
+                    # True if x = "True" or if x = "False"...the fix is to do an int() conversion
+                    int(scene.preserve_trunk),
+                    scene.trunk_split_angle,
+                    scene.randomangle,
+                    scene.trunk_variation,
+                    scene.radius,
+                    scene.radius_dec,
+                    scene.iteration,
+                    scene.preserve_end,
+                    scene.trunk_length,
+                    scene.trunk_split_proba,
+                    scene.split_proba,
+                    scene.trunk_space,
+                    scene.branch_length,
+                    scene.split_angle,
+                    scene.gravity_strength,
+                    scene.gravity_start,
+                    scene.gravity_end,
+                    scene.obstacle,
+                    scene.obstacle_strength,
+                    scene.SeedProp,
+                    int(scene.create_armature),
+                    scene.bones_iterations,
+                    int(scene.visualize_leafs),
+                    scene.leafs_iteration_length,
+                    int(scene.uv),
+                    int(scene.mat),
+                    scene.roots_iteration,
+                    int(scene.create_roots),
+                    scene.branch_rotate,
+                    scene.branch_random_rotate,
+                    int(scene.particle),
+                    scene.number,
+                    scene.display))
 
         # write to file
         prsets_directory = os.path.join(os.path.dirname(__file__), "mod_tree_presets")
@@ -1354,7 +1421,7 @@ class LoadTreePresetOperator(Operator):
             if ":" in line:
                 setting, value = line.split(":")
                 if setting == "preserve_trunk":
-                    scene.preserve_trunk = bool(value)  # the value is a string so cast to the correct type first
+                    scene.preserve_trunk = bool(int(value))  # bools have to be converted to int first (stored as 0/1)
                 elif setting == "trunk_split_angle":
                     scene.trunk_split_angle = float(value)
                 elif setting == "randomangle":
@@ -1394,27 +1461,27 @@ class LoadTreePresetOperator(Operator):
                 elif setting == "SeedProp":
                     scene.SeedProp = int(value)
                 elif setting == "create_armature":
-                    scene.create_armature = bool(value)
+                    scene.create_armature = bool(int(value))
                 elif setting == "bones_iterations":
                     scene.bones_iterations = int(value)
                 elif setting == "visualize_leafs":
-                    scene.visualize_leafs = bool(value)
+                    scene.visualize_leafs = bool(int(value))
                 elif setting == "leafs_iteration_length":
                     scene.leafs_iteration_length = int(value)
                 elif setting == "uv":
-                    scene.uv = bool(value)
+                    scene.uv = bool(int(value))
                 elif setting == "mat":
-                    scene.mat = bool(value)
+                    scene.mat = bool(int(value))
                 elif setting == "roots_iteration":
                     scene.roots_iteration = int(value)
                 elif setting == "create_roots":
-                    scene.create_roots = bool(value)
+                    scene.create_roots = bool(int(value))
                 elif setting == "branch_rotate":
                     scene.branch_rotate = float(value)
                 elif setting == "branch_random_rotate":
                     scene.branch_random_rotate = float(value)
                 elif setting == "particle":
-                    scene.particle = bool(value)
+                    scene.particle = bool(int(value))
                 elif setting == "number":
                     scene.number = int(value)
                 elif setting == "display":
@@ -1838,5 +1905,54 @@ def unregister():
     del Scene.display
 
 
+# Unit tests
+class AddTuple(unittest.TestCase):
+    maxDiff = 10000
+
+    def test_add_integers(self):
+        a = 1
+        b = (5, 6, 7)
+        expected = (6, 7, 8)
+
+        result = add_tuple(b, a)
+
+        self.assertEqual(result, expected)
+
+
+class Gravity(unittest.TestCase):
+    maxDiff = 10000
+
+    def test_positive_gravity(self):
+        direction = Vector((1, 1, 1))
+        strength = -100
+        expected = Vector((1, 1, 1.8164966106414795))
+
+        result = gravity(direction, strength)
+
+        self.assertEqual(result, expected)
+
+    def test_negative_gravity(self):
+        direction = Vector((1, 1, 1))
+        strength = 100
+        expected = Vector((1, 1, 0.1835033893585205))
+
+        result = gravity(direction, strength)
+
+        self.assertEqual(result, expected)
+
+
+def load_tests(test_cases):
+    loader = unittest.TestLoader()
+    test_suite = unittest.TestSuite()
+    for test_class in test_cases:
+        tests = loader.loadTestsFromTestCase(test_class)
+        test_suite.addTests(tests)
+    return test_suite
+
+
 if __name__ == "__main__":
+    # run test cases
+    suite = load_tests([AddTuple, Gravity])
+    unittest.TextTestRunner(verbosity=2).run(suite)
+    # register addon
     register()
