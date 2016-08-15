@@ -447,11 +447,8 @@ class MakeIslands:
 
     def active_island(self):
         for island in self.islands:
-            try:
-                if bm.faces.active.index in island:
-                    return island
-            except:  # broad try-except...what are you trying to catch here?
-                return None
+            if bm.faces.active.index in island:
+                return island
 
     def selected_islands(self):
         _selectedIslands = []
