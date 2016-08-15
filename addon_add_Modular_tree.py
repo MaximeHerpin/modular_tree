@@ -365,62 +365,21 @@ Nodes, Links = (
 
 
 # This part is heavily inspired by the "UV Align\Distribute" addon made by Rebellion (Luca Carella)
-def initbmesh():
-    global bm
-    global uvlayer
-    bm = bmesh.from_edit_mesh(bpy.context.edit_object.data)
-    uvlayer = bm.loops.layers.uv.active
-
-
-def b_box_center(island):
-    min_x = 1000
-    min_y = 1000
-    max_x = -1000
-    max_y = -1000
-
-    # for island in islands:
-    for face_id in island:
-        face = bm.faces[face_id]
-        for loop in face.loops:
-            min_x = min(loop[uvlayer].uv.x, min_x)
-            min_y = min(loop[uvlayer].uv.y, min_y)
-            max_x = max(loop[uvlayer].uv.x, max_x)
-            max_y = max(loop[uvlayer].uv.y, max_y)
-
-    return (Vector((min_x, min_y)) + Vector((max_x, max_y))) / 2
-
-
-def rotate_island(island, angle):
-    rad = radians(angle)
-    center = b_box_center(island)
-    for face_id in island:
-        face = bm.faces[face_id]
-        for loop in face.loops:
-            x = loop[bm.loops.layers.uv.active].uv.x
-            y = loop[bm.loops.layers.uv.active].uv.y
-            xt = x - center.x
-            yt = y - center.y
-            xr = (xt * cos(rad)) - (yt * sin(rad))
-            yr = (xt * sin(rad)) + (yt * cos(rad))
-            loop[bm.loops.layers.uv.active].uv.x = xr + center.x
-            loop[bm.loops.layers.uv.active].uv.y = yr + center.y
-
-
 class MakeIslands:
     def __init__(self):
-        initbmesh()
-        global bm
-        global uvlayer
+        self.uvlayer = None
+        self.bm = None
+        self.initbmesh()
         self.face_to_verts = defaultdict(set)
         self.vert_to_faces = defaultdict(set)
         self.selectedIsland = set()
-        for face in bm.faces:
+        for face in self.bm.faces:
             for loop in face.loops:
-                ind = '{0[0]:.5} {0[1]:.5} {1}'.format(loop[uvlayer].uv, loop.vert.index)
+                ind = '{0[0]:.5} {0[1]:.5} {1}'.format(loop[self.uvlayer].uv, loop.vert.index)
                 self.face_to_verts[face.index].add(ind)
                 self.vert_to_faces[ind].add(face.index)
                 if face.select:
-                    if loop[uvlayer].select:
+                    if loop[self.uvlayer].select:
                         self.selectedIsland.add(face.index)
 
         self.islands = []
@@ -430,6 +389,10 @@ class MakeIslands:
             self.current_island = []
             self.add_to_island(face_id)
             self.islands.append(self.current_island)
+
+    def initbmesh(self):
+        self.bm = bmesh.from_edit_mesh(bpy.context.edit_object.data)
+        self.uvlayer = self.bm.loops.layers.uv.active
 
     def add_to_island(self, face_id):
         if face_id in self.faces_left:
@@ -445,17 +408,47 @@ class MakeIslands:
                     for face in connected_faces:
                         self.add_to_island(face)
 
-    def active_island(self):
-        for island in self.islands:
-            if bm.faces.active.index in island:
-                return island
-
     def selected_islands(self):
         _selectedIslands = []
         for island in self.islands:
             if not self.selectedIsland.isdisjoint(island):
                 _selectedIslands.append(island)
         return _selectedIslands
+
+    def b_box_center(self, island):
+        min_x = 1000
+        min_y = 1000
+        max_x = -1000
+        max_y = -1000
+
+        # for island in islands:
+        for face_id in island:
+            face = self.bm.faces[face_id]
+            for loop in face.loops:
+                min_x = min(loop[self.uvlayer].uv.x, min_x)
+                min_y = min(loop[self.uvlayer].uv.y, min_y)
+                max_x = max(loop[self.uvlayer].uv.x, max_x)
+                max_y = max(loop[self.uvlayer].uv.y, max_y)
+
+        return (Vector((min_x, min_y)) + Vector((max_x, max_y))) / 2
+
+    def rotate_island(self, island, angle):
+        rad = radians(angle)
+        center = self.b_box_center(island)
+        for face_id in island:
+            face = self.bm.faces[face_id]
+            for loop in face.loops:
+                x = loop[self.bm.loops.layers.uv.active].uv.x
+                y = loop[self.bm.loops.layers.uv.active].uv.y
+                xt = x - center.x
+                yt = y - center.y
+                xr = (xt * cos(rad)) - (yt * sin(rad))
+                yr = (xt * sin(rad)) + (yt * cos(rad))
+                loop[self.bm.loops.layers.uv.active].uv.x = xr + center.x
+                loop[self.bm.loops.layers.uv.active].uv.y = yr + center.y
+
+    def get_bm(self):
+        return self.bm
 
 
 def create_system(ob, number, display, vertex_group):
@@ -487,18 +480,13 @@ def create_system(ob, number, display, vertex_group):
 def rotate():
     bpy.ops.object.editmode_toggle()
     make_islands = MakeIslands()
+    bm = make_islands.get_bm()
     bm.verts.ensure_lookup_table()
     bm.edges.ensure_lookup_table()
     bm.faces.ensure_lookup_table()
     sel_islands = make_islands.selected_islands()
-    act_island = make_islands.active_island()
-
-    if not act_island:
-        self.report({"ERROR"}, "No active face")  # self is not defined, will raise an error!
-        return {"CANCELLED"}
 
     for island in sel_islands:
-
         f0 = bm.faces[island[0]]
         index = f0.index
         f1 = bm.faces[island[0]]
@@ -515,7 +503,7 @@ def rotate():
             y2 += .25 * f1.loops[i][bm.loops.layers.uv.active].uv.y
 
         if (abs(x2 - x1) < abs(y2 - y1)) and (len(island) % 8 == 0):
-            rotate_island(island, 90)
+            make_islands.rotate_island(island, 90)
 
     bpy.ops.uv.pack_islands(rotate=False, margin=0.001)
     bpy.ops.object.editmode_toggle()
