@@ -101,7 +101,7 @@ S2 = Split(
      (0.12, -0.57, 2.13), (-0.37, -0.06, 2.17), (-0.46, 0.62, 2.06), (0.03, 1.05, 1.88), (-1.19, -0.63, 0.6),
      (-1.42, -0.01, 0.52), (-0.71, -1.0, 0.98), (-0.39, -0.91, 1.36), (0.63, -0.72, 1.11), (-0.2, -0.73, 1.49),
      (0.85, 0.64, 0.64), (1.12, 0.01, 0.68), (0.28, 0.97, 0.69), (-0.72, 0.91, 0.89), (-1.21, 0.7, 0.6),
-     (-0.36, 0.92, 1.36), (-0.43, -1.0, 0.68), (0.13, -1.05, 0.69), (-.42, .09, .90), (.13, .16, .97)],
+     (-0.36, 0.92, 1.36), (-0.43, -1.0, 0.68), (0.13, -1.05, 0.69), (-.42, 0.09, 0.90), (0.13, 0.16, 0.97)],
     # verts2
     [(-0.0, 1.0, 0.0), (-0.71, 0.71, 0.0), (-1.0, -0.0, 0.0), (-0.71, -0.71, 0.0), (0.0, -1.0, 0.0),
      (0.71, -0.71, 0.0), (1.0, -0.0, -0.0), (0.71, 0.71, -0.01), (-1.34, 0.76, 0.99), (-1.43, 0.53, 0.47),
@@ -110,7 +110,7 @@ S2 = Split(
      (0.63, -0.57, 1.75), (0.35, -0.06, 2.16), (0.21, 0.62, 2.16), (0.38, 1.05, 1.67), (-0.94, -0.63, 0.26),
      (-1.12, -0.01, 0.09), (-0.8, -1.0, 0.78), (-0.59, -0.81, 1.45), (0.75, -0.72, 0.94), (-0.07, -0.51, 1.66),
      (0.84, 0.64, 0.42), (1.12, 0.01, 0.39), (0.31, 0.97, 0.63), (-0.79, 0.91, 0.69), (-0.96, 0.7, 0.25),
-     (-0.38, 0.92, 1.37), (-0.43, -1.0, 0.69), (0.13, -1.05, 0.7), (-.98, 0, .16), (.85, .16, .49)],
+     (-0.38, 0.92, 1.37), (-0.43, -1.0, 0.69), (0.13, -1.05, 0.7), (-.98, 0, 0.16), (0.85, 0.16, 0.49)],
     # faces
     [(25, 24, 11, 10), (15, 14, 21, 22), (2, 3, 24, 25), (12, 26, 27, 13), (12, 11, 24, 26), (20, 29, 28, 19),
      (20, 21, 14, 29), (14, 13, 27, 29), (31, 30, 17, 18), (30, 32, 16, 17), (7, 0, 32, 30), (6, 7, 30, 31),
@@ -231,7 +231,7 @@ trunk = Split(
      (0.0, 0.99, 0.62), (-0.7, 0.7, 0.62), (0.0, -1.0, 1.43), (-0.43, -1.09, 1.3), (-0.6, -1.38, 0.99),
      (-0.41, -1.66, 0.69), (0.0, -1.78, 0.57), (0.41, -1.66, 0.69), (0.6, -1.38, 0.99), (0.43, -1.09, 1.3),
      (0.0, -1.08, 1.49), (-0.42, -1.23, 1.41), (-0.59, -1.6, 1.22), (-0.42, -1.98, 1.03), (0.0, -2.13, 0.95),
-     (0.42, -1.98, 1.03), (0.59, -1.6, 1.22), (0.42, -1.23, 1.41), (0, 0, 1), (0, -.35, .59)],
+     (0.42, -1.98, 1.03), (0.59, -1.6, 1.22), (0.42, -1.23, 1.41), (0, 0, 1), (0, -0.35, 0.59)],
     # verts2
     [(0.0, 1.0, -0.04), (-0.71, 0.71, -0.04), (-1.0, -0.0, -0.04), (-0.71, -0.71, -0.04), (0.0, -0.98, -0.04),
      (0.71, -0.71, -0.04), (1.0, 0.0, -0.04), (0.71, 0.71, -0.04), (0.0, 0.98, 1.31), (-0.69, 0.69, 1.31),
@@ -271,12 +271,12 @@ class Trunk:
 
 R1 = Trunk(
     # roots
-    [(Vector((-6.293336696217011e-08, -0.6988458633422852, -0.3152722477912903)), .69, [110, 111, 112, 113, 114, 115, 116, 117]),
-     (Vector((0.6009913086891174, -0.04263520613312721, -0.3981175780296326)), .34, [55, 56, 57, 58, 59, 60, 61, 62]),
-     (Vector((0.5693859457969666, 0.49961066246032715, -0.352831494808197)), .34, [47, 48, 49, 50, 51, 52, 53, 54]),
-     (Vector((-0.779069721698761, 0.455067813396454, -0.24110554456710815)), .34, [63, 64, 65, 66, 67, 68, 69, 70, 101]),
-     (Vector((-0.7720233201980591, -0.09697314351797104, -0.3281529068946838)), .56, [71, 72, 73, 74, 75, 76, 77, 78]),
-     (Vector((-1.859164768802657e-07, 0.2071729600429535, -0.4783042669296265)), .60, [39, 40, 41, 42, 43, 44, 45, 46])],
+    [(Vector((-6.293336696217011e-08, -0.6988458633422852, -0.3152722477912903)), 0.69, [110, 111, 112, 113, 114, 115, 116, 117]),
+     (Vector((0.6009913086891174, -0.04263520613312721, -0.3981175780296326)), 0.34, [55, 56, 57, 58, 59, 60, 61, 62]),
+     (Vector((0.5693859457969666, 0.49961066246032715, -0.352831494808197)), 0.34, [47, 48, 49, 50, 51, 52, 53, 54]),
+     (Vector((-0.779069721698761, 0.455067813396454, -0.24110554456710815)), 0.34, [63, 64, 65, 66, 67, 68, 69, 70, 101]),
+     (Vector((-0.7720233201980591, -0.09697314351797104, -0.3281529068946838)), 0.56, [71, 72, 73, 74, 75, 76, 77, 78]),
+     (Vector((-1.859164768802657e-07, 0.2071729600429535, -0.4783042669296265)), 0.60, [39, 40, 41, 42, 43, 44, 45, 46])],
     # stem
     [0, 1, 2, 3, 4, 5, 6, 7],
     # verts
@@ -421,7 +421,6 @@ class MakeIslands:
         max_x = -1000
         max_y = -1000
 
-        # for island in islands:
         for face_id in island:
             face = self.bm.faces[face_id]
             for loop in face.loops:
@@ -459,22 +458,22 @@ def create_system(ob, number, display, vertex_group):
     leaf = ob.modifiers.new("psys name", 'PARTICLE_SYSTEM')
     part = ob.particle_systems[0]
     part.vertex_group_density = g.name
-    set = leaf.particle_system.settings
-    set.name = "leaf"
-    set.type = "HAIR"
-    set.use_advanced_hair = True
-    set.draw_percentage = 100 * display / number
-    set.count = number
-    set.distribution = "RAND"
-    set.normal_factor = .250
-    set.factor_random = .7
-    set.use_rotations = True
-    set.phase_factor = 1
-    set.phase_factor_random = 1
-    set.particle_size = .015
-    set.size_random = .25
-    set.brownian_factor = 1
-    set.render_type = "OBJECT"
+    settings = leaf.particle_system.settings
+    settings.name = "leaf"
+    settings.type = "HAIR"
+    settings.use_advanced_hair = True
+    settings.draw_percentage = 100 * display / number
+    settings.count = number
+    settings.distribution = "RAND"
+    settings.normal_factor = 0.250
+    settings.factor_random = 0.7
+    settings.use_rotations = True
+    settings.phase_factor = 1
+    settings.phase_factor_random = 1
+    settings.particle_size = 0.015
+    settings.size_random = 0.25
+    settings.brownian_factor = 1
+    settings.render_type = "OBJECT"
 
 
 def rotate():
@@ -497,10 +496,10 @@ def rotate():
 
         x1, y1, x2, y2 = (0, 0, 0, 0)
         for i in range(4):
-            x1 += .25 * f0.loops[i][bm.loops.layers.uv.active].uv.x
-            x2 += .25 * f1.loops[i][bm.loops.layers.uv.active].uv.x
-            y1 += .25 * f0.loops[i][bm.loops.layers.uv.active].uv.y
-            y2 += .25 * f1.loops[i][bm.loops.layers.uv.active].uv.y
+            x1 += 0.25 * f0.loops[i][bm.loops.layers.uv.active].uv.x
+            x2 += 0.25 * f1.loops[i][bm.loops.layers.uv.active].uv.x
+            y1 += 0.25 * f0.loops[i][bm.loops.layers.uv.active].uv.y
+            y2 += 0.25 * f1.loops[i][bm.loops.layers.uv.active].uv.y
 
         if (abs(x2 - x1) < abs(y2 - y1)) and (len(island) % 8 == 0):
             make_islands.rotate_island(island, 90)
@@ -547,9 +546,9 @@ def joindre(verts, faces, v1_i, v2_i):
 
 def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entree, directions, branch_length, s_index, seams,
          jonc_seams, random_angle, branch_rotation):
-    random1 = random_angle * (random() - .5)
-    random2 = random_angle * (random() - .5)
-    random3 = random_angle * (random() - .5)
+    random1 = random_angle * (random() - 0.5)
+    random2 = random_angle * (random() - 0.5)
+    random3 = random_angle * (random() - 0.5)
 
     rand_x = Matrix.Rotation(random1, 4, 'X')
     rand_y = Matrix.Rotation(random2, 4, 'Y')
@@ -595,9 +594,9 @@ def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entre
 
 def join_branch(verts, faces, indexes, scale, branch_length, branch_verts, direction, rand, s_index, Seams):
     barycentre = Vector((0, 0, 0))
-    random1 = rand * (random() - .5)
-    random2 = rand * (random() - .5)
-    random3 = rand * (random() - .5)
+    random1 = rand * (random() - 0.5)
+    random2 = rand * (random() - 0.5)
+    random3 = rand * (random() - 0.5)
     for i in indexes:
         barycentre += verts[i]
     barycentre /= len(indexes)
@@ -720,9 +719,9 @@ def create_tree(position):
         faces = [f for f in R1.faces]
         extr = [i for i in R1.stem]
         roots = [(i[2], i[1], i[0], i[2][0]) for i in R1.roots]
-        roots_variations = .5
+        roots_variations = 0.5
         roots_length = 1.4
-        roots_rad_dec = .7
+        roots_rad_dec = 0.7
 
         for i in range(scene.roots_iteration):
             next_roots = []
