@@ -32,12 +32,72 @@ import unittest
 from mathutils import Vector, Matrix
 from random import random, seed, randint
 from math import pi, radians, cos, sin
+from time import time
 
 import bpy
 from bpy.props import StringProperty, BoolProperty, FloatProperty, IntProperty, EnumProperty
 from bpy.types import Operator, Panel, Scene, Menu
 import bmesh
 from collections import defaultdict
+
+
+class Clock:
+    """A quick and easy to use performance measuring tool.
+
+    Methods:
+        __init__ - Clocks the start time to measure performance.
+        add_sub_job - Adds a sub-job to the job list.
+        stop - Stops the specified job.
+        display - Displays the final statistics.
+    """
+    def __init__(self, main_job):
+        """Clocks the start time to measure performance.
+
+        Args:
+            job - (string) the name of the job to print out when finished
+
+        """
+        self.jobs = [[main_job, {"sublvl": 0,  "start": time(), "finish": 0}]]
+
+    def add_sub_job(self, sub_job, sub=1):
+        """Adds a sub-job to the job list.
+
+        Args:
+            sub_job - (string) the name of the sub_job to make
+            sub - (int) the sub level (see details)
+
+        Details:
+            The sub property is used for if you want to time an entire function, but also
+            a few lines in that function. The lines in the middle can be given a sub
+            value of 1 to indicate that they are in the 2nd sub-level and they will be indented
+            in the final printout.
+        """
+        self.jobs.append([sub_job, {"sublvl": sub, "start": time(), "finish": 0}])
+
+    def stop(self, job):
+        """Stops the specified job.
+
+        Args:
+            job - (string) the name of the job to stop
+        """
+        for i, j in enumerate(self.jobs):
+            if j[0] == job:
+                if self.jobs[i][1]["finish"]:
+                    print("Job already finished!")
+                else:
+                    self.jobs[i][1]["finish"] = time()
+                return
+
+    def display(self):
+        """Displays the final statistics."""
+        for job in self.jobs:
+            name = job[0]
+            info = job[1]
+            string = "{sub}{name} took {tm} seconds".format(
+                name=name,
+                sub="    " * info["sublvl"],
+                tm=info["finish"] - info["start"])
+            print(string)
 
 
 class Module:
@@ -695,6 +755,7 @@ def build_material():
 
 
 def create_tree(position):
+    clock = Clock("create_tree")
     for select_ob in bpy.context.selected_objects:
         select_ob.select = False
     scene = bpy.context.scene
@@ -884,9 +945,12 @@ def create_tree(position):
         fix_normals(inside=True)
 
     if scene.particle:
+        clock.add_sub_job("particles")
         create_system(obj, scene.number, scene.display, vgroups["leaf"])
+        clock.stop("particles")
 
     if scene.uv:
+        clock.add_sub_job("uv")
         test = [[False, []] for _ in range(len(verts))]
         for (a, b) in seams2:
             a, b = min(a, b), max(a, b)
@@ -906,6 +970,7 @@ def create_tree(position):
         bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
         bpy.ops.object.editmode_toggle()
         rotate()
+        clock.stop("uv")
 
     if scene.mat:
         obj.active_material = build_material()
@@ -914,6 +979,7 @@ def create_tree(position):
         obj.active_material = bpy.data.materials.get(scene.bark_material)
 
     if scene.create_armature:
+        clock.add_sub_job("armature")
         bpy.ops.object.add(type='ARMATURE', enter_editmode=True, location=Vector((0, 0, 0)))
         arm = bpy.context.object
         arm.show_x_ray = True
@@ -937,16 +1003,22 @@ def create_tree(position):
         scene.objects.active = arm
         bpy.ops.object.parent_set(type='ARMATURE_AUTO')
         bpy.ops.object.select_all(action='DESELECT')
+        clock.stop("armature")
 
     if scene.visualize_leafs:
+        clock.add_sub_job("vis leaves")
         scene.objects.active = obj
         vgroups.active_index = vgroups["leaf"].index
         bpy.ops.paint.weight_paint_toggle()
+        clock.stop("vis leaves")
 
     obj.select = True
     scene.objects.active = obj
     obj["is_tree"] = True
     obj["has_armature"] = True if scene.create_armature else False
+
+    clock.stop("create_tree")
+    clock.display()
 
 
 class MakeTreeOperator(Operator):
@@ -987,7 +1059,6 @@ class UpdateTreeOperator(Operator):
             pos = obj.location
             scale = obj.scale
             rot = obj.rotation_euler
-
             create_tree(pos)
             ob = bpy.context.active_object  # this is the new object that has been set active by 'create_tree'
             ob.scale = scale
