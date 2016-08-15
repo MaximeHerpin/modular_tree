@@ -423,6 +423,14 @@ class MakeIslands:
                     if loop[uvlayer].select:
                         self.selectedIsland.add(face.index)
 
+        self.islands = []
+        self.faces_left = set(self.face_to_verts.keys())
+        while len(self.faces_left) > 0:
+            face_id = list(self.faces_left)[0]
+            self.current_island = []
+            self.add_to_island(face_id)
+            self.islands.append(self.current_island)
+
     def add_to_island(self, face_id):
         if face_id in self.faces_left:
             # add the face itself
@@ -436,16 +444,6 @@ class MakeIslands:
                 if connected_faces:
                     for face in connected_faces:
                         self.add_to_island(face)
-
-    def get_islands(self):
-        self.islands = []  # instance attribute defined outside of __init__!
-        self.faces_left = set(self.face_to_verts.keys())  # instance attribute defined outside of __init__!
-        while len(self.faces_left) > 0:
-            face_id = list(self.faces_left)[0]
-            self.current_island = []  # instance attribute defined outside of __init__!
-            self.add_to_island(face_id)
-            self.islands.append(self.current_island)
-        return self.islands
 
     def active_island(self):
         for island in self.islands:
@@ -495,7 +493,6 @@ def rotate():
     bm.verts.ensure_lookup_table()
     bm.edges.ensure_lookup_table()
     bm.faces.ensure_lookup_table()
-    islands = make_islands.get_islands()  # islands is not used...does get_islands need to return anything?
     sel_islands = make_islands.selected_islands()
     act_island = make_islands.active_island()
 
@@ -705,7 +702,7 @@ def build_material():
 
     mat.node_tree.links.new(nodes["Texture Coordinate"].outputs[3], nodes["Vector Math"].inputs[1])
     links = mat.node_tree.links
-    for (f, t) in Links:
+    for f, t in Links:
         from_node = mat.node_tree.nodes[f[0]]
         to_node = mat.node_tree.nodes[t[0]]
         links.new(from_node.outputs[f[1]], to_node.inputs[t[1]])
