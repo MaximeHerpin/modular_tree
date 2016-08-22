@@ -19,7 +19,7 @@
 bl_info = {
     "name": "Modular trees",
     "author": "Herpin Maxime, Jake Dube",
-    "version": (1, 2),
+    "version": (1, 3),
     "blender": (2, 77, 0),
     "location": "View3D > Tools > Tree > Make Tree",
     "description": "Generates an organic tree with correctly modeled branching.",
@@ -442,7 +442,7 @@ R1 = Trunk(
      (117, 116), (110, 117)])
 
 # Material node_tree
-Nodes, Links = (
+Bark_Nodes, Bark_Links = (
     [('NodeReroute', Vector((-580.0, 460.0)), 'Reroute', ''), ('NodeReroute', Vector((20.0, -20.0)), 'Reroute.001', ''),
      ('ShaderNodeInvert', Vector((540.0, 300.0)), 'Invert', ''),
      ('NodeReroute', Vector((620.0, -20.0)), 'Reroute.002', ''),
@@ -473,6 +473,25 @@ Nodes, Links = (
      ([17, 'UV'], [7, 'Vector']), ([7, 'Vector'], [6, 'Vector']), ([17, 'Object'], [18, 'Vector']),
      ([18, 'Vector'], [13, 'Vector']), ([18, 'Vector'], [0, 'Input']), ([20, 'BSDF'], [5, 'Surface']),
      ([21, 'Location'], [18, 'Vector'])])
+
+
+Leaf_Nodes, Leaf_Links = ([('ShaderNodeMapping', Vector((-1020.0, 440.0)), 'Mapping', ''),
+     ('ShaderNodeTexCoord', Vector((-1200.0, 440.0)), 'Texture Coordinate', ''),
+     ('ShaderNodeTexImage', Vector((-660.0, 440.0)), 'Image Texture', ''),
+     ('NodeReroute', Vector((-460.0, 540.0)), 'Reroute', ''),
+     ('ShaderNodeSeparateRGB', Vector((-660.0, 140.0)), 'Separate RGB', ''),
+     ('ShaderNodeOutputMaterial', Vector((280.0, 500.0)), 'Material Output', ''),
+     ('ShaderNodeBsdfTransparent', Vector((-80.0, 380.0)), 'Transparent BSDF', ''),
+     ('ShaderNodeBsdfTranslucent', Vector((-260.0, 500.0)), 'Translucent BSDF', ''),
+     ('ShaderNodeAddShader', Vector((-80.0, 500.0)), 'Add Shader', ''),
+     ('ShaderNodeBsdfDiffuse', Vector((-260.0, 380.0)), 'Diffuse BSDF', ''),
+     ('ShaderNodeMixShader', Vector((100.0, 500.0)), 'Mix Shader', ''),
+     ('ShaderNodeHueSaturation', Vector((-460.0, 440.0)), 'Hue Saturation Value', ''),
+     ('NodeReroute', Vector((60.0, 540.0)), 'Reroute.001', ''),
+     ('ShaderNodeMixRGB', Vector((-820.0, 140.0)), 'Mix', ''),
+     ('ShaderNodeObjectInfo', Vector((-1000.0, 140.0)), 'Object Info', '')],
+     [([7, 'BSDF'], [8, 'Shader']), ([8, 'Shader'], [10, 'Shader']), ([9, 'BSDF'], [8, 'Shader']), ([11, 'Color'], [9, 'Color']), ([0, 'Vector'], [2, 'Vector']), ([1, 'UV'], [0, 'Vector']), ([11, 'Color'], [7, 'Color']), ([6, 'BSDF'], [10, 'Shader']), ([2, 'Color'], [11, 'Color']), ([13, 'Color'], [4, 'Image']), ([4, 'R'], [11, 'Hue']), ([10, 'Shader'], [5, 'Surface']), ([12, 'Output'], [10, 'Fac']), ([2, 'Alpha'], [3, 'Input']), ([3, 'Output'], [12, 'Input']), ([14, 'Random'], [13, 'Fac'])])
+
 
 
 # This part is heavily inspired by the "UV Align\Distribute" addon made by Rebellion (Luca Carella)
@@ -617,7 +636,7 @@ def create_system(ob, number, display, vertex_group):
 
 def rotate():
     """After automatic unwrap, the uv islands are not corectly oriented, this function corrects it by rotating them acordingly"""
-    bpy.ops.object.editmode_toggle()
+    bpy.ops.object.mode_set(mode='EDIT')
     make_islands = MakeIslands()
     bm = make_islands.get_bm()
     bm.verts.ensure_lookup_table()
@@ -645,7 +664,7 @@ def rotate():
             make_islands.rotate_island(island, 90)
 
     bpy.ops.uv.pack_islands(rotate=False, margin=0.001)
-    bpy.ops.object.editmode_toggle()
+    bpy.ops.object.mode_set(mode='OBJECT')
 
 
 # ....................................................................................................................................
@@ -881,11 +900,11 @@ def fix_normals(inside):
     bpy.ops.object.mode_set(mode='OBJECT')
 
 
-def build_material():
+def build_bark_material(mat_name):
     if not bpy.context.scene.render.engine == 'CYCLES':
         bpy.context.scene.render.engine = 'CYCLES'
 
-    mat = bpy.data.materials.new(name="Tree")
+    mat = bpy.data.materials.new(name=mat_name)
     mat.diffuse_color = (0.214035, 0.0490235, 0.0163952)
     mat.specular_color = (0.0469617, 0.0469617, 0.0469617)
     mat.specular_hardness = 10
@@ -893,7 +912,7 @@ def build_material():
     mat.node_tree.nodes.remove(mat.node_tree.nodes.get('Diffuse BSDF'))
     mat.node_tree.nodes.remove(mat.node_tree.nodes.get('Material Output'))
 
-    for (n_type, loc, name, label) in Nodes:
+    for (n_type, loc, name, label) in Bark_Nodes:
         new_node = mat.node_tree.nodes.new(n_type)
         new_node.location = loc
         new_node.name = name
@@ -920,15 +939,45 @@ def build_material():
 
     mat.node_tree.links.new(nodes["Texture Coordinate"].outputs[3], nodes["Vector Math"].inputs[1])
     links = mat.node_tree.links
-    for f, t in Links:
+    for f, t in Bark_Links:
         from_node = mat.node_tree.nodes[f[0]]
         to_node = mat.node_tree.nodes[t[0]]
         links.new(from_node.outputs[f[1]], to_node.inputs[t[1]])
-
     return mat
 
 
-def create_tree(position):
+def build_leaf_material(mat_name):
+    if not bpy.context.scene.render.engine == 'CYCLES':
+        bpy.context.scene.render.engine = 'CYCLES'
+
+    mat = bpy.data.materials.new(name=mat_name)
+    mat.diffuse_color = (0.081, 0.548, 0.187)
+    mat.specular_color = (0.0469617, 0.0469617, 0.0469617)
+    mat.specular_hardness = 10
+    mat.use_nodes = True
+    mat.node_tree.nodes.remove(mat.node_tree.nodes.get('Diffuse BSDF'))
+    mat.node_tree.nodes.remove(mat.node_tree.nodes.get('Material Output'))
+
+    for (n_type, loc, name, label) in Leaf_Nodes:
+        new_node = mat.node_tree.nodes.new(n_type)
+        new_node.location = loc
+        new_node.name = name
+        new_node.label = label
+    nodes = mat.node_tree.nodes
+    nodes["Mix"].inputs[1].default_value = (.4,.4,.4,1)
+    nodes["Mix"].inputs[2].default_value = (.6,.6,.6,1)
+    links = mat.node_tree.links
+    mat.node_tree.links.new(nodes["Translucent BSDF"].outputs[0], nodes["Add Shader"].inputs[1])
+    mat.node_tree.links.new(nodes["Add Shader"].outputs[0], nodes["Mix Shader"].inputs[2])
+    for f, t in Leaf_Links:
+        from_node = mat.node_tree.nodes[f[0]]
+        to_node = mat.node_tree.nodes[t[0]]
+        links.new(from_node.outputs[f[1]], to_node.inputs[t[1]])
+        
+    return mat
+
+
+def create_tree(position,is_twig=False):
     """Creates a tree
 
     Details:
@@ -945,9 +994,10 @@ def create_tree(position):
 
     Args:
         position - (Vector) Position to generate tree at
+        is_twig - (Bool) Is the tree a twig
     """
     clock = Clock("create_tree")
-
+    twig_leafs = []
     #deselecting all objects
     for select_ob in bpy.context.selected_objects:
         select_ob.select = False
@@ -1060,6 +1110,8 @@ def create_tree(position):
             elif i == scene.iteration + scene.trunk_length - 1 or random() < scene.break_chance:
                 end_verts = [Vector(v) for v in end_cap.verts]
                 end_faces = [f for f in end_cap.faces]
+                if is_twig:
+                    twig_leafs.append((pos,direction,curr_rotation))
                 n = len(verts)
                 join_branch(verts, faces, indexes, radius, scene.trunk_space, end_verts, direction,
                                                  scene.trunk_variation, s_index, seams2)
@@ -1071,6 +1123,7 @@ def create_tree(position):
             elif i < scene.iteration + scene.trunk_length - 1 and i == scene.trunk_length + 1 or random() < split_probability:
                 variation = scene.trunk_variation if trunk2 else scene.randomangle
                 rand_j = 1
+                
                 big_j = Joncts[rand_j] if (not trunk2) else trunk
                 i1 = [i for i in big_j.sortie[0]]
                 i2 = [i for i in big_j.sortie[1]]
@@ -1102,10 +1155,13 @@ def create_tree(position):
 
             else:
                 branch_verts = [v for v in branch.verts]
+                
                 variation = scene.trunk_variation if trunk2 else scene.randomangle
                 length = scene.trunk_space if trunk2 else scene.branch_length
                 ni, direction, nsi = join_branch(verts, faces, indexes, radius, length, branch_verts, direction,
                                                  variation, s_index, seams2)
+                if is_twig:
+                    twig_leafs.append((pos+direction*length*random(),direction,curr_rotation))
                 sortie = pos + direction * scene.branch_length
 
                 if i <= scene.bones_iterations:
@@ -1162,14 +1218,16 @@ def create_tree(position):
         bpy.ops.object.editmode_toggle()
         bpy.ops.mesh.mark_seam(clear=False)
         bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
-        bpy.ops.object.editmode_toggle()
-        rotate()
+        if scene.finish_unwrap:
+            bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
+            rotate()  # this will set the mode to object already
+        else:
+            bpy.ops.object.mode_set(mode='OBJECT')
         clock.stop("uv")
 
     # material creation
     if scene.mat:
-        obj.active_material = build_material()
+        obj.active_material = build_bark_material("bark")
 
     elif bpy.data.materials.get(scene.bark_material) is not None:
         obj.active_material = bpy.data.materials.get(scene.bark_material)
@@ -1216,6 +1274,8 @@ def create_tree(position):
 
     clock.stop("create_tree")
     clock.display()
+    if is_twig:
+        return twig_leafs
 
 
 class MakeTreeOperator(Operator):
@@ -1232,6 +1292,164 @@ class MakeTreeOperator(Operator):
 
         return {'FINISHED'}
 
+def add_leaf(position,direction,rotation,scale):
+    
+    verts,faces = ([(-1.0, 0.07, 0.05), (1.0, 0.07, 0.05), (-1.0, -1.01, 1.75), (1.0, -1.01, 1.75), (-1.0, -0.76, 1.1), (-1.0, -0.38, 0.55), (1.0, -0.38, 0.55), (1.0, -0.76, 1.1), (-0.33, 0.0, 0.0), (0.33, 0.0, 0.0), (0.33, -1.16, 1.64), (-0.33, -1.16, 1.64), (0.33, -0.56, 0.42), (-0.33, -0.56, 0.42), (0.33, -0.9, 1.0), (-0.33, -0.9, 1.0)], [(14, 7, 3, 10), (9, 1, 6, 12), (12, 6, 7, 14), (5, 13, 15, 4), (13, 12, 14, 15), (0, 8, 13, 5), (8, 9, 12, 13), (4, 15, 11, 2), (15, 14, 10, 11)])
+    verts = [Vector(v) for v in verts]
+    verts = rot_scale(verts,scale,direction,rotation)
+    verts = [v+position for v in verts]
+    mesh = bpy.data.meshes.new("leaf")
+    mesh.from_pydata(verts, [], faces)
+    mesh.update(calc_edges=False)
+    obj = bpy.data.objects.new("leaf", mesh)
+    obj.location = bpy.context.scene.cursor_location
+    bpy.context.scene.objects.link(obj)
+    bpy.context.scene.objects.active = obj
+    obj.select = True
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
+    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.object.shade_smooth()
+
+
+class MakeTwigOperator(Operator):
+    """Creates a twig"""
+    bl_idname = "mod_tree.add_twig"
+    bl_label = "Create Twig"
+    bl_options = {"REGISTER", "UNDO"}
+    
+    def execute(self, context):
+        scene = context.scene
+        seed(scene.TwigSeedProp)
+        save_preserve_trunk = scene.preserve_trunk
+        save_trunk_split_angle = scene.split_angle  # This variable is never used! Should it be?
+        save_randomangle = scene.randomangle
+        save_trunk_variation = scene.trunk_variation
+        save_radius = scene.radius
+        save_radius_dec = scene.radius_dec
+        save_iteration = scene.iteration
+        save_preserve_end = scene.preserve_end
+        save_trunk_length = scene.trunk_length
+        save_trunk_split_proba = scene.trunk_split_proba
+        save_trunk_space = scene.trunk_space
+        save_split_proba = scene.split_proba
+        save_branch_length = scene.branch_length
+        save_split_angle = scene.split_angle
+        save_gravity_strength = scene.gravity_strength
+        save_gravity_start = scene.gravity_start
+        save_gravity_end = scene.gravity_end
+        save_obstacle = scene.obstacle
+        save_obstacle_strength = scene.obstacle_strength
+        save_SeedProp = scene.SeedProp
+        save_create_armature = scene.create_armature
+        save_bones_iterations = scene.bones_iterations
+        save_visualize_leafs = scene.visualize_leafs
+        save_leafs_iteration_length = scene.leafs_iteration_length
+        save_uv = scene.uv
+        save_mat = scene.mat
+        save_roots_iteration = scene.roots_iteration
+        save_create_roots = scene.create_roots
+        save_branch_rotate = scene.branch_rotate
+        save_branch_random_rotate = scene.branch_random_rotate
+        save_particle = scene.particle
+        save_number = scene.number
+        save_display = scene.display       
+        
+        
+        scene.preserve_trunk = False
+        scene.trunk_split_angle = 0
+        scene.randomangle = .5
+        scene.trunk_variation = .1
+        scene.radius = .25
+        scene.radius_dec = .85
+        scene.iteration = scene.twig_iteration
+        scene.preserve_end = 40
+        scene.trunk_length = 0
+        scene.trunk_split_proba = .2
+        scene.trunk_space = .1        
+        scene.split_proba = .7
+        scene.branch_length = 3
+        scene.split_angle = .2
+        scene.gravity_strength = 0
+        scene.gravity_start = 0
+        scene.gravity_end = 0
+        scene.obstacle = ''
+        scene.obstacle_strength = 0
+        scene.SeedProp = scene.SeedProp
+        scene.create_armature = False
+        scene.bones_iterations = 10
+        scene.visualize_leafs = False
+        scene.leafs_iteration_length = 7
+        scene.uv = True
+        scene.mat = scene.mat
+        scene.roots_iteration = 0
+        scene.create_roots = False
+        scene.branch_rotate = 0
+        scene.branch_random_rotate = 15
+        scene.particle = False
+        scene.number = 0
+        scene.display = 0
+        
+        if bpy.data.materials.get("twig bark") is None:
+            build_bark_material("twig bark")
+        
+        if bpy.data.materials.get("twig leaf") is None:
+            build_leaf_material("twig leaf")
+        
+        twig_leafs = create_tree(bpy.context.scene.cursor_location ,is_twig=True)
+        twig = bpy.context.active_object
+        twig.name = 'twig'
+        twig.active_material = bpy.data.materials.get(scene.twig_bark_material)
+        for (position,direction,rotation) in twig_leafs:
+            for i in range(randint(1,3)):
+                if random()<scene.leaf_chance:
+                    add_leaf(position+direction*.5*random(),direction+Vector((random(),random(),random())),rotation+random()*5,(1+random())*scene.leaf_size)
+                    bpy.context.active_object.active_material = bpy.data.materials.get(scene.twig_leaf_material)    
+                    twig.select = True
+                    scene.objects.active = twig
+        bpy.ops.object.join()
+        bpy.ops.transform.rotate(value=-1.5708, axis=(1, 0, 0))
+        bpy.ops.transform.resize(value=(0.25, 0.25, 0.25))
+        bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+
+
+        
+        scene.preserve_trunk = save_preserve_trunk
+        scene.trunk_split_angle = save_split_angle
+        scene.randomangle = save_randomangle
+        scene.trunk_variation = save_trunk_variation
+        scene.radius = save_radius
+        scene.radius_dec = save_radius_dec
+        scene.iteration = save_iteration
+        scene.preserve_end = save_preserve_end
+        scene.trunk_length = save_trunk_length
+        scene.trunk_split_proba = save_trunk_split_proba
+        scene.trunk_space = save_trunk_space
+        scene.split_proba = save_split_proba
+        scene.branch_length = save_branch_length
+        scene.split_angle = save_split_angle
+        scene.gravity_strength = save_gravity_strength
+        scene.gravity_start = save_gravity_start
+        scene.gravity_end = save_gravity_end
+        scene.obstacle = save_obstacle
+        scene.obstacle_strength = save_obstacle_strength
+        scene.SeedProp = save_SeedProp
+        scene.create_armature = save_create_armature
+        scene.bones_iterations = save_bones_iterations
+        scene.visualize_leafs = save_visualize_leafs
+        scene.leafs_iteration_length = save_leafs_iteration_length
+        scene.uv = save_uv
+        scene.mat = save_mat
+        scene.roots_iteration = save_roots_iteration
+        scene.create_roots = save_create_roots
+        scene.branch_rotate = save_branch_rotate
+        scene.branch_random_rotate = save_branch_random_rotate
+        scene.particle = save_particle
+        scene.number = save_number
+        scene.display = save_display
+
+        return {'FINISHED'}
+    
 
 class UpdateTreeOperator(Operator):
     """Update a tree"""
@@ -1288,6 +1506,44 @@ class UpdateTreeOperator(Operator):
         return {'FINISHED'}
 
 
+class UpdateTwigOperator(Operator):
+    """Update a twig"""
+    bl_idname = "mod_tree.update_twig"
+    bl_label = "Update Selected Twig"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        scene = context.scene
+
+        seed(scene.SeedProp)
+        obj = bpy.context.active_object
+
+        try:
+            is_tree_prop = obj.get('is_tree')            
+        except AttributeError:
+            self.report({'ERROR'}, "No active tree object!")
+            return {'CANCELLED'}
+
+        if is_tree_prop:
+            pos = obj.location
+            scale = obj.scale
+            rot = obj.rotation_euler
+            bpy.ops.mod_tree.add_twig()
+            ob = bpy.context.active_object  # this is the new object that has been set active by 'create_tree'
+            ob.scale = scale
+            ob.rotation_euler = rot
+            ob.select = False
+            obj.select = True
+            bpy.ops.object.delete(use_global=False)
+            ob.select = True
+
+        else:
+            self.report({'ERROR'}, "No active twig object!")
+            return {'CANCELLED'}
+
+        return {'FINISHED'}
+
+
 class SaveTreePresetOperator(Operator):
     """Save Tree Preset"""
     bl_idname = "mod_tree.save_preset"
@@ -1298,7 +1554,8 @@ class SaveTreePresetOperator(Operator):
     def execute(self, context):
         scene = context.scene
 
-        preset = ("preserve_trunk:{}\n"
+        preset = ("finish_unwrap:{}\n"
+                  "preserve_trunk:{}\n"
                   "trunk_split_angle:{}\n"
                   "randomangle:{}\n"
                   "trunk_variation:{}\n"
@@ -1330,9 +1587,16 @@ class SaveTreePresetOperator(Operator):
                   "branch_random_rotate:{}\n"
                   "particle:{}\n"
                   "number:{}\n"
-                  "display:{}\n".format(
+                  "display:{}\n"
+                  "leaf_size:{}\n"
+                  "leaf_chance:{}\n"
+                  "twig_leaf_material:{}\n"
+                  "twig_bark_material:{}\n"
+                  "TwigSeedProp:{}\n"
+                  "twig_iteration:{}\n".format(
                     # bools can't be stored as "True" or "False" b/c bool(x) will evaluate to
                     # True if x = "True" or if x = "False"...the fix is to do an int() conversion
+                    int(scene.finish_unwrap),
                     int(scene.preserve_trunk),
                     scene.trunk_split_angle,
                     scene.randomangle,
@@ -1365,7 +1629,13 @@ class SaveTreePresetOperator(Operator):
                     scene.branch_random_rotate,
                     int(scene.particle),
                     scene.number,
-                    scene.display))
+                    scene.display,
+                    scene.leaf_size,
+                    scene.leaf_chance,
+                    scene.twig_leaf_material,
+                    scene.twig_bark_material,
+                    scene.TwigSeedProp,
+                    scene.twig_iteration))
 
         # write to file
         prsets_directory = os.path.join(os.path.dirname(__file__), "mod_tree_presets")
@@ -1420,7 +1690,9 @@ class LoadTreePresetOperator(Operator):
             # verify that a colon is in the line to avoid an error with line.split(":")
             if ":" in line:
                 setting, value = line.split(":")
-                if setting == "preserve_trunk":
+                if setting == 'finish_unwrap':
+                    scene.finish_unwrap = bool(int(value))
+                elif setting == "preserve_trunk":
                     scene.preserve_trunk = bool(int(value))  # bools have to be converted to int first (stored as 0/1)
                 elif setting == "trunk_split_angle":
                     scene.trunk_split_angle = float(value)
@@ -1486,6 +1758,18 @@ class LoadTreePresetOperator(Operator):
                     scene.number = int(value)
                 elif setting == "display":
                     scene.display = int(value)
+                elif setting == "leaf_size":
+                    scene.leaf_size = float(value)
+                elif setting == "leaf_chance":
+                    scene.leaf_chance = float(value)
+                elif setting == "twig_leaf_material":
+                    scene.twig_leaf_material = value
+                elif setting == "twig_bark_material":
+                    scene.twig_bark_material = value
+                elif setting == "TwigSeedProp":
+                    scene.TwigSeedProp = int(value)
+                elif setting == "twig_iteration":
+                    scene.twig_iteration = int(value)
 
         return {'FINISHED'}
 
@@ -1505,6 +1789,10 @@ class MakeTreePanel(Panel):
         row = layout.row()
         row.scale_y = 1.5
         row.operator("mod_tree.add_tree", icon="WORLD")
+        
+        row = layout.row()
+        row.scale_y = 1.5
+        row.operator("mod_tree.add_twig", icon="WORLD")
 
         row = layout.row()
         row.scale_y = 1.5
@@ -1515,8 +1803,11 @@ class MakeTreePanel(Panel):
         box.prop(scene, "SeedProp")
         box.prop(scene, "iteration")
         box.prop(scene, 'radius')
-        box.prop(scene, 'mat')
         box.prop(scene, 'uv')
+        if scene.uv:
+            box.prop(scene, 'finish_unwrap')
+        else:
+            scene.finish_unwrap = False
 
 
 class RootsAndTrunksPanel(Panel):
@@ -1614,6 +1905,37 @@ class AdvancedSettingsPanel(Panel):
             box.prop(scene, 'display')
 
 
+class MakeTwigPanel(Panel):
+    bl_label = "Make Twig"
+    bl_idname = "3D_VIEW_PT_layout_MakeTwig"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'TOOLS'
+    bl_context = "objectmode"
+    bl_category = 'Tree'
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        scene = context.scene
+        layout = self.layout
+
+        row = layout.row()
+        row.scale_y = 1.5
+        row.operator("mod_tree.add_twig", icon="WORLD")
+        
+        row = layout.row()
+        row.scale_y = 1.5
+        row.operator("mod_tree.update_twig", icon="FILE_REFRESH")
+
+        box = layout.box()
+        box.label("Twig Options")
+        box.prop(scene, "leaf_size")
+        box.prop(scene, "leaf_chance")
+        box.prop(scene, "TwigSeedProp")
+        box.prop(scene, "twig_iteration")
+        box.prop_search(scene, "twig_bark_material", bpy.data, "materials")
+        box.prop_search(scene, "twig_leaf_material", bpy.data, "materials")           
+
+
 class TreePresetLoadMenu(Menu):
     bl_idname = "mod_tree.preset_load_menu"
     bl_label = "Load Preset"
@@ -1673,10 +1995,10 @@ class MakeTreePresetsPanel(Panel):
 
 
 # classes to register
-classes = [MakeTreeOperator, UpdateTreeOperator, SaveTreePresetOperator, RemoveTreePresetOperator,
+classes = [MakeTreeOperator, MakeTwigOperator, UpdateTreeOperator, UpdateTwigOperator, SaveTreePresetOperator, RemoveTreePresetOperator,
            LoadTreePresetOperator,
            MakeTreePanel, RootsAndTrunksPanel, TreeBranchesPanel, AdvancedSettingsPanel,
-           TreePresetLoadMenu, TreePresetRemoveMenu, MakeTreePresetsPanel]
+           MakeTwigPanel, TreePresetLoadMenu, TreePresetRemoveMenu, MakeTreePresetsPanel]
 
 
 def register():
@@ -1686,6 +2008,10 @@ def register():
 
     # register props
     Scene.preset_name = StringProperty(name="Preset Name", default="MyPreset")
+
+    Scene.finish_unwrap = BoolProperty(name="Unwrap",
+                                       description="Run 'Unwrap' operator. WARNING: slow, enable for final only",
+                                       default=True)
 
     Scene.preserve_trunk = BoolProperty(
         name="Preserve Trunk", default=False,
@@ -1812,9 +2138,9 @@ def register():
         description="The number of branches iterations where leafs will appear")
 
     Scene.uv = BoolProperty(
-        name="Unwrap",
+        name="Create UV Seams",
         default=False,
-        description="unwrap tree. WARNING: takes time, check last")
+        description="Create uv seams for tree (enable unwrap to auto unwrap)")
 
     Scene.mat = BoolProperty(
         name="Create New Material",
@@ -1861,7 +2187,32 @@ def register():
 
     Scene.bark_material = StringProperty(
         name="Bark Material")
-
+    
+    Scene.leaf_size = FloatProperty(
+        name="Leaf Size",
+        min=0,
+        default=1)
+    
+    Scene.leaf_chance = FloatProperty(
+        name="Leaf Generation Probability",
+        min=0,
+        default=.5)
+    
+    Scene.twig_leaf_material = StringProperty(
+        name="Leaf Material")
+    
+    Scene.twig_bark_material = StringProperty(
+        name="Twig Bark Material")
+    
+    Scene.TwigSeedProp = IntProperty(
+        name="Twig Seed",
+        default=randint(0, 1000))
+    
+    Scene.twig_iteration = IntProperty(
+        name="Twig Iteration",
+        min=0,
+        default=9)
+    
 
 def unregister():
     # unregister all classes
@@ -1870,6 +2221,7 @@ def unregister():
 
     # unregister props
     del Scene.preset_name
+    del Scene.finish_unwrap
     del Scene.preserve_trunk
     del Scene.trunk_split_angle
     del Scene.randomangle
@@ -1903,6 +2255,12 @@ def unregister():
     del Scene.particle
     del Scene.number
     del Scene.display
+    del Scene.leaf_size
+    del Scene.leaf_chance
+    del Scene.twig_leaf_material
+    del Scene.twig_bark_material
+    del Scene.TwigSeedProp
+    del Scene.twig_iteration
 
 
 # Unit tests
