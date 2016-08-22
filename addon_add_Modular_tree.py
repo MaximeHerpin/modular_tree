@@ -1310,7 +1310,6 @@ def add_leaf(position,direction,rotation,scale):
     bpy.ops.object.shade_smooth()
 
 
-
 class MakeTwigOperator(Operator):
     """Creates a twig"""
     bl_idname = "mod_tree.add_twig"
@@ -1321,7 +1320,7 @@ class MakeTwigOperator(Operator):
         scene = context.scene
         seed(scene.TwigSeedProp)
         save_preserve_trunk = scene.preserve_trunk
-        save_trunk_split_angle = scene.split_angle
+        save_trunk_split_angle = scene.split_angle  # This variable is never used! Should it be?
         save_randomangle = scene.randomangle
         save_trunk_variation = scene.trunk_variation
         save_radius = scene.radius
@@ -1585,7 +1584,13 @@ class SaveTreePresetOperator(Operator):
                   "branch_random_rotate:{}\n"
                   "particle:{}\n"
                   "number:{}\n"
-                  "display:{}\n".format(
+                  "display:{}\n"
+                  "leaf_size:{}\n"
+                  "leaf_chance:{}\n"
+                  "twig_leaf_material:{}\n"
+                  "twig_bark_material:{}\n"
+                  "TwigSeedProp:{}\n"
+                  "twig_iteration:{}\n".format(
                     # bools can't be stored as "True" or "False" b/c bool(x) will evaluate to
                     # True if x = "True" or if x = "False"...the fix is to do an int() conversion
                     int(scene.preserve_trunk),
@@ -1620,7 +1625,13 @@ class SaveTreePresetOperator(Operator):
                     scene.branch_random_rotate,
                     int(scene.particle),
                     scene.number,
-                    scene.display))
+                    scene.display,
+                    scene.leaf_size,
+                    scene.leaf_chance,
+                    scene.twig_leaf_material,
+                    scene.twig_bark_material,
+                    scene.TwigSeedProp,
+                    scene.twig_iteration))
 
         # write to file
         prsets_directory = os.path.join(os.path.dirname(__file__), "mod_tree_presets")
@@ -1741,6 +1752,18 @@ class LoadTreePresetOperator(Operator):
                     scene.number = int(value)
                 elif setting == "display":
                     scene.display = int(value)
+                elif setting == "leaf_size":
+                    scene.leaf_size = float(value)
+                elif setting == "leaf_chance":
+                    scene.leaf_chance = float(value)
+                elif setting == "twig_leaf_material":
+                    scene.twig_leaf_material = value
+                elif setting == "twig_bark_material":
+                    scene.twig_bark_material = value
+                elif setting == "TwigSeedProp":
+                    scene.TwigSeedProp = int(value)
+                elif setting == "twig_iteration":
+                    scene.twig_iteration = int(value)
 
         return {'FINISHED'}
 
@@ -1871,6 +1894,7 @@ class AdvancedSettingsPanel(Panel):
             box.prop(scene, 'number')
             box.prop(scene, 'display')
 
+
 class MakeTwigPanel(Panel):
     bl_label = "Make Twig"
     bl_idname = "3D_VIEW_PT_layout_MakeTwig"
@@ -1893,7 +1917,7 @@ class MakeTwigPanel(Panel):
         row.operator("mod_tree.update_twig", icon="FILE_REFRESH")
 
         box = layout.box()
-        box.label("options")
+        box.label("Twig Options")
         box.prop(scene, "leaf_size")
         box.prop(scene, "leaf_chance")
         box.prop(scene, "TwigSeedProp")
@@ -2151,29 +2175,29 @@ def register():
         name="Bark Material")
     
     Scene.leaf_size = FloatProperty(
-        name = "Leaf size",
-        min = 0,
-        default = 1)
+        name="Leaf Size",
+        min=0,
+        default=1)
     
     Scene.leaf_chance = FloatProperty(
-        name = "Leaf Generation Probability",
-        min = 0,
-        default = .5)
+        name="Leaf Generation Probability",
+        min=0,
+        default=.5)
     
     Scene.twig_leaf_material = StringProperty(
-        name = "Leaf Material")  
+        name="Leaf Material")
     
     Scene.twig_bark_material = StringProperty(
-        name = "Twig Bark Material")  
+        name="Twig Bark Material")
     
     Scene.TwigSeedProp = IntProperty(
         name="Twig Seed",
         default=randint(0, 1000))
     
     Scene.twig_iteration = IntProperty(
-        name = "Twig Iteration",
-        min = 0,
-        default = 9)
+        name="Twig Iteration",
+        min=0,
+        default=9)
     
 
 def unregister():
@@ -2216,6 +2240,12 @@ def unregister():
     del Scene.particle
     del Scene.number
     del Scene.display
+    del Scene.leaf_size
+    del Scene.leaf_chance
+    del Scene.twig_leaf_material
+    del Scene.twig_bark_material
+    del Scene.TwigSeedProp
+    del Scene.twig_iteration
 
 
 # Unit tests
