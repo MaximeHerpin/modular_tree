@@ -442,7 +442,7 @@ R1 = Trunk(
      (117, 116), (110, 117)])
 
 # Material node_tree
-Nodes, Links = (
+Bark_Nodes, Bark_Links = (
     [('NodeReroute', Vector((-580.0, 460.0)), 'Reroute', ''), ('NodeReroute', Vector((20.0, -20.0)), 'Reroute.001', ''),
      ('ShaderNodeInvert', Vector((540.0, 300.0)), 'Invert', ''),
      ('NodeReroute', Vector((620.0, -20.0)), 'Reroute.002', ''),
@@ -473,6 +473,25 @@ Nodes, Links = (
      ([17, 'UV'], [7, 'Vector']), ([7, 'Vector'], [6, 'Vector']), ([17, 'Object'], [18, 'Vector']),
      ([18, 'Vector'], [13, 'Vector']), ([18, 'Vector'], [0, 'Input']), ([20, 'BSDF'], [5, 'Surface']),
      ([21, 'Location'], [18, 'Vector'])])
+
+
+Leaf_Nodes, Leaf_Links = ([('ShaderNodeMapping', Vector((-1020.0, 440.0)), 'Mapping', ''),
+     ('ShaderNodeTexCoord', Vector((-1200.0, 440.0)), 'Texture Coordinate', ''),
+     ('ShaderNodeTexImage', Vector((-660.0, 440.0)), 'Image Texture', ''),
+     ('NodeReroute', Vector((-460.0, 540.0)), 'Reroute', ''),
+     ('ShaderNodeSeparateRGB', Vector((-660.0, 140.0)), 'Separate RGB', ''),
+     ('ShaderNodeOutputMaterial', Vector((280.0, 500.0)), 'Material Output', ''),
+     ('ShaderNodeBsdfTransparent', Vector((-80.0, 380.0)), 'Transparent BSDF', ''),
+     ('ShaderNodeBsdfTranslucent', Vector((-260.0, 500.0)), 'Translucent BSDF', ''),
+     ('ShaderNodeAddShader', Vector((-80.0, 500.0)), 'Add Shader', ''),
+     ('ShaderNodeBsdfDiffuse', Vector((-260.0, 380.0)), 'Diffuse BSDF', ''),
+     ('ShaderNodeMixShader', Vector((100.0, 500.0)), 'Mix Shader', ''),
+     ('ShaderNodeHueSaturation', Vector((-460.0, 440.0)), 'Hue Saturation Value', ''),
+     ('NodeReroute', Vector((60.0, 540.0)), 'Reroute.001', ''),
+     ('ShaderNodeMixRGB', Vector((-820.0, 140.0)), 'Mix', ''),
+     ('ShaderNodeObjectInfo', Vector((-1000.0, 140.0)), 'Object Info', '')],
+     [([7, 'BSDF'], [8, 'Shader']), ([8, 'Shader'], [10, 'Shader']), ([9, 'BSDF'], [8, 'Shader']), ([11, 'Color'], [9, 'Color']), ([0, 'Vector'], [2, 'Vector']), ([1, 'UV'], [0, 'Vector']), ([11, 'Color'], [7, 'Color']), ([6, 'BSDF'], [10, 'Shader']), ([2, 'Color'], [11, 'Color']), ([13, 'Color'], [4, 'Image']), ([4, 'R'], [11, 'Hue']), ([10, 'Shader'], [5, 'Surface']), ([12, 'Output'], [10, 'Fac']), ([2, 'Alpha'], [3, 'Input']), ([3, 'Output'], [12, 'Input']), ([14, 'Random'], [13, 'Fac'])])
+
 
 
 # This part is heavily inspired by the "UV Align\Distribute" addon made by Rebellion (Luca Carella)
@@ -881,11 +900,11 @@ def fix_normals(inside):
     bpy.ops.object.mode_set(mode='OBJECT')
 
 
-def build_material():
+def build_bark_material(mat_name):
     if not bpy.context.scene.render.engine == 'CYCLES':
         bpy.context.scene.render.engine = 'CYCLES'
 
-    mat = bpy.data.materials.new(name="Tree")
+    mat = bpy.data.materials.new(name=mat_name)
     mat.diffuse_color = (0.214035, 0.0490235, 0.0163952)
     mat.specular_color = (0.0469617, 0.0469617, 0.0469617)
     mat.specular_hardness = 10
@@ -893,7 +912,7 @@ def build_material():
     mat.node_tree.nodes.remove(mat.node_tree.nodes.get('Diffuse BSDF'))
     mat.node_tree.nodes.remove(mat.node_tree.nodes.get('Material Output'))
 
-    for (n_type, loc, name, label) in Nodes:
+    for (n_type, loc, name, label) in Bark_Nodes:
         new_node = mat.node_tree.nodes.new(n_type)
         new_node.location = loc
         new_node.name = name
@@ -920,11 +939,41 @@ def build_material():
 
     mat.node_tree.links.new(nodes["Texture Coordinate"].outputs[3], nodes["Vector Math"].inputs[1])
     links = mat.node_tree.links
-    for f, t in Links:
+    for f, t in Bark_Links:
         from_node = mat.node_tree.nodes[f[0]]
         to_node = mat.node_tree.nodes[t[0]]
         links.new(from_node.outputs[f[1]], to_node.inputs[t[1]])
+    return mat
 
+
+def build_leaf_material(mat_name):
+    if not bpy.context.scene.render.engine == 'CYCLES':
+        bpy.context.scene.render.engine = 'CYCLES'
+
+    mat = bpy.data.materials.new(name=mat_name)
+    mat.diffuse_color = (0.081, 0.548, 0.187)
+    mat.specular_color = (0.0469617, 0.0469617, 0.0469617)
+    mat.specular_hardness = 10
+    mat.use_nodes = True
+    mat.node_tree.nodes.remove(mat.node_tree.nodes.get('Diffuse BSDF'))
+    mat.node_tree.nodes.remove(mat.node_tree.nodes.get('Material Output'))
+
+    for (n_type, loc, name, label) in Leaf_Nodes:
+        new_node = mat.node_tree.nodes.new(n_type)
+        new_node.location = loc
+        new_node.name = name
+        new_node.label = label
+    nodes = mat.node_tree.nodes
+    nodes["Mix"].inputs[1].default_value = (.4,.4,.4,1)
+    nodes["Mix"].inputs[2].default_value = (.6,.6,.6,1)
+    links = mat.node_tree.links
+    mat.node_tree.links.new(nodes["Translucent BSDF"].outputs[0], nodes["Add Shader"].inputs[1])
+    mat.node_tree.links.new(nodes["Add Shader"].outputs[0], nodes["Mix Shader"].inputs[2])
+    for f, t in Leaf_Links:
+        from_node = mat.node_tree.nodes[f[0]]
+        to_node = mat.node_tree.nodes[t[0]]
+        links.new(from_node.outputs[f[1]], to_node.inputs[t[1]])
+        
     return mat
 
 
@@ -1176,7 +1225,7 @@ def create_tree(position,is_twig=False):
 
     # material creation
     if scene.mat:
-        obj.active_material = build_material()
+        obj.active_material = build_bark_material("bark")
 
     elif bpy.data.materials.get(scene.bark_material) is not None:
         obj.active_material = bpy.data.materials.get(scene.bark_material)
@@ -1270,7 +1319,7 @@ class MakeTwigOperator(Operator):
     
     def execute(self, context):
         scene = context.scene
-        seed(scene.SeedProp)
+        seed(scene.TwigSeedProp)
         save_preserve_trunk = scene.preserve_trunk
         save_trunk_split_angle = scene.split_angle
         save_randomangle = scene.randomangle
@@ -1303,8 +1352,7 @@ class MakeTwigOperator(Operator):
         save_branch_random_rotate = scene.branch_random_rotate
         save_particle = scene.particle
         save_number = scene.number
-        save_display = scene.display
-        save_break_chance = scene.break_chance
+        save_display = scene.display       
         
         
         scene.preserve_trunk = False
@@ -1313,7 +1361,7 @@ class MakeTwigOperator(Operator):
         scene.trunk_variation = .1
         scene.radius = .25
         scene.radius_dec = .85
-        scene.iteration = 9
+        scene.iteration = scene.twig_iteration
         scene.preserve_end = 40
         scene.trunk_length = 0
         scene.trunk_split_proba = .2
@@ -1340,23 +1388,27 @@ class MakeTwigOperator(Operator):
         scene.particle = False
         scene.number = 0
         scene.display = 0
-        scene.break_chance = .02
+        
+        if bpy.data.materials.get("twig bark") is None:
+            build_bark_material("twig bark")
+        
+        if bpy.data.materials.get("twig leaf") is None:
+            build_leaf_material("twig leaf")
         
         twig_leafs = create_tree(bpy.context.scene.cursor_location ,is_twig=True)
         twig = bpy.context.active_object
         twig.name = 'twig'
+        twig.active_material = bpy.data.materials.get(scene.twig_bark_material)
         for (position,direction,rotation) in twig_leafs:
             for i in range(randint(1,3)):
                 if random()<scene.leaf_chance:
-                    add_leaf(position+direction*.5*random(),direction+Vector((random(),random(),random())),rotation+random()*5,(1+random())*scene.leaf_scale)
-                twig.select = True
-                scene.objects.active = twig
-                bpy.ops.object.join()
-        
+                    add_leaf(position+direction*.5*random(),direction+Vector((random(),random(),random())),rotation+random()*5,(1+random())*scene.leaf_size)
+                    bpy.context.active_object.active_material = bpy.data.materials.get(scene.twig_leaf_material)    
+                    twig.select = True
+                    scene.objects.active = twig
+        bpy.ops.object.join()
         bpy.ops.transform.rotate(value=-1.5708, axis=(1, 0, 0))
         bpy.ops.transform.resize(value=(0.25, 0.25, 0.25))
-        bpy.ops.transform.translate(value=(-3, 0, 0), constraint_axis=(True, False, False))
-
         bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 
 
@@ -1394,7 +1446,6 @@ class MakeTwigOperator(Operator):
         scene.particle = save_particle
         scene.number = save_number
         scene.display = save_display
-        scene.break_chance = save_break_chance
 
         return {'FINISHED'}
     
@@ -1709,6 +1760,10 @@ class MakeTreePanel(Panel):
         row = layout.row()
         row.scale_y = 1.5
         row.operator("mod_tree.add_tree", icon="WORLD")
+        
+        row = layout.row()
+        row.scale_y = 1.5
+        row.operator("mod_tree.add_twig", icon="WORLD")
 
         row = layout.row()
         row.scale_y = 1.5
@@ -1719,7 +1774,6 @@ class MakeTreePanel(Panel):
         box.prop(scene, "SeedProp")
         box.prop(scene, "iteration")
         box.prop(scene, 'radius')
-        box.prop(scene, 'mat')
         box.prop(scene, 'uv')
 
 
@@ -1842,6 +1896,10 @@ class MakeTwigPanel(Panel):
         box.label("options")
         box.prop(scene, "leaf_size")
         box.prop(scene, "leaf_chance")
+        box.prop(scene, "TwigSeedProp")
+        box.prop(scene, "twig_iteration")
+        box.prop_search(scene, "twig_bark_material", bpy.data, "materials")
+        box.prop_search(scene, "twig_leaf_material", bpy.data, "materials")           
 
 
 class TreePresetLoadMenu(Menu):
@@ -2092,7 +2150,7 @@ def register():
     Scene.bark_material = StringProperty(
         name="Bark Material")
     
-    Scene.leaf_scale = FloatProperty(
+    Scene.leaf_size = FloatProperty(
         name = "Leaf size",
         min = 0,
         default = 1)
@@ -2102,8 +2160,20 @@ def register():
         min = 0,
         default = .5)
     
-    Scene.leaf_material = StringProperty(
+    Scene.twig_leaf_material = StringProperty(
         name = "Leaf Material")  
+    
+    Scene.twig_bark_material = StringProperty(
+        name = "Twig Bark Material")  
+    
+    Scene.TwigSeedProp = IntProperty(
+        name="Twig Seed",
+        default=randint(0, 1000))
+    
+    Scene.twig_iteration = IntProperty(
+        name = "Twig Iteration",
+        min = 0,
+        default = 9)
     
 
 def unregister():
