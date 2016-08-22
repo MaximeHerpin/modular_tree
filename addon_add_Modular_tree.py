@@ -1300,7 +1300,8 @@ class SaveTreePresetOperator(Operator):
     def execute(self, context):
         scene = context.scene
 
-        preset = ("preserve_trunk:{}\n"
+        preset = ("finish_unwrap:{}\n"
+                  "preserve_trunk:{}\n"
                   "trunk_split_angle:{}\n"
                   "randomangle:{}\n"
                   "trunk_variation:{}\n"
@@ -1335,6 +1336,7 @@ class SaveTreePresetOperator(Operator):
                   "display:{}\n".format(
                     # bools can't be stored as "True" or "False" b/c bool(x) will evaluate to
                     # True if x = "True" or if x = "False"...the fix is to do an int() conversion
+                    int(scene.finish_unwrap),
                     int(scene.preserve_trunk),
                     scene.trunk_split_angle,
                     scene.randomangle,
@@ -1422,7 +1424,9 @@ class LoadTreePresetOperator(Operator):
             # verify that a colon is in the line to avoid an error with line.split(":")
             if ":" in line:
                 setting, value = line.split(":")
-                if setting == "preserve_trunk":
+                if setting == 'finish_unwrap':
+                    scene.finish_unwrap = bool(int(value))
+                elif setting == "preserve_trunk":
                     scene.preserve_trunk = bool(int(value))  # bools have to be converted to int first (stored as 0/1)
                 elif setting == "trunk_split_angle":
                     scene.trunk_split_angle = float(value)
