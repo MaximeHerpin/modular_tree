@@ -617,7 +617,7 @@ def create_system(ob, number, display, vertex_group):
 
 def rotate():
     """After automatic unwrap, the uv islands are not corectly oriented, this function corrects it by rotating them acordingly"""
-    bpy.ops.object.editmode_toggle()
+    bpy.ops.object.mode_set(mode='EDIT')
     make_islands = MakeIslands()
     bm = make_islands.get_bm()
     bm.verts.ensure_lookup_table()
@@ -645,7 +645,7 @@ def rotate():
             make_islands.rotate_island(island, 90)
 
     bpy.ops.uv.pack_islands(rotate=False, margin=0.001)
-    bpy.ops.object.editmode_toggle()
+    bpy.ops.object.mode_set(mode='OBJECT')
 
 
 # ....................................................................................................................................
@@ -1162,9 +1162,11 @@ def create_tree(position):
         bpy.ops.object.editmode_toggle()
         bpy.ops.mesh.mark_seam(clear=False)
         bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
-        bpy.ops.object.editmode_toggle()
-        rotate()
+        if scene.finish_unwrap:
+            bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
+            rotate()  # this will set the mode to object already
+        else:
+            bpy.ops.object.mode_set(mode='OBJECT')
         clock.stop("uv")
 
     # material creation
@@ -1517,6 +1519,10 @@ class MakeTreePanel(Panel):
         box.prop(scene, 'radius')
         box.prop(scene, 'mat')
         box.prop(scene, 'uv')
+        if scene.uv:
+            box.prop(scene, 'finish_unwrap')
+        else:
+            scene.finish_unwrap = False
 
 
 class RootsAndTrunksPanel(Panel):
@@ -1687,6 +1693,10 @@ def register():
     # register props
     Scene.preset_name = StringProperty(name="Preset Name", default="MyPreset")
 
+    Scene.finish_unwrap = BoolProperty(name="Unwrap",
+                                       description="Run 'Unwrap' operator. WARNING: slow, enable for final only",
+                                       default=True)
+
     Scene.preserve_trunk = BoolProperty(
         name="Preserve Trunk", default=False,
         description="preserves the trunk growth, check and see.")
@@ -1812,9 +1822,9 @@ def register():
         description="The number of branches iterations where leafs will appear")
 
     Scene.uv = BoolProperty(
-        name="Unwrap",
+        name="Create UV Seams",
         default=False,
-        description="unwrap tree. WARNING: takes time, check last")
+        description="Create uv seams for tree (enable unwrap to auto unwrap)")
 
     Scene.mat = BoolProperty(
         name="Create New Material",
@@ -1870,6 +1880,7 @@ def unregister():
 
     # unregister props
     del Scene.preset_name
+    del Scene.finish_unwrap
     del Scene.preserve_trunk
     del Scene.trunk_split_angle
     del Scene.randomangle
