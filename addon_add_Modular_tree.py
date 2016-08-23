@@ -24,7 +24,8 @@ bl_info = {
     "location": "View3D > Tools > Tree > Make Tree",
     "description": "Generates an organic tree with correctly modeled branching.",
     "warning": "May take a long time to generate! Save your file before generating!",
-    "wiki_url": "",
+    "wiki_url": "https://github.com/MaximeHerpin/Blender-Modular-tree-addon/wiki",
+    "tracker_url": "https://github.com/MaximeHerpin/Blender-Modular-tree-addon/issues/new",
     "category": "Add Mesh"}
 
 import os
@@ -1249,7 +1250,7 @@ def create_tree(position,is_twig=False):
         mesh.vertex_colors.new()
         color_map = mesh.vertex_colors.active
         for i in range(unwrap_stop_index):
-            color_map.data[i].color = (0,0,0)
+            color_map.data[i].color = (0, 0, 0)
             mesh.vertices[i].select = True
         bpy.ops.object.mode_set(mode='EDIT')
         if scene.finish_unwrap:
@@ -1408,32 +1409,37 @@ class TreeAddonPrefs(AddonPreferences):
     bl_idname = __name__
 
     always_save_prior = BoolProperty(
-        name="always_save_prior",
+        name="Save .blend File",
         default=True,
         description="Always save .blend file before executing" +
                     "time-consuming operations")
 
     save_all_images = BoolProperty(
-        name="save_all_images",
+        name="Save Images",
         default=True,
         description="Always save images before executing" +
                     "time-consuming operations")
 
     save_all_texts = BoolProperty(
-        name="save_all_texts",
+        name="Save Texts",
         default=True,
         description="Always save texts before executing" +
                     "time-consuming operations")
+
+    preset_file = StringProperty(
+        name="Preset File",
+        description="Preset File",
+        subtype='FILE_PATH')
 
     def draw(self, context):
         layout = self.layout
 
         row = layout.row()
-        row.prop(self, 'always_save_prior', text="Save .blend File")
+        row.prop(self, 'always_save_prior')
         row = layout.row()
-        row.prop(self, 'save_all_images', text="Save Images")
+        row.prop(self, 'save_all_images')
         row = layout.row()
-        row.prop(self, 'save_all_texts', text="Save Texts")
+        row.prop(self, 'save_all_texts')
 
         row = layout.row()
         # website url
@@ -1441,6 +1447,11 @@ class TreeAddonPrefs(AddonPreferences):
             "https://github.com/MaximeHerpin/Blender-Modular-tree-addon/wiki/Roadmap"
         row.operator("wm.url_open", text="Official Discussion Forum", icon='QUESTION').url = \
             "https://blenderartists.org/forum/showthread.php?405377-Addon-Modular-Tree"
+
+        box = layout.box()
+        box.label("Preset Installer")
+        box.prop(self, 'preset_file')
+        box.operator("mod_tree.install_preset")
 
 
 class MakeTreeOperator(Operator):
@@ -1823,6 +1834,38 @@ class SaveTreePresetOperator(Operator):
         return {'FINISHED'}
 
 
+class InstallTreePresetOperator(Operator):
+    """Install a tree preset from file"""
+    bl_idname = "mod_tree.install_preset"
+    bl_label = "Install Preset"
+    bl_description = "Installs preset"
+    bl_options = {"REGISTER"}
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_confirm(self, event)
+
+    def execute(self, context):
+        addon_prefs = bpy.context.user_preferences.addons[__name__].preferences
+
+        if not os.path.isfile(addon_prefs.preset_file) or addon_prefs.preset_file[-4:] != ".mtp":
+            self.report({'ERROR'}, "Not a valid preset file!")
+            return {'CANCELLED'}
+
+        with open(addon_prefs.preset_file, 'r') as p:
+            content = p.read()
+
+        # write to file
+        prsets_directory = os.path.join(os.path.dirname(__file__), "mod_tree_presets")
+        preset_name = os.path.basename(addon_prefs.preset_file)[:-4]
+        prset = os.path.join(prsets_directory, preset_name + ".mtp")  # mtp stands for modular tree preset
+
+        os.makedirs(os.path.dirname(prset), exist_ok=True)
+        with open(prset, 'w') as p:
+            print(content, file=p, flush=True)
+
+        return {'FINISHED'}
+
+
 class RemoveTreePresetOperator(Operator):
     """Remove a tree preset"""
     bl_idname = "mod_tree.remove_preset"
@@ -2173,7 +2216,8 @@ class MakeTreePresetsPanel(Panel):
 classes = [MakeTreeOperator, MakeTwigOperator, UpdateTreeOperator, UpdateTwigOperator, SaveTreePresetOperator, RemoveTreePresetOperator,
            LoadTreePresetOperator,
            MakeTreePanel, RootsAndTrunksPanel, TreeBranchesPanel, AdvancedSettingsPanel,
-           MakeTwigPanel, TreePresetLoadMenu, TreePresetRemoveMenu, MakeTreePresetsPanel]
+           MakeTwigPanel, TreePresetLoadMenu, TreePresetRemoveMenu, MakeTreePresetsPanel, InstallTreePresetOperator,
+           TreeAddonPrefs]
 
 
 def register():
