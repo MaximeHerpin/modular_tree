@@ -533,7 +533,7 @@ class MakeIslands:
         self.islands = []
         self.faces_left = set(self.face_to_verts.keys())
         while len(self.faces_left) > 0:
-            face_id = list(self.faces_left)[0]
+            face_id = self.faces_left.pop()
             self.current_island = []
             self.add_to_island(face_id)
             self.islands.append(self.current_island)
@@ -1623,6 +1623,7 @@ class SaveTreePresetOperator(Operator):
                   "visualize_leafs:{}\n"
                   "leafs_iteration_length:{}\n"
                   "uv:{}\n"
+                  "unwrap_end_iteration:{}\n"
                   "mat:{}\n"
                   "roots_iteration:{}\n"
                   "create_roots:{}\n"
@@ -1665,6 +1666,7 @@ class SaveTreePresetOperator(Operator):
                     int(scene.visualize_leafs),
                     scene.leafs_iteration_length,
                     int(scene.uv),
+                    int(scene.unwrap_end_iteration),
                     int(scene.mat),
                     scene.roots_iteration,
                     int(scene.create_roots),
@@ -1785,6 +1787,8 @@ class LoadTreePresetOperator(Operator):
                     scene.leafs_iteration_length = int(value)
                 elif setting == "uv":
                     scene.uv = bool(int(value))
+                elif setting == "unwrap_end_iteration":
+                    scene.unwrap_end_iteration = int(value)
                 elif setting == "mat":
                     scene.mat = bool(int(value))
                 elif setting == "roots_iteration":
@@ -2184,9 +2188,9 @@ def register():
         description="Create uv seams for tree (enable unwrap to auto unwrap)")
     
     Scene.unwrap_end_iteration = IntProperty(
-        name = "last unwrapped iteration",
-        min = 1,
-        default = 15)
+        name="last unwrapped iteration",
+        min=1,
+        default=15)
 
     Scene.mat = BoolProperty(
         name="Create New Material",
