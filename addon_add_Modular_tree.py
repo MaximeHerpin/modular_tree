@@ -1241,21 +1241,11 @@ def create_tree(position,is_twig=False):
             if test[v0][0] and v1 in test[v0][1]:
                 edge.select = True
 
-        bpy.ops.object.editmode_toggle()
+        bpy.ops.object.mode_set(mode='EDIT')
         bpy.ops.mesh.mark_seam(clear=False)
-        bpy.ops.mesh.select_all(action='TOGGLE')
-        bpy.ops.object.editmode_toggle()
-               
-        #for i in range(unwrap_stop_index):
-        #    mesh.vertices[i].select = True
-        #bpy.ops.object.mode_set(mode='OBJECT')
-        #bpy.ops.object.mode_set(mode='EDIT')        
-        #bpy.ops.object.mode_set(mode='VERTEX_PAINT')
-        #bpy.data.brushes["Draw"].color = (0, 0, 0)
-        #mesh.use_paint_mask = True
-        #bpy.ops.paint.vertex_color_set()
-        #bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='DESELECT')
         bpy.ops.object.mode_set(mode='OBJECT')
+      
         mesh.vertex_colors.new()
         color_map = mesh.vertex_colors.active
         for i in range(unwrap_stop_index):
