@@ -19,7 +19,7 @@
 bl_info = {
     "name": "Modular trees",
     "author": "Herpin Maxime, Jake Dube",
-    "version": (1, 4),
+    "version": (2, 0),
     "blender": (2, 77, 0),
     "location": "View3D > Tools > Tree > Make Tree",
     "description": "Generates an organic tree with correctly modeled branching.",
@@ -36,7 +36,7 @@ from time import time
 
 import bpy
 from bpy.props import StringProperty, BoolProperty, FloatProperty, IntProperty, EnumProperty
-from bpy.types import Operator, Panel, Scene, Menu
+from bpy.types import Operator, Panel, Scene, Menu, AddonPreferences
 import bmesh
 from collections import defaultdict
 
@@ -456,37 +456,33 @@ R1 = Trunk(
      (117, 116), (110, 117)])
 
 # Material node_tree
-Bark_Nodes, Bark_Links = (
-    [('NodeReroute', Vector((-580.0, 460.0)), 'Reroute', ''), ('NodeReroute', Vector((20.0, -20.0)), 'Reroute.001', ''),
-     ('ShaderNodeInvert', Vector((540.0, 300.0)), 'Invert', ''),
-     ('NodeReroute', Vector((620.0, -20.0)), 'Reroute.002', ''),
-     ('NodeReroute', Vector((-60.0, 140.0)), 'Reroute.003', ''),
-     ('ShaderNodeOutputMaterial', Vector((1240.0, 440.0)), 'Material Output', ''),
-     ('ShaderNodeTexImage', Vector((-220.0, 440.0)), 'Bark texture', 'Bark texture'),
-     ('ShaderNodeMapping', Vector((-560.0, 440.0)), 'Mapping', ''),
-     ('ShaderNodeSeparateXYZ', Vector((-560.0, 140.0)), 'Separate XYZ', ''),
-     ('ShaderNodeMixRGB', Vector((-380.0, 140.0)), 'Mix', ''),
-     ('ShaderNodeMixRGB', Vector((-40.0, 300.0)), 'Mix.002', ''),
-     ('ShaderNodeValToRGB', Vector((280.0, 300.0)), 'moss height', 'moss height'),
-     ('ShaderNodeTexNoise', Vector((540.0, 540.0)), 'Noise Texture.001', ''),
-     ('ShaderNodeTexNoise', Vector((-560.0, 0.0)), 'Noise Texture', ''),
-     ('ShaderNodeMath', Vector((120.0, 300.0)), 'Math.001', ''),
-     ('ShaderNodeMixRGB', Vector((700.0, 300.0)), 'moss color', 'moss color'),
-     ('ShaderNodeMixRGB', Vector((900.0, 440.0)), 'color variation', 'color variation'),
-     ('ShaderNodeTexCoord', Vector((-940.0, 200.0)), 'Texture Coordinate', ''),
-     ('ShaderNodeVectorMath', Vector((-740.0, 0.0)), 'Vector Math', ''),
-     ('ShaderNodeBrightContrast', Vector((720.0, 540.0)), 'Bright/Contrast', ''),
-     ('ShaderNodeBsdfDiffuse', Vector((1060.0, 440.0)), 'Diffuse BSDF', ''),
-     ('ShaderNodeObjectInfo', Vector((-940.0, -140.0)), 'Object Info', '')],
-    [([17, 'Generated'], [8, 'Vector']), ([8, 'Z'], [9, 'Color1']), ([13, 'Fac'], [9, 'Color2']),
-     ([11, 'Color'], [2, 'Color']), ([2, 'Color'], [15, 'Fac']), ([3, 'Output'], [15, 'Color1']),
-     ([14, 'Value'], [11, 'Fac']), ([9, 'Color'], [10, 'Color1']), ([10, 'Color'], [14, 'Value']),
-     ([4, 'Output'], [10, 'Color2']), ([0, 'Output'], [12, 'Vector']), ([16, 'Color'], [20, 'Color']),
-     ([15, 'Color'], [16, 'Color1']), ([12, 'Fac'], [19, 'Color']), ([19, 'Color'], [16, 'Fac']),
-     ([4, 'Output'], [1, 'Input']), ([1, 'Output'], [3, 'Input']), ([6, 'Color'], [4, 'Input']),
-     ([17, 'UV'], [7, 'Vector']), ([7, 'Vector'], [6, 'Vector']), ([17, 'Object'], [18, 'Vector']),
-     ([18, 'Vector'], [13, 'Vector']), ([18, 'Vector'], [0, 'Input']), ([20, 'BSDF'], [5, 'Surface']),
-     ([21, 'Location'], [18, 'Vector'])])
+Bark_Nodes, Bark_Links = ([('NodeReroute', Vector((-580.0, 460.0)), 'Reroute', ''),
+    ('ShaderNodeSeparateXYZ', Vector((-560.0, 140.0)), 'Separate XYZ', ''),
+    ('ShaderNodeMixRGB', Vector((-380.0, 140.0)), 'Mix', ''),
+    ('ShaderNodeTexNoise', Vector((-560.0, 0.0)), 'Noise Texture', ''),
+    ('ShaderNodeVectorMath', Vector((-740.0, 0.0)), 'Vector Math', ''),
+    ('ShaderNodeObjectInfo', Vector((-940.0, -140.0)), 'Object Info', ''),
+    ('ShaderNodeTexImage', Vector((-220.0, 440.0)), 'Bark texture', 'Bark texture'),
+    ('ShaderNodeMapping', Vector((-560.0, 440.0)), 'Mapping', ''),
+    ('ShaderNodeMapping', Vector((-561.4127807617188, 749.75927734375)), 'Mapping.001', ''),
+    ('ShaderNodeTexImage', Vector((-213.890625, 727.4722900390625)), 'Bark texture.001', 'Bark texture'),
+    ('ShaderNodeTexCoord', Vector((-935.7615966796875, 212.72984313964844)), 'Texture Coordinate', ''),
+    ('NodeReroute', Vector((280.0, 140.0)), 'Reroute.003', ''),
+    ('ShaderNodeOutputMaterial', Vector((1580.0, 440.0)), 'Material Output', ''),
+    ('ShaderNodeTexNoise', Vector((880.0, 540.0)), 'Noise Texture.001', ''),
+    ('ShaderNodeBrightContrast', Vector((1060.0, 540.0)), 'Bright/Contrast', ''),
+    ('NodeReroute', Vector((360.0, -20.0)), 'Reroute.001', ''),
+    ('ShaderNodeInvert', Vector((880.0, 300.0)), 'Invert', ''),
+    ('NodeReroute', Vector((960.0, -20.0)), 'Reroute.002', ''),
+    ('ShaderNodeMixRGB', Vector((300.0, 300.0)), 'Mix.002', ''),
+    ('ShaderNodeValToRGB', Vector((620.0, 300.0)), 'moss height', 'moss height'),
+    ('ShaderNodeMath', Vector((460.0, 300.0)), 'Math.001', ''),
+    ('ShaderNodeMixRGB', Vector((1040.0, 300.0)), 'moss color', 'moss color'),
+    ('ShaderNodeMixRGB', Vector((1240.0, 440.0)), 'color variation', 'color variation'),
+    ('ShaderNodeAttribute', Vector((-220.0, 900.0)), 'Attribute', ''),
+    ('ShaderNodeMixRGB', Vector((-3.890625, 533.7361450195312)), 'Mix.001', ''),
+    ('ShaderNodeBsdfDiffuse', Vector((1400.0, 440.0)), 'Diffuse BSDF', '')],
+    [([10, 'Object'], [4, 'Vector']), ([10, 'Generated'], [1, 'Vector']), ([1, 'Z'], [2, 'Color1']), ([3, 'Fac'], [2, 'Color2']), ([19, 'Color'], [16, 'Color']), ([16, 'Color'], [21, 'Fac']), ([17, 'Output'], [21, 'Color1']), ([20, 'Value'], [19, 'Fac']), ([2, 'Color'], [18, 'Color1']), ([18, 'Color'], [20, 'Value']), ([11, 'Output'], [18, 'Color2']), ([0, 'Output'], [13, 'Vector']), ([22, 'Color'], [25, 'Color']), ([21, 'Color'], [22, 'Color1']), ([13, 'Fac'], [14, 'Color']), ([14, 'Color'], [22, 'Fac']), ([11, 'Output'], [15, 'Input']), ([15, 'Output'], [17, 'Input']), ([10, 'UV'], [7, 'Vector']), ([7, 'Vector'], [6, 'Vector']), ([4, 'Vector'], [3, 'Vector']), ([4, 'Vector'], [0, 'Input']), ([5, 'Location'], [4, 'Vector']), ([8, 'Vector'], [9, 'Vector']), ([10, 'Generated'], [8, 'Vector']), ([9, 'Color'], [24, 'Color2']), ([24, 'Color'], [11, 'Input']), ([23, 'Fac'], [24, 'Fac']), ([6, 'Color'], [24, 'Color1']), ([25, 'BSDF'], [12, 'Surface'])])
 
 
 Leaf_Nodes, Leaf_Links = ([('ShaderNodeMapping', Vector((-1020.0, 440.0)), 'Mapping', ''),
@@ -537,7 +533,7 @@ class MakeIslands:
         self.islands = []
         self.faces_left = set(self.face_to_verts.keys())
         while len(self.faces_left) > 0:
-            face_id = list(self.faces_left)[0]
+            face_id = self.faces_left.pop()
             self.current_island = []
             self.add_to_island(face_id)
             self.islands.append(self.current_island)
@@ -933,6 +929,9 @@ def build_bark_material(mat_name):
 
     nodes = mat.node_tree.nodes
     nodes['Mapping'].scale = (15, 15, 15)
+    nodes['Mapping.001'].scale = (20,20,20)
+    nodes["Bark texture.001"].projection = 'BOX'
+    nodes['Attribute'].attribute_name = "Col"
     nodes["Noise Texture"].inputs[1].default_value = 2
     nodes["Noise Texture"].inputs[2].default_value = 10
     nodes["Mix"].blend_type = 'MULTIPLY'
@@ -1026,6 +1025,7 @@ def create_tree(position,is_twig=False):
     # [(string : parent name, string : bone name, Vector : tail position, Vector : head position), ...]
     bones = []
     leafs_start_index = 0
+    unwrap_stop_index = 0
     big_j = S1
     seams2 = [s for s in R1.Seams]
     entree = [i for i in big_j.entree]
@@ -1085,7 +1085,9 @@ def create_tree(position,is_twig=False):
     for i in range(scene.iteration + scene.trunk_length):
         if i == scene.iteration + scene.trunk_length - scene.leafs_iteration_length:
             leafs_start_index = len(verts)
-
+        if i == scene.unwrap_end_iteration + scene.trunk_length:
+            unwrap_stop_index = len(verts)
+        
         nextremites = []
 
         for E in extremites:
@@ -1239,9 +1241,17 @@ def create_tree(position,is_twig=False):
             if test[v0][0] and v1 in test[v0][1]:
                 edge.select = True
 
-        bpy.ops.object.editmode_toggle()
+        bpy.ops.object.mode_set(mode='EDIT')
         bpy.ops.mesh.mark_seam(clear=False)
-        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.mesh.select_all(action='DESELECT')
+        bpy.ops.object.mode_set(mode='OBJECT')
+      
+        mesh.vertex_colors.new()
+        color_map = mesh.vertex_colors.active
+        for i in range(unwrap_stop_index):
+            color_map.data[i].color = (0,0,0)
+            mesh.vertices[i].select = True
+        bpy.ops.object.mode_set(mode='EDIT')
         if scene.finish_unwrap:
             bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
             rotate()  # this will set the mode to object already
@@ -1303,6 +1313,134 @@ def create_tree(position,is_twig=False):
     clock.display()
     if is_twig:
         return twig_leafs
+
+
+def save_text(text):
+    """Saves Blender text block that is stored externally.
+
+    Args:
+        text: Blender text block to save.
+    """
+    # get filepath and text
+    text_path = text.filepath
+    text_as_string = text.as_string()
+    # write to file
+    with open(text_path, "w") as d:
+        d.write(str(text_as_string))
+
+
+def always_save():
+    """Saves .blend file and referenced images/texts.
+
+    Does not save 'Render Result' or 'Viewer Node'
+
+    Returns:
+        "BLEND_ERROR", None: IF file has not been saved (no filepath)
+        "IMAGE_ERROR", image: IF image has not been saved
+        "SUCCESS", None: IF saved all required types correctly
+    """
+    try:
+        addon_prefs = bpy.context.user_preferences.addons[__name__].preferences
+    except KeyError:
+        print("Could not find addon prefs! Files not saved!")
+        return "FAILED", None
+
+    print("\n")
+
+    # save file
+    if addon_prefs.always_save_prior:
+        if bpy.data.is_saved:
+            bpy.ops.wm.save_mainfile()
+            print("Blend file saved...")
+        else:
+            return "BLEND_ERROR", None
+
+    # save all images
+    if addon_prefs.save_all_images:
+        for image in bpy.data.images:
+            if image.has_data and image.is_dirty and not image.packed_file:
+                if image.filepath:
+                    image.save()
+                    print("Image \"", image.name, "\" saved...", sep="")
+                elif image.name != 'Render Result' and image.name != 'Viewer Node':
+                    return "IMAGE_ERROR", image
+
+    # save all texts
+    if addon_prefs.save_all_texts:
+        for text in bpy.data.texts:
+            if text.filepath and text.is_dirty:
+                # my function for saving texts
+                save_text(text)
+                print("Text \"", text.name, "\" saved...", sep="")
+
+    print("\n")
+
+    return "SUCCESS", None
+
+
+def save_everything():
+    # save files
+    save_return, bad_file = always_save()
+    messages = []
+    message_lvls = []
+    if save_return == "BLEND_ERROR":
+        messages += ["Save file or disable always save " + "in user prefs."]
+        message_lvls += ['ERROR']
+        return messages, message_lvls, 'CANCELLED'
+
+    elif save_return == "IMAGE_ERROR":
+        messages += [
+            "Image '" + bad_file.name + "' does not have a valid file path (for saving). Assign " + "a valid path, pack image, or disable save images in " + "user prefs"]
+        message_lvls += ['ERROR']
+        return messages, message_lvls, 'CANCELLED'
+
+    elif save_return == "TEXT_ERROR":
+        messages += [
+            "Text '" + bad_file.name + "' does not have a valid file path (for saving). " + "Assign a valid path or disable save texts in user prefs"]
+        message_lvls += ['ERROR']
+        return messages, message_lvls, 'CANCELLED'
+
+    else:
+        return [], [], ''  # this is what we want
+
+
+class TreeAddonPrefs(AddonPreferences):
+    bl_idname = __name__
+
+    always_save_prior = BoolProperty(
+        name="always_save_prior",
+        default=True,
+        description="Always save .blend file before executing" +
+                    "time-consuming operations")
+
+    save_all_images = BoolProperty(
+        name="save_all_images",
+        default=True,
+        description="Always save images before executing" +
+                    "time-consuming operations")
+
+    save_all_texts = BoolProperty(
+        name="save_all_texts",
+        default=True,
+        description="Always save texts before executing" +
+                    "time-consuming operations")
+
+    def draw(self, context):
+        layout = self.layout
+
+        row = layout.row()
+        row.prop(self, 'always_save_prior', text="Save .blend File")
+        row = layout.row()
+        row.prop(self, 'save_all_images', text="Save Images")
+        row = layout.row()
+        row.prop(self, 'save_all_texts', text="Save Texts")
+
+        row = layout.row()
+        # website url
+        row.operator("wm.url_open", text="Feature Roadmap", icon='QUESTION').url = \
+            "https://github.com/MaximeHerpin/Blender-Modular-tree-addon/wiki/Roadmap"
+        row.operator("wm.url_open", text="Official Discussion Forum", icon='QUESTION').url = \
+            "https://blenderartists.org/forum/showthread.php?405377-Addon-Modular-Tree"
 
 
 class MakeTreeOperator(Operator):
@@ -1388,9 +1526,9 @@ class MakeTwigOperator(Operator):
         save_branch_random_rotate = scene.branch_random_rotate
         save_particle = scene.particle
         save_number = scene.number
-        save_display = scene.display       
-        
-        
+        save_display = scene.display
+        save_break_chance = scene.break_chance
+
         scene.preserve_trunk = False
         scene.trunk_split_angle = 0
         scene.randomangle = .5
@@ -1424,7 +1562,8 @@ class MakeTwigOperator(Operator):
         scene.particle = False
         scene.number = 0
         scene.display = 0
-        
+        scene.break_chance = 0
+
         if bpy.data.materials.get("twig bark") is None:
             build_bark_material("twig bark")
         
@@ -1480,6 +1619,7 @@ class MakeTwigOperator(Operator):
         scene.particle = save_particle
         scene.number = save_number
         scene.display = save_display
+        scene.break_chance = save_break_chance
 
         return {'FINISHED'}
     
@@ -1613,6 +1753,7 @@ class SaveTreePresetOperator(Operator):
                   "visualize_leafs:{}\n"
                   "leafs_iteration_length:{}\n"
                   "uv:{}\n"
+                  "unwrap_end_iteration:{}\n"
                   "mat:{}\n"
                   "roots_iteration:{}\n"
                   "create_roots:{}\n"
@@ -1655,6 +1796,7 @@ class SaveTreePresetOperator(Operator):
                     int(scene.visualize_leafs),
                     scene.leafs_iteration_length,
                     int(scene.uv),
+                    int(scene.unwrap_end_iteration),
                     int(scene.mat),
                     scene.roots_iteration,
                     int(scene.create_roots),
@@ -1775,6 +1917,8 @@ class LoadTreePresetOperator(Operator):
                     scene.leafs_iteration_length = int(value)
                 elif setting == "uv":
                     scene.uv = bool(int(value))
+                elif setting == "unwrap_end_iteration":
+                    scene.unwrap_end_iteration = int(value)
                 elif setting == "mat":
                     scene.mat = bool(int(value))
                 elif setting == "roots_iteration":
@@ -1835,6 +1979,8 @@ class MakeTreePanel(Panel):
         box.prop(scene, 'uv')
         if scene.uv:
             box.prop(scene, 'finish_unwrap')
+            if scene.finish_unwrap:
+                box.prop(scene, "unwrap_end_iteration")
         else:
             scene.finish_unwrap = False
 
@@ -2075,7 +2221,8 @@ def register():
 
     Scene.iteration = IntProperty(
         name="Branch Iterations",
-        min=1,
+        min=2,
+        soft_max=30,
         default=20)
 
     Scene.preserve_end = IntProperty(
@@ -2170,6 +2317,12 @@ def register():
         name="Create UV Seams",
         default=False,
         description="Create uv seams for tree (enable unwrap to auto unwrap)")
+    
+    Scene.unwrap_end_iteration = IntProperty(
+        name="last unwrapped iteration",
+        min=1,
+        soft_max=20,
+        default=8)
 
     Scene.mat = BoolProperty(
         name="Create New Material",
@@ -2239,7 +2392,8 @@ def register():
     
     Scene.twig_iteration = IntProperty(
         name="Twig Iteration",
-        min=0,
+        min=3,
+        soft_max=10,
         default=9)
     
 
@@ -2276,6 +2430,7 @@ def unregister():
     del Scene.visualize_leafs
     del Scene.leafs_iteration_length
     del Scene.uv
+    del Scene.unwrap_end_iteration
     del Scene.mat
     del Scene.roots_iteration
     del Scene.create_roots
