@@ -456,37 +456,33 @@ R1 = Trunk(
      (117, 116), (110, 117)])
 
 # Material node_tree
-Bark_Nodes, Bark_Links = (
-    [('NodeReroute', Vector((-580.0, 460.0)), 'Reroute', ''), ('NodeReroute', Vector((20.0, -20.0)), 'Reroute.001', ''),
-     ('ShaderNodeInvert', Vector((540.0, 300.0)), 'Invert', ''),
-     ('NodeReroute', Vector((620.0, -20.0)), 'Reroute.002', ''),
-     ('NodeReroute', Vector((-60.0, 140.0)), 'Reroute.003', ''),
-     ('ShaderNodeOutputMaterial', Vector((1240.0, 440.0)), 'Material Output', ''),
-     ('ShaderNodeTexImage', Vector((-220.0, 440.0)), 'Bark texture', 'Bark texture'),
-     ('ShaderNodeMapping', Vector((-560.0, 440.0)), 'Mapping', ''),
-     ('ShaderNodeSeparateXYZ', Vector((-560.0, 140.0)), 'Separate XYZ', ''),
-     ('ShaderNodeMixRGB', Vector((-380.0, 140.0)), 'Mix', ''),
-     ('ShaderNodeMixRGB', Vector((-40.0, 300.0)), 'Mix.002', ''),
-     ('ShaderNodeValToRGB', Vector((280.0, 300.0)), 'moss height', 'moss height'),
-     ('ShaderNodeTexNoise', Vector((540.0, 540.0)), 'Noise Texture.001', ''),
-     ('ShaderNodeTexNoise', Vector((-560.0, 0.0)), 'Noise Texture', ''),
-     ('ShaderNodeMath', Vector((120.0, 300.0)), 'Math.001', ''),
-     ('ShaderNodeMixRGB', Vector((700.0, 300.0)), 'moss color', 'moss color'),
-     ('ShaderNodeMixRGB', Vector((900.0, 440.0)), 'color variation', 'color variation'),
-     ('ShaderNodeTexCoord', Vector((-940.0, 200.0)), 'Texture Coordinate', ''),
-     ('ShaderNodeVectorMath', Vector((-740.0, 0.0)), 'Vector Math', ''),
-     ('ShaderNodeBrightContrast', Vector((720.0, 540.0)), 'Bright/Contrast', ''),
-     ('ShaderNodeBsdfDiffuse', Vector((1060.0, 440.0)), 'Diffuse BSDF', ''),
-     ('ShaderNodeObjectInfo', Vector((-940.0, -140.0)), 'Object Info', '')],
-    [([17, 'Generated'], [8, 'Vector']), ([8, 'Z'], [9, 'Color1']), ([13, 'Fac'], [9, 'Color2']),
-     ([11, 'Color'], [2, 'Color']), ([2, 'Color'], [15, 'Fac']), ([3, 'Output'], [15, 'Color1']),
-     ([14, 'Value'], [11, 'Fac']), ([9, 'Color'], [10, 'Color1']), ([10, 'Color'], [14, 'Value']),
-     ([4, 'Output'], [10, 'Color2']), ([0, 'Output'], [12, 'Vector']), ([16, 'Color'], [20, 'Color']),
-     ([15, 'Color'], [16, 'Color1']), ([12, 'Fac'], [19, 'Color']), ([19, 'Color'], [16, 'Fac']),
-     ([4, 'Output'], [1, 'Input']), ([1, 'Output'], [3, 'Input']), ([6, 'Color'], [4, 'Input']),
-     ([17, 'UV'], [7, 'Vector']), ([7, 'Vector'], [6, 'Vector']), ([17, 'Object'], [18, 'Vector']),
-     ([18, 'Vector'], [13, 'Vector']), ([18, 'Vector'], [0, 'Input']), ([20, 'BSDF'], [5, 'Surface']),
-     ([21, 'Location'], [18, 'Vector'])])
+Bark_Nodes, Bark_Links = ([('NodeReroute', Vector((-580.0, 460.0)), 'Reroute', ''),
+    ('ShaderNodeSeparateXYZ', Vector((-560.0, 140.0)), 'Separate XYZ', ''),
+    ('ShaderNodeMixRGB', Vector((-380.0, 140.0)), 'Mix', ''),
+    ('ShaderNodeTexNoise', Vector((-560.0, 0.0)), 'Noise Texture', ''),
+    ('ShaderNodeVectorMath', Vector((-740.0, 0.0)), 'Vector Math', ''),
+    ('ShaderNodeObjectInfo', Vector((-940.0, -140.0)), 'Object Info', ''),
+    ('ShaderNodeTexImage', Vector((-220.0, 440.0)), 'Bark texture', 'Bark texture'),
+    ('ShaderNodeMapping', Vector((-560.0, 440.0)), 'Mapping', ''),
+    ('ShaderNodeMapping', Vector((-561.4127807617188, 749.75927734375)), 'Mapping.001', ''),
+    ('ShaderNodeTexImage', Vector((-213.890625, 727.4722900390625)), 'Bark texture.001', 'Bark texture'),
+    ('ShaderNodeTexCoord', Vector((-935.7615966796875, 212.72984313964844)), 'Texture Coordinate', ''),
+    ('NodeReroute', Vector((280.0, 140.0)), 'Reroute.003', ''),
+    ('ShaderNodeOutputMaterial', Vector((1580.0, 440.0)), 'Material Output', ''),
+    ('ShaderNodeTexNoise', Vector((880.0, 540.0)), 'Noise Texture.001', ''),
+    ('ShaderNodeBrightContrast', Vector((1060.0, 540.0)), 'Bright/Contrast', ''),
+    ('NodeReroute', Vector((360.0, -20.0)), 'Reroute.001', ''),
+    ('ShaderNodeInvert', Vector((880.0, 300.0)), 'Invert', ''),
+    ('NodeReroute', Vector((960.0, -20.0)), 'Reroute.002', ''),
+    ('ShaderNodeMixRGB', Vector((300.0, 300.0)), 'Mix.002', ''),
+    ('ShaderNodeValToRGB', Vector((620.0, 300.0)), 'moss height', 'moss height'),
+    ('ShaderNodeMath', Vector((460.0, 300.0)), 'Math.001', ''),
+    ('ShaderNodeMixRGB', Vector((1040.0, 300.0)), 'moss color', 'moss color'),
+    ('ShaderNodeMixRGB', Vector((1240.0, 440.0)), 'color variation', 'color variation'),
+    ('ShaderNodeAttribute', Vector((-220.0, 900.0)), 'Attribute', ''),
+    ('ShaderNodeMixRGB', Vector((-3.890625, 533.7361450195312)), 'Mix.001', ''),
+    ('ShaderNodeBsdfDiffuse', Vector((1400.0, 440.0)), 'Diffuse BSDF', '')],
+    [([10, 'Object'], [4, 'Vector']), ([10, 'Generated'], [1, 'Vector']), ([1, 'Z'], [2, 'Color1']), ([3, 'Fac'], [2, 'Color2']), ([19, 'Color'], [16, 'Color']), ([16, 'Color'], [21, 'Fac']), ([17, 'Output'], [21, 'Color1']), ([20, 'Value'], [19, 'Fac']), ([2, 'Color'], [18, 'Color1']), ([18, 'Color'], [20, 'Value']), ([11, 'Output'], [18, 'Color2']), ([0, 'Output'], [13, 'Vector']), ([22, 'Color'], [25, 'Color']), ([21, 'Color'], [22, 'Color1']), ([13, 'Fac'], [14, 'Color']), ([14, 'Color'], [22, 'Fac']), ([11, 'Output'], [15, 'Input']), ([15, 'Output'], [17, 'Input']), ([10, 'UV'], [7, 'Vector']), ([7, 'Vector'], [6, 'Vector']), ([4, 'Vector'], [3, 'Vector']), ([4, 'Vector'], [0, 'Input']), ([5, 'Location'], [4, 'Vector']), ([8, 'Vector'], [9, 'Vector']), ([10, 'Generated'], [8, 'Vector']), ([9, 'Color'], [24, 'Color2']), ([24, 'Color'], [11, 'Input']), ([23, 'Fac'], [24, 'Fac']), ([6, 'Color'], [24, 'Color1']), ([25, 'BSDF'], [12, 'Surface'])])
 
 
 Leaf_Nodes, Leaf_Links = ([('ShaderNodeMapping', Vector((-1020.0, 440.0)), 'Mapping', ''),
@@ -933,6 +929,9 @@ def build_bark_material(mat_name):
 
     nodes = mat.node_tree.nodes
     nodes['Mapping'].scale = (15, 15, 15)
+    nodes['Mapping.001'].scale = (20,20,20)
+    nodes["Bark texture.001"].projection = 'BOX'
+    nodes['Attribute'].attribute_name = "Col"
     nodes["Noise Texture"].inputs[1].default_value = 2
     nodes["Noise Texture"].inputs[2].default_value = 10
     nodes["Mix"].blend_type = 'MULTIPLY'
@@ -1026,6 +1025,7 @@ def create_tree(position,is_twig=False):
     # [(string : parent name, string : bone name, Vector : tail position, Vector : head position), ...]
     bones = []
     leafs_start_index = 0
+    unwrap_stop_index = 0
     big_j = S1
     seams2 = [s for s in R1.Seams]
     entree = [i for i in big_j.entree]
@@ -1085,7 +1085,9 @@ def create_tree(position,is_twig=False):
     for i in range(scene.iteration + scene.trunk_length):
         if i == scene.iteration + scene.trunk_length - scene.leafs_iteration_length:
             leafs_start_index = len(verts)
-
+        if i == scene.unwrap_end_iteration + scene.trunk_length:
+            unwrap_stop_index = len(verts)
+        
         nextremites = []
 
         for E in extremites:
@@ -1241,7 +1243,25 @@ def create_tree(position,is_twig=False):
 
         bpy.ops.object.editmode_toggle()
         bpy.ops.mesh.mark_seam(clear=False)
-        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.mesh.select_all(action='TOGGLE')
+        bpy.ops.object.editmode_toggle()
+               
+        #for i in range(unwrap_stop_index):
+        #    mesh.vertices[i].select = True
+        #bpy.ops.object.mode_set(mode='OBJECT')
+        #bpy.ops.object.mode_set(mode='EDIT')        
+        #bpy.ops.object.mode_set(mode='VERTEX_PAINT')
+        #bpy.data.brushes["Draw"].color = (0, 0, 0)
+        #mesh.use_paint_mask = True
+        #bpy.ops.paint.vertex_color_set()
+        #bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.object.mode_set(mode='OBJECT')
+        mesh.vertex_colors.new()
+        color_map = mesh.vertex_colors.active
+        for i in range(unwrap_stop_index):
+            color_map.data[i].color = (0,0,0)
+            mesh.vertices[i].select = True
+        bpy.ops.object.mode_set(mode='EDIT')
         if scene.finish_unwrap:
             bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
             rotate()  # this will set the mode to object already
@@ -1835,6 +1855,8 @@ class MakeTreePanel(Panel):
         box.prop(scene, 'uv')
         if scene.uv:
             box.prop(scene, 'finish_unwrap')
+            if scene.finish_unwrap:
+                box.prop(scene, "unwrap_end_iteration")
         else:
             scene.finish_unwrap = False
 
@@ -2170,6 +2192,11 @@ def register():
         name="Create UV Seams",
         default=False,
         description="Create uv seams for tree (enable unwrap to auto unwrap)")
+    
+    Scene.unwrap_end_iteration = IntProperty(
+        name = "last unwrapped iteration",
+        min = 1,
+        default = 15)
 
     Scene.mat = BoolProperty(
         name="Create New Material",
@@ -2276,6 +2303,7 @@ def unregister():
     del Scene.visualize_leafs
     del Scene.leafs_iteration_length
     del Scene.uv
+    del Scene.unwrap_end_iteration
     del Scene.mat
     del Scene.roots_iteration
     del Scene.create_roots
