@@ -1354,7 +1354,7 @@ def always_save():
     except KeyError:
         print("Could not find addon prefs! Files not saved!")
         return "FAILED", None
-    
+
     print("\n")
 
     # save file
@@ -2263,7 +2263,8 @@ def register():
 
     Scene.iteration = IntProperty(
         name="Branch Iterations",
-        min=1,
+        min=2,
+        soft_max=30,
         default=20)
 
     Scene.preserve_end = IntProperty(
@@ -2362,7 +2363,8 @@ def register():
     Scene.unwrap_end_iteration = IntProperty(
         name="last unwrapped iteration",
         min=1,
-        default=15)
+        soft_max=20,
+        default=8)
 
     Scene.mat = BoolProperty(
         name="Create New Material",
@@ -2432,7 +2434,8 @@ def register():
 
     Scene.twig_iteration = IntProperty(
         name="Twig Iteration",
-        min=0,
+        min=3,
+        soft_max=10,
         default=9)
 
 
