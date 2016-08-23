@@ -41,6 +41,20 @@ import bmesh
 from collections import defaultdict
 
 
+LOGO = r"""
+
+                                                ______
+  __  __             _         _               /  *   \
+ |  \/  |  ___    __| | _   _ | |  __ _  _ __  \_*  *_/  _ __  ___   ___
+ | |\/| | / _ \  / _` || | | || | / _` || '__|   | ||   | '__|/ _ \ / _ \
+ | |  | || (_) || (_| || |_| || || (_| || |      || |   | |  |  __/|  __/
+ |_|  |_| \___/  \__,_| \__,_||_| \__,_||_|     /  | \  |_|   \___| \___|
+
+ ========================================================================
+
+"""
+
+
 class Clock:
     """A quick and easy to use performance measuring tool.
 
@@ -491,7 +505,6 @@ Leaf_Nodes, Leaf_Links = ([('ShaderNodeMapping', Vector((-1020.0, 440.0)), 'Mapp
      ('ShaderNodeMixRGB', Vector((-820.0, 140.0)), 'Mix', ''),
      ('ShaderNodeObjectInfo', Vector((-1000.0, 140.0)), 'Object Info', '')],
      [([7, 'BSDF'], [8, 'Shader']), ([8, 'Shader'], [10, 'Shader']), ([9, 'BSDF'], [8, 'Shader']), ([11, 'Color'], [9, 'Color']), ([0, 'Vector'], [2, 'Vector']), ([1, 'UV'], [0, 'Vector']), ([11, 'Color'], [7, 'Color']), ([6, 'BSDF'], [10, 'Shader']), ([2, 'Color'], [11, 'Color']), ([13, 'Color'], [4, 'Image']), ([4, 'R'], [11, 'Hue']), ([10, 'Shader'], [5, 'Surface']), ([12, 'Output'], [10, 'Fac']), ([2, 'Alpha'], [3, 'Input']), ([3, 'Output'], [12, 'Input']), ([14, 'Random'], [13, 'Fac'])])
-
 
 
 # This part is heavily inspired by the "UV Align\Distribute" addon made by Rebellion (Luca Carella)
@@ -997,8 +1010,10 @@ def create_tree(position,is_twig=False):
         is_twig - (Bool) Is the tree a twig
     """
     clock = Clock("create_tree")
+    print(LOGO)
     twig_leafs = []
-    #deselecting all objects
+
+    # deselecting all objects
     for select_ob in bpy.context.selected_objects:
         select_ob.select = False
     scene = bpy.context.scene
@@ -1006,7 +1021,9 @@ def create_tree(position,is_twig=False):
     make_roots = scene.create_roots
     trunk2 = scene.preserve_trunk
     radius = scene.radius
-    #The list of bones is a list of (string : parent name, string : bone name, Vector : tail position, Vector : head position)
+
+    # the list of bones is a list of...
+    # [(string : parent name, string : bone name, Vector : tail position, Vector : head position), ...]
     bones = []
     leafs_start_index = 0
     big_j = S1
@@ -1021,6 +1038,7 @@ def create_tree(position,is_twig=False):
         faces = [f for f in root.faces]
         extr = [i for i in root.sortie[1]]
     else:
+        print("Generating Roots...")
         verts = [Vector(v) * radius for v in R1.verts]
         faces = [f for f in R1.faces]
         extr = [i for i in R1.stem]
@@ -1061,7 +1079,9 @@ def create_tree(position,is_twig=False):
 
     radius = scene.radius
     extremites = [(extr, radius, Vector((0, 0, 1)), extr[0], last_bone, trunk2, 0)]
-    #Branchs generation
+
+    # branches generation
+    print("Generating Branches...")
     for i in range(scene.iteration + scene.trunk_length):
         if i == scene.iteration + scene.trunk_length - scene.leafs_iteration_length:
             leafs_start_index = len(verts)
@@ -1173,7 +1193,8 @@ def create_tree(position,is_twig=False):
                 nextremites.append((ni, radius * scene.radius_dec, direction, nsi, nb, trunk2, curr_rotation))
 
         extremites = nextremites
-    #Mesh and object creation
+    # mesh and object creation
+    print("Building Object...")
     mesh = bpy.data.meshes.new("tree")
 
     mesh.from_pydata(verts, [], faces)
@@ -1191,16 +1212,19 @@ def create_tree(position,is_twig=False):
     g.add([i for i in range(leafs_start_index, len(verts))], 1.0, "ADD")
 
     # fix normals, then make sure they are fixed :)
+    print("Setting Normals...")
     fix_normals(inside=False)
     if obj.data.polygons[0].normal.x < 0:
         fix_normals(inside=True)
 
     # particle setup
     if scene.particle:
+        print("Configuring Particle System...")
         create_system(obj, scene.number, scene.display, vgroups["leaf"])
 
     # uv unwrapping
     if scene.uv:
+        print("Unwrapping...")
         clock.add_sub_job("uv")
         test = [[False, []] for _ in range(len(verts))]
         for (a, b) in seams2:
@@ -1226,6 +1250,7 @@ def create_tree(position,is_twig=False):
         clock.stop("uv")
 
     # material creation
+    print("Setting Materials...")
     if scene.mat:
         obj.active_material = build_bark_material("bark")
 
@@ -1234,6 +1259,7 @@ def create_tree(position,is_twig=False):
 
     # armature creation
     if scene.create_armature:
+        print("Building Armature...")
         clock.add_sub_job("armature")
         bpy.ops.object.add(type='ARMATURE', enter_editmode=True, location=Vector((0, 0, 0)))
         arm = bpy.context.object
@@ -1273,6 +1299,7 @@ def create_tree(position,is_twig=False):
     obj["has_armature"] = True if scene.create_armature else False
 
     clock.stop("create_tree")
+    print("\nDeveloper Info:")
     clock.display()
     if is_twig:
         return twig_leafs
@@ -1292,11 +1319,19 @@ class MakeTreeOperator(Operator):
 
         return {'FINISHED'}
 
-def add_leaf(position,direction,rotation,scale):
+
+def add_leaf(position, direction, rotation, scale):
     
-    verts,faces = ([(-1.0, 0.07, 0.05), (1.0, 0.07, 0.05), (-1.0, -1.01, 1.75), (1.0, -1.01, 1.75), (-1.0, -0.76, 1.1), (-1.0, -0.38, 0.55), (1.0, -0.38, 0.55), (1.0, -0.76, 1.1), (-0.33, 0.0, 0.0), (0.33, 0.0, 0.0), (0.33, -1.16, 1.64), (-0.33, -1.16, 1.64), (0.33, -0.56, 0.42), (-0.33, -0.56, 0.42), (0.33, -0.9, 1.0), (-0.33, -0.9, 1.0)], [(14, 7, 3, 10), (9, 1, 6, 12), (12, 6, 7, 14), (5, 13, 15, 4), (13, 12, 14, 15), (0, 8, 13, 5), (8, 9, 12, 13), (4, 15, 11, 2), (15, 14, 10, 11)])
+    verts, faces = ([(-1.0, 0.07, 0.05), (1.0, 0.07, 0.05), (-1.0, -1.01, 1.75),
+                     (1.0, -1.01, 1.75), (-1.0, -0.76, 1.1), (-1.0, -0.38, 0.55),
+                     (1.0, -0.38, 0.55), (1.0, -0.76, 1.1), (-0.33, 0.0, 0.0),
+                     (0.33, 0.0, 0.0), (0.33, -1.16, 1.64), (-0.33, -1.16, 1.64),
+                     (0.33, -0.56, 0.42), (-0.33, -0.56, 0.42), (0.33, -0.9, 1.0), (-0.33, -0.9, 1.0)],
+
+                    [(14, 7, 3, 10), (9, 1, 6, 12), (12, 6, 7, 14), (5, 13, 15, 4), (13, 12, 14, 15),
+                     (0, 8, 13, 5), (8, 9, 12, 13), (4, 15, 11, 2), (15, 14, 10, 11)])
     verts = [Vector(v) for v in verts]
-    verts = rot_scale(verts,scale,direction,rotation)
+    verts = rot_scale(verts, scale, direction, rotation)
     verts = [v+position for v in verts]
     mesh = bpy.data.meshes.new("leaf")
     mesh.from_pydata(verts, [], faces)
@@ -1411,8 +1446,6 @@ class MakeTwigOperator(Operator):
         bpy.ops.transform.rotate(value=-1.5708, axis=(1, 0, 0))
         bpy.ops.transform.resize(value=(0.25, 0.25, 0.25))
         bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
-
-
         
         scene.preserve_trunk = save_preserve_trunk
         scene.trunk_split_angle = save_split_angle
@@ -1789,10 +1822,6 @@ class MakeTreePanel(Panel):
         row = layout.row()
         row.scale_y = 1.5
         row.operator("mod_tree.add_tree", icon="WORLD")
-        
-        row = layout.row()
-        row.scale_y = 1.5
-        row.operator("mod_tree.add_twig", icon="WORLD")
 
         row = layout.row()
         row.scale_y = 1.5
@@ -2309,6 +2338,8 @@ def load_tests(test_cases):
 
 
 if __name__ == "__main__":
+    print(LOGO)
+
     # run test cases
     suite = load_tests([AddTuple, Gravity])
     unittest.TextTestRunner(verbosity=2).run(suite)
