@@ -1249,7 +1249,7 @@ def create_tree(position,is_twig=False):
         mesh.vertex_colors.new()
         color_map = mesh.vertex_colors.active
         for i in range(unwrap_stop_index):
-            color_map.data[i].color = (0,0,0)
+            color_map.data[i].color = (0, 0, 0)
             mesh.vertices[i].select = True
         bpy.ops.object.mode_set(mode='EDIT')
         if scene.finish_unwrap:
