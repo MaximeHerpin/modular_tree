@@ -1551,6 +1551,7 @@ class MakeTwigOperator(Operator):
         save_particle = scene.particle
         save_number = scene.number
         save_display = scene.display
+        save_break_chance = scene.break_chance
 
         scene.preserve_trunk = False
         scene.trunk_split_angle = 0
@@ -1585,6 +1586,7 @@ class MakeTwigOperator(Operator):
         scene.particle = False
         scene.number = 0
         scene.display = 0
+        scene.break_chance = 0
 
         if bpy.data.materials.get("twig bark") is None:
             build_bark_material("twig bark")
@@ -1644,6 +1646,7 @@ class MakeTwigOperator(Operator):
         scene.particle = save_particle
         scene.number = save_number
         scene.display = save_display
+        scene.break_chance = save_break_chance
 
         return {'FINISHED'}
 
