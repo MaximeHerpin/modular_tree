@@ -19,13 +19,12 @@
 bl_info = {
     "name": "Modular trees",
     "author": "Herpin Maxime, Jake Dube",
-    "version": (1, 4),
+    "version": (2, 0),
     "blender": (2, 77, 0),
     "location": "View3D > Tools > Tree > Make Tree",
     "description": "Generates an organic tree with correctly modeled branching.",
     "warning": "May take a long time to generate! Save your file before generating!",
-    "wiki_url": "https://github.com/MaximeHerpin/Blender-Modular-tree-addon/wiki",
-    "tracker_url": "https://github.com/MaximeHerpin/Blender-Modular-tree-addon/issues/new",
+    "wiki_url": "",
     "category": "Add Mesh"}
 
 import os
@@ -40,6 +39,7 @@ from bpy.props import StringProperty, BoolProperty, FloatProperty, IntProperty, 
 from bpy.types import Operator, Panel, Scene, Menu, AddonPreferences
 import bmesh
 from collections import defaultdict
+
 
 LOGO = r"""
 
@@ -64,7 +64,6 @@ class Clock:
         stop - Stops the specified job.
         display - Displays the final statistics.
     """
-
     def __init__(self, main_job):
         """Clocks the start time to measure performance.
 
@@ -72,7 +71,7 @@ class Clock:
             job - (string) the name of the job to print out when finished
 
         """
-        self.jobs = [[main_job, {"sublvl": 0, "start": time(), "finish": 0}]]
+        self.jobs = [[main_job, {"sublvl": 0,  "start": time(), "finish": 0}]]
 
     def add_sub_job(self, sub_job, sub=1):
         """Adds a sub-job to the job list.
@@ -129,7 +128,7 @@ class Module:
         Args:
             entree - (list of int) The indexes of the entry vertices
             sortie - (list of int) The indexes of the exit vertices
-            verts - (list of vector) The vertices of the Module
+            verts - (list of vector) The vertices of the Module 
             faces - (list of (int, int, int, int)) The faces of the Module
         """
         self.entree = entree
@@ -378,15 +377,14 @@ trunk = Split(
 
 class Trunk:
     """This is used to represent the base of a trunk with roots"""
-
     def __init__(self, roots, stem, verts, faces, seams):
         """Initializes the variables
 
         Args:
-            roots - (list of (Vector, list of int)) The directions and indexes of roots exits
+            roots - (list of (Vector, list of int)) The directions and indexes of roots exits 
             stem - (list of int) The indexes of the trunk exit
             verts - (list of Vector) The vertices
-            faces - (list of (int, int, int, int)) The faces
+            faces - (list of (int, int, int, int)) The faces 
             seams - (list of (int, int)) The seams
         """
         self.roots = roots
@@ -398,15 +396,12 @@ class Trunk:
 
 R1 = Trunk(
     # roots
-    [(Vector((-6.293336696217011e-08, -0.6988458633422852, -0.3152722477912903)), 0.69,
-      [110, 111, 112, 113, 114, 115, 116, 117]),
+    [(Vector((-6.293336696217011e-08, -0.6988458633422852, -0.3152722477912903)), 0.69, [110, 111, 112, 113, 114, 115, 116, 117]),
      (Vector((0.6009913086891174, -0.04263520613312721, -0.3981175780296326)), 0.34, [55, 56, 57, 58, 59, 60, 61, 62]),
      (Vector((0.5693859457969666, 0.49961066246032715, -0.352831494808197)), 0.34, [47, 48, 49, 50, 51, 52, 53, 54]),
-     (Vector((-0.779069721698761, 0.455067813396454, -0.24110554456710815)), 0.34,
-      [63, 64, 65, 66, 67, 68, 69, 70, 101]),
+     (Vector((-0.779069721698761, 0.455067813396454, -0.24110554456710815)), 0.34, [63, 64, 65, 66, 67, 68, 69, 70, 101]),
      (Vector((-0.7720233201980591, -0.09697314351797104, -0.3281529068946838)), 0.56, [71, 72, 73, 74, 75, 76, 77, 78]),
-     (Vector((-1.859164768802657e-07, 0.2071729600429535, -0.4783042669296265)), 0.60,
-      [39, 40, 41, 42, 43, 44, 45, 46])],
+     (Vector((-1.859164768802657e-07, 0.2071729600429535, -0.4783042669296265)), 0.60, [39, 40, 41, 42, 43, 44, 45, 46])],
     # stem
     [0, 1, 2, 3, 4, 5, 6, 7],
     # verts
@@ -436,7 +431,7 @@ R1 = Trunk(
      (0.43, -1.6, -0.67), (0.6, -1.33, -0.97), (0.43, -1.06, -1.27)],
     # faces
     [(7, 6, 14, 15), (5, 4, 12, 13), (3, 2, 10, 11), (1, 0, 8, 9), (0, 7, 15, 8), (6, 5, 13, 14), (4, 3, 11, 12),
-     (2, 1, 9, 10), (9, 8, 16, 17), (8, 15, 23, 16), (14, 13, 21, 22), (12, 11, 19, 20), (10, 9, 17, 18),
+     (2, 1, 9, 10), (9, 8, 16, 17), (8, 15, 23,  16), (14,  13,  21, 22), (12, 11, 19, 20), (10, 9, 17, 18),
      (15, 14, 22, 23), (13, 12, 20, 21), (11, 10, 18, 19), (16, 23, 31, 24), (22, 21, 29, 30), (20, 19, 27, 28),
      (18, 17, 25, 26), (23, 22, 30, 31), (21, 20, 28, 29), (19, 18, 26, 27), (17, 16, 24, 25), (32, 43, 44, 38),
      (33, 42, 43, 32), (103, 102, 78, 77), (104, 42, 33, 103), (105, 104, 76, 75), (45, 56, 57, 44), (57, 58, 38, 44),
@@ -489,27 +484,23 @@ Bark_Nodes, Bark_Links = ([('NodeReroute', Vector((-580.0, 460.0)), 'Reroute', '
     ('ShaderNodeBsdfDiffuse', Vector((1400.0, 440.0)), 'Diffuse BSDF', '')],
     [([10, 'Object'], [4, 'Vector']), ([10, 'Generated'], [1, 'Vector']), ([1, 'Z'], [2, 'Color1']), ([3, 'Fac'], [2, 'Color2']), ([19, 'Color'], [16, 'Color']), ([16, 'Color'], [21, 'Fac']), ([17, 'Output'], [21, 'Color1']), ([20, 'Value'], [19, 'Fac']), ([2, 'Color'], [18, 'Color1']), ([18, 'Color'], [20, 'Value']), ([11, 'Output'], [18, 'Color2']), ([0, 'Output'], [13, 'Vector']), ([22, 'Color'], [25, 'Color']), ([21, 'Color'], [22, 'Color1']), ([13, 'Fac'], [14, 'Color']), ([14, 'Color'], [22, 'Fac']), ([11, 'Output'], [15, 'Input']), ([15, 'Output'], [17, 'Input']), ([10, 'UV'], [7, 'Vector']), ([7, 'Vector'], [6, 'Vector']), ([4, 'Vector'], [3, 'Vector']), ([4, 'Vector'], [0, 'Input']), ([5, 'Location'], [4, 'Vector']), ([8, 'Vector'], [9, 'Vector']), ([10, 'Generated'], [8, 'Vector']), ([9, 'Color'], [24, 'Color2']), ([24, 'Color'], [11, 'Input']), ([23, 'Fac'], [24, 'Fac']), ([6, 'Color'], [24, 'Color1']), ([25, 'BSDF'], [12, 'Surface'])])
 
+
 Leaf_Nodes, Leaf_Links = ([('ShaderNodeMapping', Vector((-1020.0, 440.0)), 'Mapping', ''),
-                           ('ShaderNodeTexCoord', Vector((-1200.0, 440.0)), 'Texture Coordinate', ''),
-                           ('ShaderNodeTexImage', Vector((-660.0, 440.0)), 'Image Texture', ''),
-                           ('NodeReroute', Vector((-460.0, 540.0)), 'Reroute', ''),
-                           ('ShaderNodeSeparateRGB', Vector((-660.0, 140.0)), 'Separate RGB', ''),
-                           ('ShaderNodeOutputMaterial', Vector((280.0, 500.0)), 'Material Output', ''),
-                           ('ShaderNodeBsdfTransparent', Vector((-80.0, 380.0)), 'Transparent BSDF', ''),
-                           ('ShaderNodeBsdfTranslucent', Vector((-260.0, 500.0)), 'Translucent BSDF', ''),
-                           ('ShaderNodeAddShader', Vector((-80.0, 500.0)), 'Add Shader', ''),
-                           ('ShaderNodeBsdfDiffuse', Vector((-260.0, 380.0)), 'Diffuse BSDF', ''),
-                           ('ShaderNodeMixShader', Vector((100.0, 500.0)), 'Mix Shader', ''),
-                           ('ShaderNodeHueSaturation', Vector((-460.0, 440.0)), 'Hue Saturation Value', ''),
-                           ('NodeReroute', Vector((60.0, 540.0)), 'Reroute.001', ''),
-                           ('ShaderNodeMixRGB', Vector((-820.0, 140.0)), 'Mix', ''),
-                           ('ShaderNodeObjectInfo', Vector((-1000.0, 140.0)), 'Object Info', '')],
-                          [([7, 'BSDF'], [8, 'Shader']), ([8, 'Shader'], [10, 'Shader']), ([9, 'BSDF'], [8, 'Shader']),
-                           ([11, 'Color'], [9, 'Color']), ([0, 'Vector'], [2, 'Vector']), ([1, 'UV'], [0, 'Vector']),
-                           ([11, 'Color'], [7, 'Color']), ([6, 'BSDF'], [10, 'Shader']), ([2, 'Color'], [11, 'Color']),
-                           ([13, 'Color'], [4, 'Image']), ([4, 'R'], [11, 'Hue']), ([10, 'Shader'], [5, 'Surface']),
-                           ([12, 'Output'], [10, 'Fac']), ([2, 'Alpha'], [3, 'Input']), ([3, 'Output'], [12, 'Input']),
-                           ([14, 'Random'], [13, 'Fac'])])
+     ('ShaderNodeTexCoord', Vector((-1200.0, 440.0)), 'Texture Coordinate', ''),
+     ('ShaderNodeTexImage', Vector((-660.0, 440.0)), 'Image Texture', ''),
+     ('NodeReroute', Vector((-460.0, 540.0)), 'Reroute', ''),
+     ('ShaderNodeSeparateRGB', Vector((-660.0, 140.0)), 'Separate RGB', ''),
+     ('ShaderNodeOutputMaterial', Vector((280.0, 500.0)), 'Material Output', ''),
+     ('ShaderNodeBsdfTransparent', Vector((-80.0, 380.0)), 'Transparent BSDF', ''),
+     ('ShaderNodeBsdfTranslucent', Vector((-260.0, 500.0)), 'Translucent BSDF', ''),
+     ('ShaderNodeAddShader', Vector((-80.0, 500.0)), 'Add Shader', ''),
+     ('ShaderNodeBsdfDiffuse', Vector((-260.0, 380.0)), 'Diffuse BSDF', ''),
+     ('ShaderNodeMixShader', Vector((100.0, 500.0)), 'Mix Shader', ''),
+     ('ShaderNodeHueSaturation', Vector((-460.0, 440.0)), 'Hue Saturation Value', ''),
+     ('NodeReroute', Vector((60.0, 540.0)), 'Reroute.001', ''),
+     ('ShaderNodeMixRGB', Vector((-820.0, 140.0)), 'Mix', ''),
+     ('ShaderNodeObjectInfo', Vector((-1000.0, 140.0)), 'Object Info', '')],
+     [([7, 'BSDF'], [8, 'Shader']), ([8, 'Shader'], [10, 'Shader']), ([9, 'BSDF'], [8, 'Shader']), ([11, 'Color'], [9, 'Color']), ([0, 'Vector'], [2, 'Vector']), ([1, 'UV'], [0, 'Vector']), ([11, 'Color'], [7, 'Color']), ([6, 'BSDF'], [10, 'Shader']), ([2, 'Color'], [11, 'Color']), ([13, 'Color'], [4, 'Image']), ([4, 'R'], [11, 'Hue']), ([10, 'Shader'], [5, 'Surface']), ([12, 'Output'], [10, 'Fac']), ([2, 'Alpha'], [3, 'Input']), ([3, 'Output'], [12, 'Input']), ([14, 'Random'], [13, 'Fac'])])
 
 
 # This part is heavily inspired by the "UV Align\Distribute" addon made by Rebellion (Luca Carella)
@@ -523,7 +514,6 @@ class MakeIslands:
         active_island - TODO
         selected_islands - TODO
     """
-
     def __init__(self):
         self.uvlayer = None
         self.bm = None
@@ -750,12 +740,11 @@ def joindre(verts, faces, v1_i, v2_i):
         faces.append([v1_i[i], v2_i[(decalage + i * k) % n], v2_i[(decalage + (i + 1) * k) % n], v1_i[(i + 1) % n]])
 
 
-def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entree, directions, branch_length, s_index,
-         seams,
+def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entree, directions, branch_length, s_index, seams,
          jonc_seams, random_angle, branch_rotation):
     """ The goal is to add a split to the tree. To do that, there is the list of existing vertices, the list of existing faces, the list of vertices to add and the list of faces to add.
         To know where to add the split, the indexes of eight vertices is given.
-
+        
     Args:
         verts - (list of (Vector, Vector, Vector)) The existing vertices
         faces - (list of (int, int, int, int)) The existing faces
@@ -768,7 +757,7 @@ def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entre
         entree - ((int, int, int, int, int, int, int, int)) the indexes of the base of the split
         directions - (Vector) The direction the split will be pointing at
         branch_length - (float) the distance between the branch end and the split base
-        s_index - (int) The index of the last vertex that is part of a seam
+        s_index - (int) The index of the last vertex that is part of a seam 
         seams - (list of (int, int)) The seams of the tree
         jonc_seams - (list of (int, int)) The seams of the split
         random_angle - (float) The amount of possible deviation between directions and the actual split direction
@@ -843,7 +832,7 @@ def join_branch(verts, faces, indexes, scale, branch_length, branch_verts, direc
         branch_verts - (list of (Vector, Vector, Vector)) The vertices to add
         direction - (Vector) The direction the Module will be pointing at
         rand - (float) The amount of possible deviation between direction and the actual Module direction
-        s_index - (int) The index of the last vertex that is part of a seam
+        s_index - (int) The index of the last vertex that is part of a seam 
         seams - (list of (int, int)) The seams of the tree
 
     Returns:
@@ -987,8 +976,8 @@ def build_leaf_material(mat_name):
         new_node.name = name
         new_node.label = label
     nodes = mat.node_tree.nodes
-    nodes["Mix"].inputs[1].default_value = (.4, .4, .4, 1)
-    nodes["Mix"].inputs[2].default_value = (.6, .6, .6, 1)
+    nodes["Mix"].inputs[1].default_value = (.4,.4,.4,1)
+    nodes["Mix"].inputs[2].default_value = (.6,.6,.6,1)
     links = mat.node_tree.links
     mat.node_tree.links.new(nodes["Translucent BSDF"].outputs[0], nodes["Add Shader"].inputs[1])
     mat.node_tree.links.new(nodes["Add Shader"].outputs[0], nodes["Mix Shader"].inputs[2])
@@ -996,11 +985,11 @@ def build_leaf_material(mat_name):
         from_node = mat.node_tree.nodes[f[0]]
         to_node = mat.node_tree.nodes[t[0]]
         links.new(from_node.outputs[f[1]], to_node.inputs[t[1]])
-
+        
     return mat
 
 
-def create_tree(position, is_twig=False):
+def create_tree(position,is_twig=False):
     """Creates a tree
 
     Details:
@@ -1013,20 +1002,21 @@ def create_tree(position, is_twig=False):
         This processus is executed for both roots and branches generation.
         After this, the tree object itself is created, the vertices, faces and seams are applied.
         Once the object is created, it can be unwrapped, a material is asigned or created, and an armature is created.
-
+        
 
     Args:
         position - (Vector) Position to generate tree at
         is_twig - (Bool) Is the tree a twig
     """
     clock = Clock("create_tree")
+    print(LOGO)
     twig_leafs = []
 
     # deselecting all objects
     for select_ob in bpy.context.selected_objects:
         select_ob.select = False
     scene = bpy.context.scene
-
+    
     make_roots = scene.create_roots
     trunk2 = scene.preserve_trunk
     radius = scene.radius
@@ -1143,10 +1133,10 @@ def create_tree(position, is_twig=False):
                 end_verts = [Vector(v) for v in end_cap.verts]
                 end_faces = [f for f in end_cap.faces]
                 if is_twig:
-                    twig_leafs.append((pos, direction, curr_rotation))
+                    twig_leafs.append((pos,direction,curr_rotation))
                 n = len(verts)
                 join_branch(verts, faces, indexes, radius, scene.trunk_space, end_verts, direction,
-                            scene.trunk_variation, s_index, seams2)
+                                                 scene.trunk_variation, s_index, seams2)
 
                 faces += [add_tuple(f, n) for f in end_faces]
                 end_seams = [(1, 0), (2, 1), (3, 2), (4, 3), (5, 4), (6, 5), (7, 6), (0, 7)]
@@ -1155,7 +1145,7 @@ def create_tree(position, is_twig=False):
             elif i < scene.iteration + scene.trunk_length - 1 and i == scene.trunk_length + 1 or random() < split_probability:
                 variation = scene.trunk_variation if trunk2 else scene.randomangle
                 rand_j = 1
-
+                
                 big_j = Joncts[rand_j] if (not trunk2) else trunk
                 i1 = [i for i in big_j.sortie[0]]
                 i2 = [i for i in big_j.sortie[1]]
@@ -1187,13 +1177,13 @@ def create_tree(position, is_twig=False):
 
             else:
                 branch_verts = [v for v in branch.verts]
-
+                
                 variation = scene.trunk_variation if trunk2 else scene.randomangle
                 length = scene.trunk_space if trunk2 else scene.branch_length
                 ni, direction, nsi = join_branch(verts, faces, indexes, radius, length, branch_verts, direction,
                                                  variation, s_index, seams2)
                 if is_twig:
-                    twig_leafs.append((pos + direction * length * random(), direction, curr_rotation))
+                    twig_leafs.append((pos+direction*length*random(),direction,curr_rotation))
                 sortie = pos + direction * scene.branch_length
 
                 if i <= scene.bones_iterations:
@@ -1460,13 +1450,6 @@ class MakeTreeOperator(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
-        # this block saves everything and cancels operator if something goes wrong
-        print(LOGO)
-        messages, message_lvls, status = save_everything()
-        for i, message in enumerate(messages):
-            self.report({message_lvls[i]}, message)
-            return {status}
-
         scene = context.scene
 
         seed(scene.SeedProp)
@@ -1476,6 +1459,7 @@ class MakeTreeOperator(Operator):
 
 
 def add_leaf(position, direction, rotation, scale):
+    
     verts, faces = ([(-1.0, 0.07, 0.05), (1.0, 0.07, 0.05), (-1.0, -1.01, 1.75),
                      (1.0, -1.01, 1.75), (-1.0, -0.76, 1.1), (-1.0, -0.38, 0.55),
                      (1.0, -0.38, 0.55), (1.0, -0.76, 1.1), (-0.33, 0.0, 0.0),
@@ -1486,7 +1470,7 @@ def add_leaf(position, direction, rotation, scale):
                      (0, 8, 13, 5), (8, 9, 12, 13), (4, 15, 11, 2), (15, 14, 10, 11)])
     verts = [Vector(v) for v in verts]
     verts = rot_scale(verts, scale, direction, rotation)
-    verts = [v + position for v in verts]
+    verts = [v+position for v in verts]
     mesh = bpy.data.meshes.new("leaf")
     mesh.from_pydata(verts, [], faces)
     mesh.update(calc_edges=False)
@@ -1506,16 +1490,8 @@ class MakeTwigOperator(Operator):
     bl_idname = "mod_tree.add_twig"
     bl_label = "Create Twig"
     bl_options = {"REGISTER", "UNDO"}
-
+    
     def execute(self, context):
-
-        # this block saves everything and cancels operator if something goes wrong
-        print(LOGO)
-        messages, message_lvls, status = save_everything()
-        for i, message in enumerate(messages):
-            self.report({message_lvls[i]}, message)
-            return {status}
-
         scene = context.scene
         seed(scene.TwigSeedProp)
         save_preserve_trunk = scene.preserve_trunk
@@ -1563,7 +1539,7 @@ class MakeTwigOperator(Operator):
         scene.preserve_end = 40
         scene.trunk_length = 0
         scene.trunk_split_proba = .2
-        scene.trunk_space = .1
+        scene.trunk_space = .1        
         scene.split_proba = .7
         scene.branch_length = 3
         scene.split_angle = .2
@@ -1590,29 +1566,26 @@ class MakeTwigOperator(Operator):
 
         if bpy.data.materials.get("twig bark") is None:
             build_bark_material("twig bark")
-
+        
         if bpy.data.materials.get("twig leaf") is None:
             build_leaf_material("twig leaf")
-
-        twig_leafs = create_tree(bpy.context.scene.cursor_location, is_twig=True)
+        
+        twig_leafs = create_tree(bpy.context.scene.cursor_location ,is_twig=True)
         twig = bpy.context.active_object
         twig.name = 'twig'
         twig.active_material = bpy.data.materials.get(scene.twig_bark_material)
-        for (position, direction, rotation) in twig_leafs:
-            for i in range(randint(1, 3)):
-                if random() < scene.leaf_chance:
-                    add_leaf(position + direction * 0.5 * random(),
-                             direction + Vector((random(), random(), random())),
-                             rotation + random() * 5, (1 + random()) * scene.leaf_size)
-                    bpy.context.active_object.active_material = bpy.data.materials.get(scene.twig_leaf_material)
+        for (position,direction,rotation) in twig_leafs:
+            for i in range(randint(1,3)):
+                if random()<scene.leaf_chance:
+                    add_leaf(position+direction*.5*random(),direction+Vector((random(),random(),random())),rotation+random()*5,(1+random())*scene.leaf_size)
+                    bpy.context.active_object.active_material = bpy.data.materials.get(scene.twig_leaf_material)    
                     twig.select = True
                     scene.objects.active = twig
-
         bpy.ops.object.join()
         bpy.ops.transform.rotate(value=-1.5708, axis=(1, 0, 0))
         bpy.ops.transform.resize(value=(0.25, 0.25, 0.25))
         bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
-
+        
         scene.preserve_trunk = save_preserve_trunk
         scene.trunk_split_angle = save_split_angle
         scene.randomangle = save_randomangle
@@ -1649,7 +1622,7 @@ class MakeTwigOperator(Operator):
         scene.break_chance = save_break_chance
 
         return {'FINISHED'}
-
+    
 
 class UpdateTreeOperator(Operator):
     """Update a tree"""
@@ -1658,14 +1631,6 @@ class UpdateTreeOperator(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
-
-        # this block saves everything and cancels operator if something goes wrong
-        print(LOGO)
-        messages, message_lvls, status = save_everything()
-        for i, message in enumerate(messages):
-            self.report({message_lvls[i]}, message)
-            return {status}
-
         scene = context.scene
 
         seed(scene.SeedProp)
@@ -1721,21 +1686,13 @@ class UpdateTwigOperator(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
-
-        # this block saves everything and cancels operator if something goes wrong
-        print(LOGO)
-        messages, message_lvls, status = save_everything()
-        for i, message in enumerate(messages):
-            self.report({message_lvls[i]}, message)
-            return {status}
-
         scene = context.scene
 
         seed(scene.SeedProp)
         obj = bpy.context.active_object
 
         try:
-            is_tree_prop = obj.get('is_tree')
+            is_tree_prop = obj.get('is_tree')            
         except AttributeError:
             self.report({'ERROR'}, "No active tree object!")
             return {'CANCELLED'}
@@ -2139,7 +2096,7 @@ class MakeTwigPanel(Panel):
         row = layout.row()
         row.scale_y = 1.5
         row.operator("mod_tree.add_twig", icon="WORLD")
-
+        
         row = layout.row()
         row.scale_y = 1.5
         row.operator("mod_tree.update_twig", icon="FILE_REFRESH")
@@ -2151,7 +2108,7 @@ class MakeTwigPanel(Panel):
         box.prop(scene, "TwigSeedProp")
         box.prop(scene, "twig_iteration")
         box.prop_search(scene, "twig_bark_material", bpy.data, "materials")
-        box.prop_search(scene, "twig_leaf_material", bpy.data, "materials")
+        box.prop_search(scene, "twig_leaf_material", bpy.data, "materials")           
 
 
 class TreePresetLoadMenu(Menu):
@@ -2213,12 +2170,10 @@ class MakeTreePresetsPanel(Panel):
 
 
 # classes to register
-classes = [MakeTreeOperator, MakeTwigOperator, UpdateTreeOperator, UpdateTwigOperator, SaveTreePresetOperator,
-           RemoveTreePresetOperator,
+classes = [MakeTreeOperator, MakeTwigOperator, UpdateTreeOperator, UpdateTwigOperator, SaveTreePresetOperator, RemoveTreePresetOperator,
            LoadTreePresetOperator,
            MakeTreePanel, RootsAndTrunksPanel, TreeBranchesPanel, AdvancedSettingsPanel,
-           MakeTwigPanel, TreePresetLoadMenu, TreePresetRemoveMenu, MakeTreePresetsPanel,
-           TreeAddonPrefs]
+           MakeTwigPanel, TreePresetLoadMenu, TreePresetRemoveMenu, MakeTreePresetsPanel]
 
 
 def register():
@@ -2414,33 +2369,33 @@ def register():
 
     Scene.bark_material = StringProperty(
         name="Bark Material")
-
+    
     Scene.leaf_size = FloatProperty(
         name="Leaf Size",
         min=0,
         default=1)
-
+    
     Scene.leaf_chance = FloatProperty(
         name="Leaf Generation Probability",
         min=0,
         default=.5)
-
+    
     Scene.twig_leaf_material = StringProperty(
         name="Leaf Material")
-
+    
     Scene.twig_bark_material = StringProperty(
         name="Twig Bark Material")
-
+    
     Scene.TwigSeedProp = IntProperty(
         name="Twig Seed",
         default=randint(0, 1000))
-
+    
     Scene.twig_iteration = IntProperty(
         name="Twig Iteration",
         min=3,
         soft_max=10,
         default=9)
-
+    
 
 def unregister():
     # unregister all classes
