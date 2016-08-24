@@ -1012,7 +1012,6 @@ def create_tree(position, is_twig=False):
     scene = bpy.context.scene
 
     clock = Clock("create_tree")
-    print(LOGO)
     if not scene.uv:
         scene.finish_unwrap = False
 
@@ -1465,6 +1464,13 @@ class MakeTreeOperator(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
+        # this block saves everything and cancels operator if something goes wrong
+        print(LOGO)
+        messages, message_lvls, status = save_everything()
+        for i, message in enumerate(messages):
+            self.report({message_lvls[i]}, message)
+            return {status}
+
         scene = context.scene
 
         seed(scene.SeedProp)
@@ -1507,6 +1513,13 @@ class BatchTreeOperator(Operator):
     bl_options = {"REGISTER", "UNDO"}
     
     def execute(self, context):
+        # this block saves everything and cancels operator if something goes wrong
+        print(LOGO)
+        messages, message_lvls, status = save_everything()
+        for i, message in enumerate(messages):
+            self.report({message_lvls[i]}, message)
+            return {status}
+
         scene = context.scene
         trees = []
         save_radius = scene.radius
@@ -1542,6 +1555,13 @@ class MakeTwigOperator(Operator):
     bl_options = {"REGISTER", "UNDO"}
     
     def execute(self, context):
+        # this block saves everything and cancels operator if something goes wrong
+        print(LOGO)
+        messages, message_lvls, status = save_everything()
+        for i, message in enumerate(messages):
+            self.report({message_lvls[i]}, message)
+            return {status}
+
         scene = context.scene
         seed(scene.TwigSeedProp)
         save_preserve_trunk = scene.preserve_trunk
@@ -1681,6 +1701,13 @@ class UpdateTreeOperator(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
+        # this block saves everything and cancels operator if something goes wrong
+        print(LOGO)
+        messages, message_lvls, status = save_everything()
+        for i, message in enumerate(messages):
+            self.report({message_lvls[i]}, message)
+            return {status}
+
         scene = context.scene
 
         seed(scene.SeedProp)
@@ -1736,6 +1763,13 @@ class UpdateTwigOperator(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
+        # this block saves everything and cancels operator if something goes wrong
+        print(LOGO)
+        messages, message_lvls, status = save_everything()
+        for i, message in enumerate(messages):
+            self.report({message_lvls[i]}, message)
+            return {status}
+
         scene = context.scene
 
         seed(scene.SeedProp)
