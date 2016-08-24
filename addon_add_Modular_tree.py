@@ -32,7 +32,7 @@ import os
 import unittest
 from mathutils import Vector, Matrix
 from random import random, seed, randint
-from math import pi, radians, cos, sin
+from math import pi, radians, cos, sin, sqrt
 from time import time
 
 import bpy
@@ -1496,6 +1496,43 @@ def add_leaf(position, direction, rotation, scale):
     bpy.ops.object.shade_smooth()
 
 
+class BatchTreeOperator(Operator):
+    """Batch trees"""
+    bl_idname = "mod_tree.batch_tree"
+    bl_label = "Batch Tree Generation"
+    bl_options = {"REGISTER", "UNDO"}
+    
+    def execute(self,context):
+        scene = context.scene
+        Trees = []
+        save_radius = scene.radius
+        space = scene.batch_space    
+        Seeds = []
+        if scene.batch_group_name != "":
+            if not scene.batch_group_name in bpy.data.groups:
+                bpy.ops.group.create(name=batch_group_name)
+        for i in range(scene.tree_number):
+            new_seed = randint(0,1000)
+            while new_seed in Seeds:
+                new_seed = randint(0,1000)
+            pointer = int(sqrt(scene.tree_number))
+            pos_x = i % pointer
+            pos_y = i//pointer
+            seed(new_seed)
+            scene.radius = save_radius*(1 + scene.batch_radius_randomness*(.5 - random())*2)
+            create_tree(Vector((-space*pointer/2,-space*pointer/2,0)) + Vector((pos_x,pos_y,0))*space)
+            Trees.append(bpy.context.active_object)
+            if scene.batch_group_name != "":
+                bpy.ops.object.group_link(group=scene.batch_group_name)
+        for tree in Trees:
+            tree.select = True
+            
+            
+        scene.radius = save_radius
+        return {'FINISHED'}
+
+
+
 class MakeTwigOperator(Operator):
     """Creates a twig"""
     bl_idname = "mod_tree.add_twig"
@@ -2028,6 +2065,27 @@ class MakeTreePanel(Panel):
             scene.finish_unwrap = False
 
 
+class BatchTreePanel(Panel):
+    bl_label = "Batch Tree Generation"
+    bl_idname = "3D_VIEW_PT_layout_BatchTree"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'TOOLS'
+    bl_context = "objectmode"
+    bl_category = 'Tree'
+    
+    def draw(self, context):
+        scene = context.scene
+        layout = self.layout
+        row = layout.row()
+        row.scale_y = 1.5
+        row.operator("mod_tree.batch_tree", icon="WORLD")
+        box = layout.box()
+        box.prop(scene, "tree_number")
+        box.prop(scene, "batch_radius_randomness")
+        box.prop(scene, "batch_group_name")
+        box.prop(scene, "batch_space")
+ 
+
 class RootsAndTrunksPanel(Panel):
     bl_label = "Roots and Trunk"
     bl_idname = "3D_VIEW_PT_layout_MakeTreeRootsAndTrunks"
@@ -2213,9 +2271,9 @@ class MakeTreePresetsPanel(Panel):
 
 
 # classes to register
-classes = [MakeTreeOperator, MakeTwigOperator, UpdateTreeOperator, UpdateTwigOperator, SaveTreePresetOperator, RemoveTreePresetOperator,
+classes = [MakeTreeOperator, BatchTreeOperator, MakeTwigOperator, UpdateTreeOperator, UpdateTwigOperator, SaveTreePresetOperator, RemoveTreePresetOperator,
            LoadTreePresetOperator,
-           MakeTreePanel, RootsAndTrunksPanel, TreeBranchesPanel, AdvancedSettingsPanel,
+           MakeTreePanel, BatchTreePanel, RootsAndTrunksPanel, TreeBranchesPanel, AdvancedSettingsPanel,
            MakeTwigPanel, TreePresetLoadMenu, TreePresetRemoveMenu, MakeTreePresetsPanel, InstallTreePresetOperator,
            TreeAddonPrefs]
 
@@ -2440,6 +2498,25 @@ def register():
         soft_max=10,
         default=9)
     
+    Scene.tree_number = IntProperty(
+        name = "Tree number",
+        min = 2,
+        default = 5)
+    
+    Scene.batch_radius_randomness = FloatProperty(
+        name = "Radius Randomness",
+        min = 0,
+        max = 1,
+        default = .5)
+    
+    Scene.batch_group_name = StringProperty(
+        name = "Groupe Name")
+    
+    Scene.batch_space = FloatProperty(
+        name = "Grid Size",
+        min = 0,
+        default =10,
+        description = "the distance beetwen the trees")
 
 def unregister():
     # unregister all classes
@@ -2489,6 +2566,11 @@ def unregister():
     del Scene.twig_bark_material
     del Scene.TwigSeedProp
     del Scene.twig_iteration
+    del Scene.tree_number
+    del Scene.batch_radius_randomness
+    del Scene.batch_group_name
+    del Scene.batch_space
+
 
 
 # Unit tests
