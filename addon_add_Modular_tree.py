@@ -19,7 +19,7 @@
 bl_info = {
     "name": "Modular trees",
     "author": "Herpin Maxime, Jake Dube",
-    "version": (2, 1),
+    "version": (2, 2),
     "blender": (2, 77, 0),
     "location": "View3D > Tools > Tree > Make Tree",
     "description": "Generates an organic tree with correctly modeled branching.",
@@ -32,7 +32,7 @@ import os
 import unittest
 from mathutils import Vector, Matrix
 from random import random, seed, randint
-from math import pi, radians, cos, sin
+from math import pi, radians, cos, sin, sqrt
 from time import time
 
 import bpy
@@ -1012,7 +1012,6 @@ def create_tree(position, is_twig=False):
     scene = bpy.context.scene
 
     clock = Clock("create_tree")
-    print(LOGO)
     if not scene.uv:
         scene.finish_unwrap = False
 
@@ -1465,6 +1464,13 @@ class MakeTreeOperator(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
+        # this block saves everything and cancels operator if something goes wrong
+        print(LOGO)
+        messages, message_lvls, status = save_everything()
+        for i, message in enumerate(messages):
+            self.report({message_lvls[i]}, message)
+            return {status}
+
         scene = context.scene
 
         seed(scene.SeedProp)
@@ -1500,6 +1506,48 @@ def add_leaf(position, direction, rotation, scale):
     bpy.ops.object.shade_smooth()
 
 
+class BatchTreeOperator(Operator):
+    """Batch trees"""
+    bl_idname = "mod_tree.batch_tree"
+    bl_label = "Batch Tree Generation"
+    bl_options = {"REGISTER", "UNDO"}
+    
+    def execute(self, context):
+        # this block saves everything and cancels operator if something goes wrong
+        print(LOGO)
+        messages, message_lvls, status = save_everything()
+        for i, message in enumerate(messages):
+            self.report({message_lvls[i]}, message)
+            return {status}
+
+        scene = context.scene
+        trees = []
+        save_radius = scene.radius
+        space = scene.batch_space    
+        seeds = []
+        if scene.batch_group_name != "":
+            if scene.batch_group_name not in bpy.data.groups:
+                bpy.ops.group.create(name=scene.batch_group_name)
+        for i in range(scene.tree_number):
+            new_seed = randint(0, 1000)
+            while new_seed in seeds:
+                new_seed = randint(0, 1000)
+            pointer = int(sqrt(scene.tree_number))
+            pos_x = i % pointer
+            pos_y = i//pointer
+            seed(new_seed)
+            scene.radius = save_radius*(1 + scene.batch_radius_randomness*(.5 - random())*2)
+            create_tree(Vector((-space*pointer/2, -space*pointer/2, 0)) + Vector((pos_x, pos_y, 0))*space)
+            trees.append(bpy.context.active_object)
+            if scene.batch_group_name != "":
+                bpy.ops.object.group_link(group=scene.batch_group_name)
+        for tree in trees:
+            tree.select = True
+
+        scene.radius = save_radius
+        return {'FINISHED'}
+
+
 class MakeTwigOperator(Operator):
     """Creates a twig"""
     bl_idname = "mod_tree.add_twig"
@@ -1507,6 +1555,13 @@ class MakeTwigOperator(Operator):
     bl_options = {"REGISTER", "UNDO"}
     
     def execute(self, context):
+        # this block saves everything and cancels operator if something goes wrong
+        print(LOGO)
+        messages, message_lvls, status = save_everything()
+        for i, message in enumerate(messages):
+            self.report({message_lvls[i]}, message)
+            return {status}
+
         scene = context.scene
         seed(scene.TwigSeedProp)
         save_preserve_trunk = scene.preserve_trunk
@@ -1646,6 +1701,13 @@ class UpdateTreeOperator(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
+        # this block saves everything and cancels operator if something goes wrong
+        print(LOGO)
+        messages, message_lvls, status = save_everything()
+        for i, message in enumerate(messages):
+            self.report({message_lvls[i]}, message)
+            return {status}
+
         scene = context.scene
 
         seed(scene.SeedProp)
@@ -1701,6 +1763,13 @@ class UpdateTwigOperator(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
+        # this block saves everything and cancels operator if something goes wrong
+        print(LOGO)
+        messages, message_lvls, status = save_everything()
+        for i, message in enumerate(messages):
+            self.report({message_lvls[i]}, message)
+            return {status}
+
         scene = context.scene
 
         seed(scene.SeedProp)
@@ -1782,7 +1851,11 @@ class SaveTreePresetOperator(Operator):
                   "twig_leaf_material:{}\n"
                   "twig_bark_material:{}\n"
                   "TwigSeedProp:{}\n"
-                  "twig_iteration:{}\n".format(
+                  "twig_iteration:{}\n"
+                  "tree_number:{}\n"
+                  "batch_radius_randomness:{}\n"
+                  "batch_group_name:{}\n"
+                  "batch_space:{}\n".format(
                     # bools can't be stored as "True" or "False" b/c bool(x) will evaluate to
                     # True if x = "True" or if x = "False"...the fix is to do an int() conversion
                     int(scene.finish_unwrap),
@@ -1825,7 +1898,11 @@ class SaveTreePresetOperator(Operator):
                     scene.twig_leaf_material,
                     scene.twig_bark_material,
                     scene.TwigSeedProp,
-                    scene.twig_iteration))
+                    scene.twig_iteration,
+                    scene.tree_number,
+                    scene.batch_radius_randomness,
+                    scene.batch_group_name,
+                    scene.batch_space))
 
         # write to file
         prsets_directory = os.path.join(os.path.dirname(__file__), "mod_tree_presets")
@@ -1949,7 +2026,7 @@ class LoadTreePresetOperator(Operator):
                 elif setting == "gravity_end":
                     scene.gravity_end = int(value)
                 elif setting == "obstacle":
-                    scene.obstacle = value
+                    scene.obstacle = value.replace("\n", "")
                 elif setting == "obstacle_strength":
                     scene.obstacle_strength = float(value)
                 elif setting == "SeedProp":
@@ -1987,13 +2064,21 @@ class LoadTreePresetOperator(Operator):
                 elif setting == "leaf_chance":
                     scene.leaf_chance = float(value)
                 elif setting == "twig_leaf_material":
-                    scene.twig_leaf_material = value
+                    scene.twig_leaf_material = value.replace("\n", "")
                 elif setting == "twig_bark_material":
-                    scene.twig_bark_material = value
+                    scene.twig_bark_material = value.replace("\n", "")
                 elif setting == "TwigSeedProp":
                     scene.TwigSeedProp = int(value)
                 elif setting == "twig_iteration":
                     scene.twig_iteration = int(value)
+                elif setting == "tree_number":
+                    scene.tree_number = int(value)
+                elif setting == "batch_radius_randomness":
+                    scene.batch_radius_randomness = float(value)
+                elif setting == "batch_group_name":
+                    scene.batch_group_name = value.replace("\n", "")
+                elif setting == "batch_space":
+                    scene.batch_space = float(value)
 
         return {'FINISHED'}
 
@@ -2029,6 +2114,27 @@ class MakeTreePanel(Panel):
             if scene.finish_unwrap:
                 box.prop(scene, "unwrap_end_iteration")
 
+
+class BatchTreePanel(Panel):
+    bl_label = "Batch Tree Generation"
+    bl_idname = "3D_VIEW_PT_layout_BatchTree"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'TOOLS'
+    bl_context = "objectmode"
+    bl_category = 'Tree'
+    
+    def draw(self, context):
+        scene = context.scene
+        layout = self.layout
+        row = layout.row()
+        row.scale_y = 1.5
+        row.operator("mod_tree.batch_tree", icon="WORLD")
+        box = layout.box()
+        box.prop(scene, "tree_number")
+        box.prop(scene, "batch_radius_randomness")
+        box.prop_search(scene, "batch_group_name", bpy.data, "groups")
+        box.prop(scene, "batch_space")
+ 
 
 class RootsAndTrunksPanel(Panel):
     bl_label = "Roots and Trunk"
@@ -2215,9 +2321,9 @@ class MakeTreePresetsPanel(Panel):
 
 
 # classes to register
-classes = [MakeTreeOperator, MakeTwigOperator, UpdateTreeOperator, UpdateTwigOperator, SaveTreePresetOperator, RemoveTreePresetOperator,
+classes = [MakeTreeOperator, BatchTreeOperator, MakeTwigOperator, UpdateTreeOperator, UpdateTwigOperator, SaveTreePresetOperator, RemoveTreePresetOperator,
            LoadTreePresetOperator,
-           MakeTreePanel, RootsAndTrunksPanel, TreeBranchesPanel, AdvancedSettingsPanel,
+           MakeTreePanel, BatchTreePanel, RootsAndTrunksPanel, TreeBranchesPanel, AdvancedSettingsPanel,
            MakeTwigPanel, TreePresetLoadMenu, TreePresetRemoveMenu, MakeTreePresetsPanel, InstallTreePresetOperator,
            TreeAddonPrefs]
 
@@ -2365,7 +2471,7 @@ def register():
         description="Create uv seams for tree (enable unwrap to auto unwrap)")
     
     Scene.unwrap_end_iteration = IntProperty(
-        name="last unwrapped iteration",
+        name="Last Unwrapped Iteration",
         min=1,
         soft_max=20,
         default=8)
@@ -2442,6 +2548,26 @@ def register():
         soft_max=10,
         default=9)
     
+    Scene.tree_number = IntProperty(
+        name="Tree Number",
+        min=2,
+        default=5)
+    
+    Scene.batch_radius_randomness = FloatProperty(
+        name="Radius Randomness",
+        min=0,
+        max=1,
+        default=.5)
+    
+    Scene.batch_group_name = StringProperty(
+        name="Group")
+    
+    Scene.batch_space = FloatProperty(
+        name="Grid Size",
+        min=0,
+        default=10,
+        description="The distance between the trees")
+
 
 def unregister():
     # unregister all classes
@@ -2491,6 +2617,11 @@ def unregister():
     del Scene.twig_bark_material
     del Scene.TwigSeedProp
     del Scene.twig_iteration
+    del Scene.tree_number
+    del Scene.batch_radius_randomness
+    del Scene.batch_group_name
+    del Scene.batch_space
+
 
 
 # Unit tests
