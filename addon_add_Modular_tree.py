@@ -990,7 +990,7 @@ def build_leaf_material(mat_name):
     return mat
 
 
-def create_tree(position,is_twig=False):
+def create_tree(position, is_twig=False):
     """Creates a tree
 
     Details:
@@ -1009,15 +1009,19 @@ def create_tree(position,is_twig=False):
         position - (Vector) Position to generate tree at
         is_twig - (Bool) Is the tree a twig
     """
+    scene = bpy.context.scene
+
     clock = Clock("create_tree")
     print(LOGO)
+    if not scene.uv:
+        scene.finish_unwrap = False
+
     twig_leafs = []
 
     # deselecting all objects
     for select_ob in bpy.context.selected_objects:
         select_ob.select = False
-    scene = bpy.context.scene
-    
+
     make_roots = scene.create_roots
     trunk2 = scene.preserve_trunk
     radius = scene.radius
@@ -2024,8 +2028,6 @@ class MakeTreePanel(Panel):
             box.prop(scene, 'finish_unwrap')
             if scene.finish_unwrap:
                 box.prop(scene, "unwrap_end_iteration")
-        else:
-            scene.finish_unwrap = False
 
 
 class RootsAndTrunksPanel(Panel):
