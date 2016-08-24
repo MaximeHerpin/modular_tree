@@ -1502,35 +1502,33 @@ class BatchTreeOperator(Operator):
     bl_label = "Batch Tree Generation"
     bl_options = {"REGISTER", "UNDO"}
     
-    def execute(self,context):
+    def execute(self, context):
         scene = context.scene
-        Trees = []
+        trees = []
         save_radius = scene.radius
         space = scene.batch_space    
-        Seeds = []
+        seeds = []
         if scene.batch_group_name != "":
-            if not scene.batch_group_name in bpy.data.groups:
-                bpy.ops.group.create(name=batch_group_name)
+            if scene.batch_group_name not in bpy.data.groups:
+                bpy.ops.group.create(name=scene.batch_group_name)
         for i in range(scene.tree_number):
-            new_seed = randint(0,1000)
-            while new_seed in Seeds:
-                new_seed = randint(0,1000)
+            new_seed = randint(0, 1000)
+            while new_seed in seeds:
+                new_seed = randint(0, 1000)
             pointer = int(sqrt(scene.tree_number))
             pos_x = i % pointer
             pos_y = i//pointer
             seed(new_seed)
             scene.radius = save_radius*(1 + scene.batch_radius_randomness*(.5 - random())*2)
-            create_tree(Vector((-space*pointer/2,-space*pointer/2,0)) + Vector((pos_x,pos_y,0))*space)
-            Trees.append(bpy.context.active_object)
+            create_tree(Vector((-space*pointer/2, -space*pointer/2, 0)) + Vector((pos_x, pos_y, 0))*space)
+            trees.append(bpy.context.active_object)
             if scene.batch_group_name != "":
                 bpy.ops.object.group_link(group=scene.batch_group_name)
-        for tree in Trees:
+        for tree in trees:
             tree.select = True
-            
-            
+
         scene.radius = save_radius
         return {'FINISHED'}
-
 
 
 class MakeTwigOperator(Operator):
@@ -1815,7 +1813,11 @@ class SaveTreePresetOperator(Operator):
                   "twig_leaf_material:{}\n"
                   "twig_bark_material:{}\n"
                   "TwigSeedProp:{}\n"
-                  "twig_iteration:{}\n".format(
+                  "twig_iteration:{}\n"
+                  "tree_number:{}\n"
+                  "batch_radius_randomness:{}\n"
+                  "batch_group_name:{}\n"
+                  "batch_space:{}\n".format(
                     # bools can't be stored as "True" or "False" b/c bool(x) will evaluate to
                     # True if x = "True" or if x = "False"...the fix is to do an int() conversion
                     int(scene.finish_unwrap),
@@ -1858,7 +1860,11 @@ class SaveTreePresetOperator(Operator):
                     scene.twig_leaf_material,
                     scene.twig_bark_material,
                     scene.TwigSeedProp,
-                    scene.twig_iteration))
+                    scene.twig_iteration,
+                    scene.tree_number,
+                    scene.batch_radius_randomness,
+                    scene.batch_group_name,
+                    scene.batch_space))
 
         # write to file
         prsets_directory = os.path.join(os.path.dirname(__file__), "mod_tree_presets")
@@ -1982,7 +1988,7 @@ class LoadTreePresetOperator(Operator):
                 elif setting == "gravity_end":
                     scene.gravity_end = int(value)
                 elif setting == "obstacle":
-                    scene.obstacle = value
+                    scene.obstacle = value.replace("\n", "")
                 elif setting == "obstacle_strength":
                     scene.obstacle_strength = float(value)
                 elif setting == "SeedProp":
@@ -2020,13 +2026,21 @@ class LoadTreePresetOperator(Operator):
                 elif setting == "leaf_chance":
                     scene.leaf_chance = float(value)
                 elif setting == "twig_leaf_material":
-                    scene.twig_leaf_material = value
+                    scene.twig_leaf_material = value.replace("\n", "")
                 elif setting == "twig_bark_material":
-                    scene.twig_bark_material = value
+                    scene.twig_bark_material = value.replace("\n", "")
                 elif setting == "TwigSeedProp":
                     scene.TwigSeedProp = int(value)
                 elif setting == "twig_iteration":
                     scene.twig_iteration = int(value)
+                elif setting == "tree_number":
+                    scene.tree_number = int(value)
+                elif setting == "batch_radius_randomness":
+                    scene.batch_radius_randomness = float(value)
+                elif setting == "batch_group_name":
+                    scene.batch_group_name = value.replace("\n", "")
+                elif setting == "batch_space":
+                    scene.batch_space = float(value)
 
         return {'FINISHED'}
 
@@ -2082,7 +2096,7 @@ class BatchTreePanel(Panel):
         box = layout.box()
         box.prop(scene, "tree_number")
         box.prop(scene, "batch_radius_randomness")
-        box.prop(scene, "batch_group_name")
+        box.prop_search(scene, "batch_group_name", bpy.data, "groups")
         box.prop(scene, "batch_space")
  
 
@@ -2421,7 +2435,7 @@ def register():
         description="Create uv seams for tree (enable unwrap to auto unwrap)")
     
     Scene.unwrap_end_iteration = IntProperty(
-        name="last unwrapped iteration",
+        name="Last Unwrapped Iteration",
         min=1,
         soft_max=20,
         default=8)
@@ -2499,24 +2513,25 @@ def register():
         default=9)
     
     Scene.tree_number = IntProperty(
-        name = "Tree number",
-        min = 2,
-        default = 5)
+        name="Tree Number",
+        min=2,
+        default=5)
     
     Scene.batch_radius_randomness = FloatProperty(
-        name = "Radius Randomness",
-        min = 0,
-        max = 1,
-        default = .5)
+        name="Radius Randomness",
+        min=0,
+        max=1,
+        default=.5)
     
     Scene.batch_group_name = StringProperty(
-        name = "Groupe Name")
+        name="Group")
     
     Scene.batch_space = FloatProperty(
-        name = "Grid Size",
-        min = 0,
-        default =10,
-        description = "the distance beetwen the trees")
+        name="Grid Size",
+        min=0,
+        default=10,
+        description="The distance between the trees")
+
 
 def unregister():
     # unregister all classes
