@@ -356,7 +356,7 @@ def register():
 
     Scene.trunk_length = IntProperty(
         name="Trunk Iterations",
-        min=0,
+        min=5,
         default=9,
         description="Iteration from from which first split occurs")
 
