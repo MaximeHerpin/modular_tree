@@ -101,6 +101,8 @@ class SaveTreePresetOperator(Operator):
                   "particle:{}\n"
                   "number:{}\n"
                   "display:{}\n"
+                  "break_chance:{}\n"
+                  "bark_material:{}\n"
                   "leaf_size:{}\n"
                   "leaf_chance:{}\n"
                   "twig_leaf_material:{}\n"
@@ -148,6 +150,8 @@ class SaveTreePresetOperator(Operator):
                     int(scene.particle),
                     scene.number,
                     scene.display,
+                    scene.break_chance,
+                    scene.bark_material,
                     scene.leaf_size,
                     scene.leaf_chance,
                     scene.twig_leaf_material,
@@ -314,6 +318,10 @@ class LoadTreePresetOperator(Operator):
                     scene.number = int(value)
                 elif setting == "display":
                     scene.display = int(value)
+                elif setting == "break_chance":
+                    scene.break_chance = float(value)
+                elif setting == "bark_material":
+                    scene.bark_material = value.replace("\n", "")
                 elif setting == "leaf_size":
                     scene.leaf_size = float(value)
                 elif setting == "leaf_chance":
