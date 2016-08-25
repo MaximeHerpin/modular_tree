@@ -45,19 +45,19 @@ class TreeAddonPrefs(AddonPreferences):
     always_save_prior = BoolProperty(
         name="Save .blend File",
         default=True,
-        description="Always save .blend file before executing" +
+        description="Always save .blend file before executing " +
                     "time-consuming operations")
 
     save_all_images = BoolProperty(
         name="Save Images",
         default=True,
-        description="Always save images before executing" +
+        description="Always save images before executing " +
                     "time-consuming operations")
 
     save_all_texts = BoolProperty(
         name="Save Texts",
         default=True,
-        description="Always save texts before executing" +
+        description="Always save texts before executing " +
                     "time-consuming operations")
 
     preset_file = StringProperty(
@@ -127,6 +127,7 @@ class BatchTreePanel(Panel):
     bl_region_type = 'TOOLS'
     bl_context = "objectmode"
     bl_category = 'Tree'
+    bl_options = {'DEFAULT_CLOSED'}
     
     def draw(self, context):
         scene = context.scene
@@ -193,6 +194,10 @@ class TreeBranchesPanel(Panel):
         box.prop(scene, 'randomangle')
         box.prop(scene, 'split_proba')
         box.prop(scene, 'split_angle')
+        box.prop(scene, 'radius_dec')
+        col = box.column(align=True)
+        col.prop(scene, 'branch_rotate')
+        col.prop(scene, 'branch_random_rotate')
 
         box = layout.box()
         col = box.column(True)
@@ -218,10 +223,6 @@ class AdvancedSettingsPanel(Panel):
         layout = self.layout
 
         box = layout.box()
-        box.prop(scene, 'radius_dec')
-        col = box.column(True)
-        col.prop(scene, 'branch_rotate')
-        col.prop(scene, 'branch_random_rotate')
         box.prop(scene, 'mat')
         if not scene.mat:
             box.prop_search(scene, "bark_material", bpy.data, "materials")
