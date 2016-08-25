@@ -134,7 +134,7 @@ class BatchTreePanel(Panel):
         layout = self.layout
         row = layout.row()
         row.scale_y = 1.5
-        row.operator("mod_tree.batch_tree", icon="WORLD")
+        row.operator("mod_tree.batch_tree", icon="LOGIC")
         box = layout.box()
         box.prop(scene, "tree_number")
         box.prop(scene, "batch_radius_randomness")
@@ -252,7 +252,7 @@ class MakeTwigPanel(Panel):
 
         row = layout.row()
         row.scale_y = 1.5
-        row.operator("mod_tree.add_twig", icon="WORLD")
+        row.operator("mod_tree.add_twig", icon="SCULPTMODE_HLT")
         
         row = layout.row()
         row.scale_y = 1.5
