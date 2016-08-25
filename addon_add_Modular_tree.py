@@ -1261,6 +1261,9 @@ def create_tree(position, is_twig=False):
             rotate()  # this will set the mode to object already
         else:
             bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.mode_set(mode='VERTEX_PAINT')
+        bpy.ops.paint.vertex_color_smooth()
+        bpy.ops.object.mode_set(mode='OBJECT')
         clock.stop("uv")
 
     # material creation
