@@ -638,6 +638,8 @@ def create_tree(position, is_twig=False):
     clock = Clock("create_tree")
     if not scene.uv:
         scene.finish_unwrap = False
+    if scene.unwrap_end_iteration >= scene.iteration:
+        scene.unwrap_end_iteration = scene.iteration - 1
 
     twig_leafs = []
 

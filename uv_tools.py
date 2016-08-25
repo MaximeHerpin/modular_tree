@@ -88,6 +88,10 @@ class MakeIslands:
         self.selectedIsland = set()
         for face in self.bm.faces:
             for loop in face.loops:
+                if not self.uvlayer:
+                    continue
+                assert self.uvlayer is not None
+
                 ind = '{0[0]:.5} {0[1]:.5} {1}'.format(loop[self.uvlayer].uv, loop.vert.index)
                 self.face_to_verts[face.index].add(ind)
                 self.vert_to_faces[ind].add(face.index)
@@ -106,6 +110,8 @@ class MakeIslands:
     def initbmesh(self):
         self.bm = bmesh.from_edit_mesh(bpy.context.edit_object.data)
         self.uvlayer = self.bm.loops.layers.uv.active
+        if not self.uvlayer:
+            print("THERE ARE NO UVLAYERS FOR THIS LOOP!")
 
     def add_to_island(self, face_id):
         """TODO - Summary
