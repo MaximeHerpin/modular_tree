@@ -237,6 +237,25 @@ class AdvancedSettingsPanel(Panel):
             box.prop(scene, 'display')
 
 
+class WindAnimationPanel(Panel):
+    bl_label = "Wind Animation"
+    bl_idname = "3D_VIEW_PT_layout_MakeTreeWindAnimation"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'TOOLS'
+    bl_context = "objectmode"
+    bl_category = 'Tree'
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        scene = context.scene
+        layout = self.layout
+
+        box = layout.box()
+        box.label("Wind Animations")
+        box = layout.box()
+        box.label("Wind Controller")
+
+
 class MakeTwigPanel(Panel):
     bl_label = "Make Twig"
     bl_idname = "3D_VIEW_PT_layout_MakeTwig"
@@ -293,10 +312,11 @@ class MakeTreePresetsPanel(Panel):
 
 
 # classes to register
-classes = [MakeTreeOperator, BatchTreeOperator, MakeTwigOperator, UpdateTreeOperator, UpdateTwigOperator, SaveTreePresetOperator, RemoveTreePresetOperator,
-           LoadTreePresetOperator,
+classes = [MakeTreeOperator, BatchTreeOperator, MakeTwigOperator, UpdateTreeOperator, UpdateTwigOperator,
+           SaveTreePresetOperator, RemoveTreePresetOperator, LoadTreePresetOperator,
            MakeTreePanel, BatchTreePanel, RootsAndTrunksPanel, TreeBranchesPanel, AdvancedSettingsPanel,
            MakeTwigPanel, TreePresetLoadMenu, TreePresetRemoveMenu, MakeTreePresetsPanel, InstallTreePresetOperator,
+           WindAnimationPanel,
            TreeAddonPrefs]
 
 
