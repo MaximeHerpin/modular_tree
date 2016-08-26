@@ -27,6 +27,7 @@ from bpy.types import Operator, Panel, Scene, Menu, AddonPreferences
 from .tree_creator import create_tree, add_leaf
 from .prep_manager import save_everything
 from .logo import display_logo
+from .material_tools import build_bark_material, build_leaf_material
 
 
 class MakeTreeOperator(Operator):
