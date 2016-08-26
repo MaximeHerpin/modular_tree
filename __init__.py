@@ -17,18 +17,6 @@
 # along with Modular Tree.  If not, see <http://www.gnu.org/licenses/>.
 # ##### END GPL LICENSE BLOCK #####
 
-bl_info = {
-    "name": "Modular trees",
-    "author": "Herpin Maxime, Jake Dube",
-    "version": (2, 3),
-    "blender": (2, 77, 0),
-    "location": "View3D > Tools > Tree > Make Tree",
-    "description": "Generates an organic tree with correctly modeled branching.",
-    "warning": "May take a long time to generate! Save your file before generating!",
-    "wiki_url": "https://github.com/MaximeHerpin/Blender-Modular-tree-addon/wiki",
-    "tracker_url": "https://github.com/MaximeHerpin/Blender-Modular-tree-addon/issues/new",
-    "category": "Add Mesh"}
-
 from random import randint
 
 import bpy
@@ -39,6 +27,19 @@ from .generator_operators import MakeTreeOperator, BatchTreeOperator, MakeTwigOp
 from .presets import TreePresetLoadMenu, TreePresetRemoveMenu, SaveTreePresetOperator, InstallTreePresetOperator, RemoveTreePresetOperator, LoadTreePresetOperator
 from .logo import display_logo
 from .wind_setup_utils import WindOperator, MakeControllerOperator, MakeTerrainOperator
+from .check_for_updates import CheckForUpdates
+
+bl_info = {
+    "name": "Modular trees",
+    "author": "Herpin Maxime, Jake Dube",
+    "version": (2, 3),
+    "blender": (2, 77, 0),
+    "location": "View3D > Tools > Tree > Make Tree",
+    "description": "Generates an organic tree with correctly modeled branching.",
+    "warning": "May take a long time to generate! Save your file before generating!",
+    "wiki_url": "https://github.com/MaximeHerpin/modular_tree/wiki",
+    "tracker_url": "https://github.com/MaximeHerpin/modular_tree/issues/new",
+    "category": "Add Mesh"}
 
 
 class TreeAddonPrefs(AddonPreferences):
@@ -70,19 +71,18 @@ class TreeAddonPrefs(AddonPreferences):
     def draw(self, context):
         layout = self.layout
 
-        row = layout.row()
-        row.prop(self, 'always_save_prior')
-        row = layout.row()
-        row.prop(self, 'save_all_images')
-        row = layout.row()
-        row.prop(self, 'save_all_texts')
+        col = layout.column()
+        col.prop(self, 'always_save_prior')
+        col.prop(self, 'save_all_images')
+        col.prop(self, 'save_all_texts')
 
         row = layout.row()
         # website url
         row.operator("wm.url_open", text="Feature Roadmap", icon='QUESTION').url = \
-            "https://github.com/MaximeHerpin/Blender-Modular-tree-addon/wiki/Roadmap"
+            "https://github.com/MaximeHerpin/modular_tree/wiki/Roadmap"
         row.operator("wm.url_open", text="Official Discussion Forum", icon='QUESTION').url = \
             "https://blenderartists.org/forum/showthread.php?405377-Addon-Modular-Tree"
+        row.operator("mod_tree.check_for_updates", icon='RADIO')
 
         box = layout.box()
         box.label("Preset Installer")
@@ -327,7 +327,7 @@ classes = [MakeTreeOperator, BatchTreeOperator, MakeTwigOperator, UpdateTreeOper
            MakeControllerOperator, MakeTerrainOperator,
            MakeTreePanel, BatchTreePanel, RootsAndTrunksPanel, TreeBranchesPanel, AdvancedSettingsPanel,
            MakeTwigPanel, TreePresetLoadMenu, TreePresetRemoveMenu, WindAnimationPanel, MakeTreePresetsPanel,
-           InstallTreePresetOperator,
+           InstallTreePresetOperator, CheckForUpdates,
            TreeAddonPrefs]
 
 

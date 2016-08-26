@@ -26,7 +26,7 @@ import bpy
 from .clock import Clock
 from .uv_tools import rotate, add_seams
 from .particle_configurator import create_system
-from .material_tools import build_bark_material, build_leaf_material
+from .material_tools import build_bark_material
 
 
 class Module:
