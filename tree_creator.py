@@ -1,18 +1,20 @@
+# Copyright 2016 Maxime Herpin, Jake Dube
+#
 # ##### BEGIN GPL LICENSE BLOCK ######
-#  This program is free software; you can redistribute it and/or
-#  modify it under the terms of the GNU General Public License
-#  as published by the Free Software Foundation; either version 2
-#  of the License, or (at your option) any later version.
+# This file is part of Modular Tree.
 #
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+# Modular Tree is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software Foundation,
-#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+# Modular Tree is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
 #
+# You should have received a copy of the GNU General Public License
+# along with Modular Tree.  If not, see <http://www.gnu.org/licenses/>.
 # ##### END GPL LICENSE BLOCK #####
 
 from mathutils import Vector, Matrix
@@ -838,10 +840,16 @@ def create_tree(position, is_twig=False):
     obj.select = True
     bpy.ops.object.shade_smooth()
     obj.select = False
-    g = obj.vertex_groups.new("leaf")
+
     vgroups = obj.vertex_groups
+
+    # add vertex group for the leaves particle system
+    leaves_group = obj.vertex_groups.new("leaf")
     vgroups.active_index = vgroups["leaf"].index
-    g.add([i for i in range(leafs_start_index, len(verts))], 1.0, "ADD")
+    leaves_group.add([i for i in range(leafs_start_index, len(verts))], 1.0, "ADD")  # add weights
+
+    # add vertex group for the wind animations
+    wind_group = obj.vertex_groups.new("wind_anim")
 
     # fix normals, then make sure they are fixed :)
     print("Setting Normals...")
