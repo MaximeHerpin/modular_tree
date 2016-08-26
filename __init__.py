@@ -35,10 +35,10 @@ import bpy
 from bpy.props import StringProperty, BoolProperty, FloatProperty, IntProperty, EnumProperty
 from bpy.types import Operator, Panel, Scene, Menu, AddonPreferences
 
-from modular_tree.generator_operators import MakeTreeOperator, BatchTreeOperator, MakeTwigOperator, UpdateTreeOperator, UpdateTwigOperator
-from modular_tree.presets import TreePresetLoadMenu, TreePresetRemoveMenu, SaveTreePresetOperator, InstallTreePresetOperator, RemoveTreePresetOperator, LoadTreePresetOperator
-from modular_tree.logo import display_logo
-from modular_tree.wind_setup_utils import WindOperator, MakeControllerOperator, MakeTerrainOperator
+from .generator_operators import MakeTreeOperator, BatchTreeOperator, MakeTwigOperator, UpdateTreeOperator, UpdateTwigOperator
+from .presets import TreePresetLoadMenu, TreePresetRemoveMenu, SaveTreePresetOperator, InstallTreePresetOperator, RemoveTreePresetOperator, LoadTreePresetOperator
+from .logo import display_logo
+from .wind_setup_utils import WindOperator, MakeControllerOperator, MakeTerrainOperator
 
 
 class TreeAddonPrefs(AddonPreferences):
