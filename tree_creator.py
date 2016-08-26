@@ -838,10 +838,16 @@ def create_tree(position, is_twig=False):
     obj.select = True
     bpy.ops.object.shade_smooth()
     obj.select = False
-    g = obj.vertex_groups.new("leaf")
+
     vgroups = obj.vertex_groups
+
+    # add vertex group for the leaves particle system
+    leaves_group = obj.vertex_groups.new("leaf")
     vgroups.active_index = vgroups["leaf"].index
-    g.add([i for i in range(leafs_start_index, len(verts))], 1.0, "ADD")
+    leaves_group.add([i for i in range(leafs_start_index, len(verts))], 1.0, "ADD")  # add weights
+
+    # add vertex group for the wind animations
+    wind_group = obj.vertex_groups.new("wind_anim")
 
     # fix normals, then make sure they are fixed :)
     print("Setting Normals...")
