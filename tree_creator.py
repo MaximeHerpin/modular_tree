@@ -23,10 +23,10 @@ from math import pi, radians
 
 import bpy
 
-from modular_tree.clock import Clock
-from modular_tree.uv_tools import rotate, add_seams
-from modular_tree.particle_configurator import create_system
-from modular_tree.material_tools import build_bark_material, build_leaf_material
+from .clock import Clock
+from .uv_tools import rotate, add_seams
+from .particle_configurator import create_system
+from .material_tools import build_bark_material, build_leaf_material
 
 
 class Module:

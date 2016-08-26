@@ -24,9 +24,9 @@ from math import sqrt
 import bpy
 from bpy.types import Operator, Panel, Scene, Menu, AddonPreferences
 
-from modular_tree.tree_creator import create_tree, add_leaf
-from modular_tree.prep_manager import save_everything
-from modular_tree.logo import display_logo
+from .tree_creator import create_tree, add_leaf
+from .prep_manager import save_everything
+from .logo import display_logo
 
 
 class MakeTreeOperator(Operator):

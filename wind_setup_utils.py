@@ -21,8 +21,8 @@ import bpy
 from bpy.types import Operator, Panel, Scene, Menu, AddonPreferences
 import mathutils
 
-from modular_tree.prep_manager import save_everything
-from modular_tree.logo import display_logo
+from .prep_manager import save_everything
+from .logo import display_logo
 
 
 class WindOperator(Operator):
