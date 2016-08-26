@@ -37,6 +37,7 @@ from bpy.types import Operator, Panel, Scene, Menu, AddonPreferences
 from modular_tree.generator_operators import MakeTreeOperator, BatchTreeOperator, MakeTwigOperator, UpdateTreeOperator, UpdateTwigOperator
 from modular_tree.presets import TreePresetLoadMenu, TreePresetRemoveMenu, SaveTreePresetOperator, InstallTreePresetOperator, RemoveTreePresetOperator, LoadTreePresetOperator
 from modular_tree.logo import display_logo
+from modular_tree.wind_setup_utils import WindOperator, MakeControllerOperator, MakeTerrainOperator
 
 
 class TreeAddonPrefs(AddonPreferences):
@@ -251,9 +252,17 @@ class WindAnimationPanel(Panel):
         layout = self.layout
 
         box = layout.box()
-        box.label("Wind Animations")
-        box = layout.box()
-        box.label("Wind Controller")
+        row = box.row()
+        row.scale_y = 1.5
+        row.operator("mod_tree.animate_wind", icon="FORCE_VORTEX")
+        box.operator("mod_tree.make_wind_controller", icon="FORCE_VORTEX")
+        box.operator("mod_tree.make_terrain", icon="FORCE_VORTEX")
+        box.prop_search(scene, "wind_controller", bpy.data, "objects")
+        box.prop_search(scene, "terrain", bpy.data, "objects")
+        box.prop(scene, "wind_height_start")
+        box.prop(scene, "wind_height_full")
+        box.prop(scene, "clear_mods")
+        box.prop(scene, "wind_strength")
 
 
 class MakeTwigPanel(Panel):
@@ -311,12 +320,13 @@ class MakeTreePresetsPanel(Panel):
         row.menu("mod_tree.preset_remove_menu")
 
 
-# classes to register
+# classes to register (panels will be in the UI in the order they are listed here)
 classes = [MakeTreeOperator, BatchTreeOperator, MakeTwigOperator, UpdateTreeOperator, UpdateTwigOperator,
-           SaveTreePresetOperator, RemoveTreePresetOperator, LoadTreePresetOperator,
+           SaveTreePresetOperator, RemoveTreePresetOperator, LoadTreePresetOperator, WindOperator,
+           MakeControllerOperator, MakeTerrainOperator,
            MakeTreePanel, BatchTreePanel, RootsAndTrunksPanel, TreeBranchesPanel, AdvancedSettingsPanel,
-           MakeTwigPanel, TreePresetLoadMenu, TreePresetRemoveMenu, MakeTreePresetsPanel, InstallTreePresetOperator,
-           WindAnimationPanel,
+           MakeTwigPanel, TreePresetLoadMenu, TreePresetRemoveMenu, WindAnimationPanel, MakeTreePresetsPanel,
+           InstallTreePresetOperator,
            TreeAddonPrefs]
 
 
@@ -560,6 +570,28 @@ def register():
         default=10,
         description="The distance between the trees")
 
+    Scene.wind_controller = StringProperty(
+        name="Control Object")
+
+    Scene.terrain = StringProperty(
+        name="Terrain")
+
+    Scene.wind_height_start = FloatProperty(
+        name="Start Height",
+        min=0,
+        default=0,
+        description="The distance from the terrain that the wind effect starts affecting tree")
+
+    Scene.wind_height_full = FloatProperty(
+        name="Full Height",
+        min=0,
+        default=10,
+        description="The distance from the terrain that the wind effect is at its highest")
+
+    Scene.clear_mods = BoolProperty(name="Clear Modifiers", default=True)
+
+    Scene.wind_strength = FloatProperty(name="Wind Strength", default=1)
+
 
 def unregister():
     # unregister all classes
@@ -613,6 +645,12 @@ def unregister():
     del Scene.batch_radius_randomness
     del Scene.batch_group_name
     del Scene.batch_space
+    del Scene.wind_controller
+    del Scene.terrain
+    del Scene.wind_height_start
+    del Scene.wind_height_full
+    del Scene.clear_mods
+    del Scene.wind_strength
 
 
 if __name__ == "__main__":
