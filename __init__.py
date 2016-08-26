@@ -42,7 +42,7 @@ from .wind_setup_utils import WindOperator, MakeControllerOperator, MakeTerrainO
 
 
 class TreeAddonPrefs(AddonPreferences):
-    bl_idname = __name__
+    bl_idname = "modular_tree"
 
     always_save_prior = BoolProperty(
         name="Save .blend File",

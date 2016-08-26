@@ -17,16 +17,17 @@
 # along with Modular Tree.  If not, see <http://www.gnu.org/licenses/>.
 # ##### END GPL LICENSE BLOCK #####
 
-from mathutils import Vector, Matrix
+from mathutils import Vector
 from random import random, seed, randint
 from math import sqrt
 
 import bpy
-from bpy.types import Operator, Panel, Scene, Menu, AddonPreferences
+from bpy.types import Operator
 
 from .tree_creator import create_tree, add_leaf
 from .prep_manager import save_everything
 from .logo import display_logo
+from .material_tools import build_bark_material, build_leaf_material
 
 
 class MakeTreeOperator(Operator):
