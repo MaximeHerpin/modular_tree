@@ -330,11 +330,98 @@ classes = [MakeTreeOperator, BatchTreeOperator, MakeTwigOperator, UpdateTreeOper
            InstallTreePresetOperator, CheckForUpdates,
            TreeAddonPrefs]
 
+prefix = "https://github.com/MaximeHerpin/modular_tree/wiki/"
+documentation_mapping = (
+    # make tree panel
+    ("bpy.ops.mod_tree.add_tree", "Make-Tree-Panel"),
+    ("bpy.ops.mod_tree.update_tree", "Make-Tree-Panel"),
+    ("bpy.types.Scene.SeedProp", "Make-Tree-Panel"),
+    ("bpy.types.Scene.iteration", "Make-Tree-Panel"),
+    ("bpy.types.Scene.radius", "Make-Tree-Panel"),
+    ("bpy.types.Scene.uv", "Make-Tree-Panel"),
+    ("bpy.types.Scene.finish_unwrap", "Make-Tree-Panel"),
+    ("bpy.types.Scene.unwrap_end_iteration", "Make-Tree-Panel"),
+    # roots and trunk
+    ("bpy.ops.mod_tree.batch_tree", "Roots-and-Trunk"),
+    ("bpy.types.Scene.create_roots", "Roots-and-Trunk"),
+    ("bpy.types.Scene.roots_iteration", "Roots-and-Trunk"),
+    ("bpy.types.Scene.trunk_length", "Roots-and-Trunk"),
+    ("bpy.types.Scene.trunk_variation", "Roots-and-Trunk"),
+    ("bpy.types.Scene.trunk_space", "Roots-and-Trunk"),
+    ("bpy.types.Scene.preserve_trunk", "Roots-and-Trunk"),
+    ("bpy.types.Scene.preserve_end", "Roots-and-Trunk"),
+    ("bpy.types.Scene.trunk_split_proba", "Roots-and-Trunk"),
+    ("bpy.types.Scene.trunk_split_angle", "Roots-and-Trunk"),
+    # branches
+    ("bpy.types.Scene.break_chance", "Branches"),
+    ("bpy.types.Scene.branch_length", "Branches"),
+    ("bpy.types.Scene.randomangle", "Branches"),
+    ("bpy.types.Scene.split_proba", "Branches"),
+    ("bpy.types.Scene.split_angle", "Branches"),
+    ("bpy.types.Scene.radius_dec", "Branches"),
+    ("bpy.types.Scene.branch_rotate", "Branches"),
+    ("bpy.types.Scene.branch_random_rotate", "Branches"),
+    ("bpy.types.Scene.gravity_strength", "Branches"),
+    ("bpy.types.Scene.gravity_start", "Branches"),
+    ("bpy.types.Scene.gravity_end", "Branches"),
+    ("bpy.types.Scene.obstacle", "Branches"),
+    # advanced settings
+    ("bpy.types.Scene.mat", "Advanced-Settings"),
+    ("bpy.types.Scene.bark_material", "Advanced-Settings"),
+    ("bpy.types.Scene.create_armature", "Advanced-Settings"),
+    ("bpy.types.Scene.bones_iterations", "Advanced-Settings"),
+    ("bpy.types.Scene.visualize_leafs", "Advanced-Settings"),
+    ("bpy.types.Scene.leafs_iteration_length", "Advanced-Settings"),
+    ("bpy.types.Scene.particle", "Advanced-Settings"),
+    ("bpy.types.Scene.number", "Advanced-Settings"),
+    ("bpy.types.Scene.display", "Advanced-Settings"),
+    # batch tree generation
+    ("bpy.ops.mod_tree.batch_tree", "Batch-Tree-Generation"),
+    ("bpy.types.Scene.tree_number", "Batch-Tree-Generation"),
+    ("bpy.types.Scene.batch_radius_randomness", "Batch-Tree-Generation"),
+    ("bpy.types.Scene.batch_group_name", "Batch-Tree-Generation"),
+    ("bpy.types.Scene.batch_space", "Batch-Tree-Generation"),
+    # make twig
+    ("bpy.ops.mod_tree.add_twig", "Make-Twig"),
+    ("bpy.ops.mod_tree.update_twig", "Make-Twig"),
+    ("bpy.types.Scene.leaf_size", "Make-Twig"),
+    ("bpy.types.Scene.leaf_chance", "Make-Twig"),
+    ("bpy.types.Scene.TwigSeedProp", "Make-Twig"),
+    ("bpy.types.Scene.twig_iteration", "Make-Twig"),
+    ("bpy.types.Scene.twig_bark_material", "Make-Twig"),
+    ("bpy.types.Scene.twig_leaf_material", "Make-Twig"),
+    # wind animation
+    ("bpy.ops.mod_tree.animate_wind", "Wind-Animation"),
+    ("bpy.ops.mod_tree.make_wind_controller", "Wind-Animation"),
+    ("bpy.ops.mod_tree.make_terrain", "Wind-Animation"),
+    ("bpy.types.Scene.wind_controller", "Wind-Animation"),
+    ("bpy.types.Scene.terrain", "Wind-Animation"),
+    ("bpy.types.Scene.wind_height_start", "Wind-Animation"),
+    ("bpy.types.Scene.wind_height_full", "Wind-Animation"),
+    ("bpy.types.Scene.clear_mods", "Wind-Animation"),
+    ("bpy.types.Scene.wind_strength", "Wind-Animation"),
+    # addon preferences
+    ("bpy.ops.mod_tree.check_for_updates", "Addon-Preferences"),
+    ("bpy.ops.mod_tree.install_preset", "Addon-Preferences"),
+    ("bpy.types.TreeAddonPrefs.always_save_prior", "Addon-Preferences"),
+    ("bpy.types.TreeAddonPrefs.save_all_images", "Addon-Preferences"),
+    ("bpy.types.TreeAddonPrefs.save_all_texts", "Addon-Preferences"),
+    ("bpy.types.TreeAddonPrefs.preset_file", "Addon-Preferences"),
+)
+
+
+def doc_map():
+    dm = (prefix, documentation_mapping)
+    return dm
+
 
 def register():
     # register all classes
     for i in classes:
         bpy.utils.register_class(i)
+
+    # register custom manual for add-on documentation
+    bpy.utils.register_manual_map(doc_map)
 
     # register props
     Scene.preset_name = StringProperty(name="Preset Name", default="MyPreset")
@@ -598,6 +685,9 @@ def unregister():
     # unregister all classes
     for i in classes:
         bpy.utils.unregister_class(i)
+
+    # unregister custom manual for add-on documentation
+    bpy.utils.register_manual_map(my_map)
 
     # unregister props
     del Scene.preset_name
