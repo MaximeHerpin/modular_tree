@@ -17,18 +17,6 @@
 # along with Modular Tree.  If not, see <http://www.gnu.org/licenses/>.
 # ##### END GPL LICENSE BLOCK #####
 
-bl_info = {
-    "name": "Modular trees",
-    "author": "Herpin Maxime, Jake Dube",
-    "version": (2, 3),
-    "blender": (2, 77, 0),
-    "location": "View3D > Tools > Tree > Make Tree",
-    "description": "Generates an organic tree with correctly modeled branching.",
-    "warning": "May take a long time to generate! Save your file before generating!",
-    "wiki_url": "https://github.com/MaximeHerpin/Blender-Modular-tree-addon/wiki",
-    "tracker_url": "https://github.com/MaximeHerpin/Blender-Modular-tree-addon/issues/new",
-    "category": "Add Mesh"}
-
 from random import randint
 
 import bpy
@@ -39,6 +27,19 @@ from .generator_operators import MakeTreeOperator, BatchTreeOperator, MakeTwigOp
 from .presets import TreePresetLoadMenu, TreePresetRemoveMenu, SaveTreePresetOperator, InstallTreePresetOperator, RemoveTreePresetOperator, LoadTreePresetOperator
 from .logo import display_logo
 from .wind_setup_utils import WindOperator, MakeControllerOperator, MakeTerrainOperator
+from .check_for_updates import CheckForUpdates
+
+bl_info = {
+    "name": "Modular trees",
+    "author": "Herpin Maxime, Jake Dube",
+    "version": (2, 3),
+    "blender": (2, 77, 0),
+    "location": "View3D > Tools > Tree > Make Tree",
+    "description": "Generates an organic tree with correctly modeled branching.",
+    "warning": "May take a long time to generate! Save your file before generating!",
+    "wiki_url": "https://github.com/MaximeHerpin/modular_tree/wiki",
+    "tracker_url": "https://github.com/MaximeHerpin/modular_tree/issues/new",
+    "category": "Add Mesh"}
 
 
 class TreeAddonPrefs(AddonPreferences):
@@ -70,19 +71,18 @@ class TreeAddonPrefs(AddonPreferences):
     def draw(self, context):
         layout = self.layout
 
-        row = layout.row()
-        row.prop(self, 'always_save_prior')
-        row = layout.row()
-        row.prop(self, 'save_all_images')
-        row = layout.row()
-        row.prop(self, 'save_all_texts')
+        col = layout.column()
+        col.prop(self, 'always_save_prior')
+        col.prop(self, 'save_all_images')
+        col.prop(self, 'save_all_texts')
 
         row = layout.row()
         # website url
         row.operator("wm.url_open", text="Feature Roadmap", icon='QUESTION').url = \
-            "https://github.com/MaximeHerpin/Blender-Modular-tree-addon/wiki/Roadmap"
+            "https://github.com/MaximeHerpin/modular_tree/wiki/Roadmap"
         row.operator("wm.url_open", text="Official Discussion Forum", icon='QUESTION').url = \
             "https://blenderartists.org/forum/showthread.php?405377-Addon-Modular-Tree"
+        row.operator("mod_tree.check_for_updates", icon='RADIO')
 
         box = layout.box()
         box.label("Preset Installer")
@@ -327,14 +327,101 @@ classes = [MakeTreeOperator, BatchTreeOperator, MakeTwigOperator, UpdateTreeOper
            MakeControllerOperator, MakeTerrainOperator,
            MakeTreePanel, BatchTreePanel, RootsAndTrunksPanel, TreeBranchesPanel, AdvancedSettingsPanel,
            MakeTwigPanel, TreePresetLoadMenu, TreePresetRemoveMenu, WindAnimationPanel, MakeTreePresetsPanel,
-           InstallTreePresetOperator,
+           InstallTreePresetOperator, CheckForUpdates,
            TreeAddonPrefs]
+
+prefix = "https://github.com/MaximeHerpin/modular_tree/wiki/"
+documentation_mapping = (
+    # make tree panel
+    ("bpy.ops.mod_tree.add_tree", "Make-Tree-Panel#make-tree"),
+    ("bpy.ops.mod_tree.update_tree", "Make-Tree-Panel#update-tree"),
+    ("bpy.types.Scene.SeedProp", "Make-Tree-Panel#seed"),
+    ("bpy.types.Scene.iteration", "Make-Tree-Panel#branch-iterations"),
+    ("bpy.types.Scene.radius", "Make-Tree-Panel#radius"),
+    ("bpy.types.Scene.uv", "Make-Tree-Panel#create-uv-seams"),
+    ("bpy.types.Scene.finish_unwrap", "Make-Tree-Panel#unwrap"),
+    ("bpy.types.Scene.unwrap_end_iteration", "Make-Tree-Panel#last-unwrapped-iteration"),
+    # roots and trunk
+    ("bpy.types.Scene.create_roots", "Roots-and-Trunk#create-roots"),
+    ("bpy.types.Scene.roots_iteration", "Roots-and-Trunk#roots-iterations"),
+    ("bpy.types.Scene.trunk_length", "Roots-and-Trunk#trunk-iterations"),
+    ("bpy.types.Scene.trunk_variation", "Roots-and-Trunk#trunk-variation"),
+    ("bpy.types.Scene.trunk_space", "Roots-and-Trunk#trunk-length"),
+    ("bpy.types.Scene.preserve_trunk", "Roots-and-Trunk#preserve-trunk"),
+    ("bpy.types.Scene.preserve_end", "Roots-and-Trunk#trunk-end"),
+    ("bpy.types.Scene.trunk_split_proba", "Roots-and-Trunk#trunk-split-probability"),
+    ("bpy.types.Scene.trunk_split_angle", "Roots-and-Trunk#trunk-split-angle"),
+    # branches
+    ("bpy.types.Scene.break_chance", "Branches#break-chance"),
+    ("bpy.types.Scene.branch_length", "Branches#branch-length"),
+    ("bpy.types.Scene.randomangle", "Branches#branch-variations"),
+    ("bpy.types.Scene.split_proba", "Branches#split-probability"),
+    ("bpy.types.Scene.split_angle", "Branches#split-angle"),
+    ("bpy.types.Scene.radius_dec", "Branches#radius-decrease"),
+    ("bpy.types.Scene.branch_rotate", "Branches#branches-rotation-angle"),
+    ("bpy.types.Scene.branch_random_rotate", "Branches#branches-random-rotation-angle"),
+    ("bpy.types.Scene.gravity_strength", "Branches#gravity-strength"),
+    ("bpy.types.Scene.gravity_start", "Branches#gravity-start"),
+    ("bpy.types.Scene.gravity_end", "Branches#gravity-end"),
+    ("bpy.types.Scene.obstacle", "Branches#obstacle"),
+    ("bpy.types.Scene.obstacle_strength", "Branches#obstacle-strength"),
+    # advanced settings
+    ("bpy.types.Scene.mat", "Advanced-Settings#create-new-material"),
+    ("bpy.types.Scene.bark_material", "Advanced-Settings#bark-material"),
+    ("bpy.types.Scene.create_armature", "Advanced-Settings#create-armature"),
+    ("bpy.types.Scene.bones_iterations", "Advanced-Settings#bones-iterations"),
+    ("bpy.types.Scene.visualize_leafs", "Advanced-Settings#visualize-particle-weights"),
+    ("bpy.types.Scene.leafs_iteration_length", "Advanced-Settings#leafs-group-length"),
+    ("bpy.types.Scene.particle", "Advanced-Settings#configure-particle-system"),
+    ("bpy.types.Scene.number", "Advanced-Settings#number-of-leaves"),
+    ("bpy.types.Scene.display", "Advanced-Settings#particles-in-viewport"),
+    # batch tree generation
+    ("bpy.ops.mod_tree.batch_tree", "Batch-Tree-Generation#batch-tree-generation"),
+    ("bpy.types.Scene.tree_number", "Batch-Tree-Generation#tree-number"),
+    ("bpy.types.Scene.batch_radius_randomness", "Batch-Tree-Generation#radius-randomness"),
+    ("bpy.types.Scene.batch_group_name", "Batch-Tree-Generation#group"),
+    ("bpy.types.Scene.batch_space", "Batch-Tree-Generation#grid-size"),
+    # make twig
+    ("bpy.ops.mod_tree.add_twig", "Make-Twig#create-twig"),
+    ("bpy.ops.mod_tree.update_twig", "Make-Twig#update-selected-twig"),
+    ("bpy.types.Scene.leaf_size", "Make-Twig#leaf-size"),
+    ("bpy.types.Scene.leaf_chance", "Make-Twig#leaf-generation-probability"),
+    ("bpy.types.Scene.TwigSeedProp", "Make-Twig#twig-seed"),
+    ("bpy.types.Scene.twig_iteration", "Make-Twig#twig-iteration"),
+    ("bpy.types.Scene.twig_bark_material", "Make-Twig#twig-bark-material"),
+    ("bpy.types.Scene.twig_leaf_material", "Make-Twig#twig-leaf-material"),
+    # wind animation
+    ("bpy.ops.mod_tree.animate_wind", "Wind-Animation#animate-wind"),
+    ("bpy.ops.mod_tree.make_wind_controller", "Wind-Animation#make-wind-controller"),
+    ("bpy.ops.mod_tree.make_terrain", "Wind-Animation#make-terrain"),
+    ("bpy.types.Scene.wind_controller", "Wind-Animation#control-object"),
+    ("bpy.types.Scene.terrain", "Wind-Animation#terrain-object"),
+    ("bpy.types.Scene.wind_height_start", "Wind-Animation#start-height"),
+    ("bpy.types.Scene.wind_height_full", "Wind-Animation#full-height"),
+    ("bpy.types.Scene.clear_mods", "Wind-Animation#clear-modifiers"),
+    ("bpy.types.Scene.wind_strength", "Wind-Animation#wind-strength"),
+    # addon preferences
+    ("bpy.ops.mod_tree.check_for_updates", "Addon-Preferences#save-blend-file"),
+    ("bpy.ops.mod_tree.install_preset", "Addon-Preferences#save-images"),
+    ("bpy.types.TreeAddonPrefs.always_save_prior", "Addon-Preferences#save-texts"),
+    ("bpy.types.TreeAddonPrefs.save_all_images", "Addon-Preferences#check-for-updates"),
+    ("bpy.types.TreeAddonPrefs.save_all_texts", "Addon-Preferences#preset-file"),
+    ("bpy.types.TreeAddonPrefs.preset_file", "Addon-Preferences#install-preset"),
+)
+
+
+def doc_map():
+    dm = (prefix, documentation_mapping)
+    return dm
 
 
 def register():
     # register all classes
     for i in classes:
         bpy.utils.register_class(i)
+
+    # register custom manual for add-on documentation
+    bpy.utils.register_manual_map(doc_map)
 
     # register props
     Scene.preset_name = StringProperty(name="Preset Name", default="MyPreset")
@@ -598,6 +685,9 @@ def unregister():
     # unregister all classes
     for i in classes:
         bpy.utils.unregister_class(i)
+
+    # unregister custom manual for add-on documentation
+    bpy.utils.unregister_manual_map(doc_map)
 
     # unregister props
     del Scene.preset_name
