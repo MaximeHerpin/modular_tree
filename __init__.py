@@ -333,14 +333,14 @@ classes = [MakeTreeOperator, BatchTreeOperator, MakeTwigOperator, UpdateTreeOper
 prefix = "https://github.com/MaximeHerpin/modular_tree/wiki/"
 documentation_mapping = (
     # make tree panel
-    ("bpy.ops.mod_tree.add_tree", "Make-Tree-Panel"),
-    ("bpy.ops.mod_tree.update_tree", "Make-Tree-Panel"),
-    ("bpy.types.Scene.SeedProp", "Make-Tree-Panel"),
-    ("bpy.types.Scene.iteration", "Make-Tree-Panel"),
-    ("bpy.types.Scene.radius", "Make-Tree-Panel"),
-    ("bpy.types.Scene.uv", "Make-Tree-Panel"),
-    ("bpy.types.Scene.finish_unwrap", "Make-Tree-Panel"),
-    ("bpy.types.Scene.unwrap_end_iteration", "Make-Tree-Panel"),
+    ("bpy.ops.mod_tree.add_tree", "Make-Tree-Panel#make-tree"),
+    ("bpy.ops.mod_tree.update_tree", "Make-Tree-Panel#update-tree"),
+    ("bpy.types.Scene.SeedProp", "Make-Tree-Panel#seed"),
+    ("bpy.types.Scene.iteration", "Make-Tree-Panel#branch-iterations"),
+    ("bpy.types.Scene.radius", "Make-Tree-Panel#radius"),
+    ("bpy.types.Scene.uv", "Make-Tree-Panel#create-uv-seams"),
+    ("bpy.types.Scene.finish_unwrap", "Make-Tree-Panel#unwrap"),
+    ("bpy.types.Scene.unwrap_end_iteration", "Make-Tree-Panel#last-unwrapped-iteration"),
     # roots and trunk
     ("bpy.ops.mod_tree.batch_tree", "Roots-and-Trunk"),
     ("bpy.types.Scene.create_roots", "Roots-and-Trunk"),
@@ -391,15 +391,15 @@ documentation_mapping = (
     ("bpy.types.Scene.twig_bark_material", "Make-Twig"),
     ("bpy.types.Scene.twig_leaf_material", "Make-Twig"),
     # wind animation
-    ("bpy.ops.mod_tree.animate_wind", "Wind-Animation"),
-    ("bpy.ops.mod_tree.make_wind_controller", "Wind-Animation"),
-    ("bpy.ops.mod_tree.make_terrain", "Wind-Animation"),
-    ("bpy.types.Scene.wind_controller", "Wind-Animation"),
-    ("bpy.types.Scene.terrain", "Wind-Animation"),
-    ("bpy.types.Scene.wind_height_start", "Wind-Animation"),
-    ("bpy.types.Scene.wind_height_full", "Wind-Animation"),
-    ("bpy.types.Scene.clear_mods", "Wind-Animation"),
-    ("bpy.types.Scene.wind_strength", "Wind-Animation"),
+    ("bpy.ops.mod_tree.animate_wind", "Wind-Animation#animate-wind"),
+    ("bpy.ops.mod_tree.make_wind_controller", "Wind-Animation#make-wind-controller"),
+    ("bpy.ops.mod_tree.make_terrain", "Wind-Animation#make-terrain"),
+    ("bpy.types.Scene.wind_controller", "Wind-Animation#control-object"),
+    ("bpy.types.Scene.terrain", "Wind-Animation#terrain-object"),
+    ("bpy.types.Scene.wind_height_start", "Wind-Animation#start-height"),
+    ("bpy.types.Scene.wind_height_full", "Wind-Animation#full-height"),
+    ("bpy.types.Scene.clear_mods", "Wind-Animation#clear-modifiers"),
+    ("bpy.types.Scene.wind_strength", "Wind-Animation#wind-strength"),
     # addon preferences
     ("bpy.ops.mod_tree.check_for_updates", "Addon-Preferences"),
     ("bpy.ops.mod_tree.install_preset", "Addon-Preferences"),
@@ -687,7 +687,7 @@ def unregister():
         bpy.utils.unregister_class(i)
 
     # unregister custom manual for add-on documentation
-    bpy.utils.register_manual_map(my_map)
+    bpy.utils.unregister_manual_map(doc_map)
 
     # unregister props
     del Scene.preset_name
