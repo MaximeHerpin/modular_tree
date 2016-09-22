@@ -23,6 +23,8 @@ import bpy
 from bpy.props import StringProperty, BoolProperty, FloatProperty, IntProperty, EnumProperty
 from bpy.types import Operator, Panel, Scene, Menu, AddonPreferences
 
+from .addon_name import get_addon_name
+
 
 class TreePresetLoadMenu(Menu):
     bl_idname = "mod_tree.preset_load_menu"
@@ -187,7 +189,7 @@ class InstallTreePresetOperator(Operator):
         return context.window_manager.invoke_confirm(self, event)
 
     def execute(self, context):
-        addon_prefs = bpy.context.user_preferences.addons[__name__].preferences
+        addon_prefs = bpy.context.user_preferences.addons[get_addon_name()].preferences
 
         if not os.path.isfile(addon_prefs.preset_file) or addon_prefs.preset_file[-4:] != ".mtp":
             self.report({'ERROR'}, "Not a valid preset file!")
