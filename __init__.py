@@ -28,6 +28,7 @@ from .presets import TreePresetLoadMenu, TreePresetRemoveMenu, SaveTreePresetOpe
 from .logo import display_logo
 from .wind_setup_utils import WindOperator, MakeControllerOperator, MakeTerrainOperator
 from .check_for_updates import CheckForUpdates
+from .addon_name import save_addon_name
 
 bl_info = {
     "name": "Modular trees",
@@ -43,7 +44,7 @@ bl_info = {
 
 
 class TreeAddonPrefs(AddonPreferences):
-    bl_idname = "modular_tree"
+    bl_idname = __name__
 
     always_save_prior = BoolProperty(
         name="Save .blend File",
@@ -416,6 +417,8 @@ def doc_map():
 
 
 def register():
+    save_addon_name(__name__)
+
     # register all classes
     for i in classes:
         bpy.utils.register_class(i)
