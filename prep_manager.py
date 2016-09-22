@@ -19,6 +19,8 @@
 
 import bpy
 
+from .addon_name import get_addon_name
+
 
 def save_text(text):
     """Saves Blender text block that is stored externally.
@@ -45,7 +47,7 @@ def always_save():
         "SUCCESS", None: IF saved all required types correctly
     """
     try:
-        addon_prefs = bpy.context.user_preferences.addons["modular_tree"].preferences
+        addon_prefs = bpy.context.user_preferences.addons[get_addon_name()].preferences
     except KeyError:
         print("Could not find addon prefs! Files not saved!")
         return "FAILED", None
