@@ -68,7 +68,7 @@ class SaveTreePresetOperator(Operator):
     bl_options = {"REGISTER"}
 
     def execute(self, context):
-        scene = context.scene
+        mtree_props = context.scene.mtree_props
 
         preset = ("finish_unwrap:{}\n"
                   "preserve_trunk:{}\n"
@@ -119,57 +119,57 @@ class SaveTreePresetOperator(Operator):
                   "batch_space:{}\n".format(
                     # bools can't be stored as "True" or "False" b/c bool(x) will evaluate to
                     # True if x = "True" or if x = "False"...the fix is to do an int() conversion
-                    int(scene.finish_unwrap),
-                    int(scene.preserve_trunk),
-                    scene.trunk_split_angle,
-                    scene.randomangle,
-                    scene.trunk_variation,
-                    scene.radius,
-                    scene.radius_dec,
-                    scene.iteration,
-                    scene.preserve_end,
-                    scene.trunk_length,
-                    scene.trunk_split_proba,
-                    scene.split_proba,
-                    scene.trunk_space,
-                    scene.branch_length,
-                    scene.split_angle,
-                    scene.gravity_strength,
-                    scene.gravity_start,
-                    scene.gravity_end,
-                    scene.obstacle,
-                    scene.obstacle_strength,
-                    scene.SeedProp,
-                    int(scene.create_armature),
-                    scene.bones_iterations,
-                    int(scene.visualize_leafs),
-                    scene.leafs_iteration_length,
-                    int(scene.uv),
-                    int(scene.unwrap_end_iteration),
-                    int(scene.mat),
-                    scene.roots_iteration,
-                    int(scene.create_roots),
-                    scene.branch_rotate,
-                    scene.branch_random_rotate,
-                    int(scene.particle),
-                    scene.number,
-                    scene.display,
-                    scene.break_chance,
-                    scene.bark_material,
-                    scene.leaf_size,
-                    scene.leaf_chance,
-                    scene.twig_leaf_material,
-                    scene.twig_bark_material,
-                    scene.TwigSeedProp,
-                    scene.twig_iteration,
-                    scene.tree_number,
-                    scene.batch_radius_randomness,
-                    scene.batch_group_name,
-                    scene.batch_space))
+                    int(mtree_props.finish_unwrap),
+                    int(mtree_props.preserve_trunk),
+                    mtree_props.trunk_split_angle,
+                    mtree_props.randomangle,
+                    mtree_props.trunk_variation,
+                    mtree_props.radius,
+                    mtree_props.radius_dec,
+                    mtree_props.iteration,
+                    mtree_props.preserve_end,
+                    mtree_props.trunk_length,
+                    mtree_props.trunk_split_proba,
+                    mtree_props.split_proba,
+                    mtree_props.trunk_space,
+                    mtree_props.branch_length,
+                    mtree_props.split_angle,
+                    mtree_props.gravity_strength,
+                    mtree_props.gravity_start,
+                    mtree_props.gravity_end,
+                    mtree_props.obstacle,
+                    mtree_props.obstacle_strength,
+                    mtree_props.SeedProp,
+                    int(mtree_props.create_armature),
+                    mtree_props.bones_iterations,
+                    int(mtree_props.visualize_leafs),
+                    mtree_props.leafs_iteration_length,
+                    int(mtree_props.uv),
+                    int(mtree_props.unwrap_end_iteration),
+                    int(mtree_props.mat),
+                    mtree_props.roots_iteration,
+                    int(mtree_props.create_roots),
+                    mtree_props.branch_rotate,
+                    mtree_props.branch_random_rotate,
+                    int(mtree_props.particle),
+                    mtree_props.number,
+                    mtree_props.display,
+                    mtree_props.break_chance,
+                    mtree_props.bark_material,
+                    mtree_props.leaf_size,
+                    mtree_props.leaf_chance,
+                    mtree_props.twig_leaf_material,
+                    mtree_props.twig_bark_material,
+                    mtree_props.TwigSeedProp,
+                    mtree_props.twig_iteration,
+                    mtree_props.tree_number,
+                    mtree_props.batch_radius_randomness,
+                    mtree_props.batch_group_name,
+                    mtree_props.batch_space))
 
         # write to file
         prsets_directory = os.path.join(os.path.dirname(__file__), "mod_tree_presets")
-        prset = os.path.join(prsets_directory, scene.preset_name + ".mtp")  # mtp stands for modular tree preset
+        prset = os.path.join(prsets_directory, mtree_props.preset_name + ".mtp")  # mtp stands for modular tree preset
 
         os.makedirs(os.path.dirname(prset), exist_ok=True)
         with open(prset, 'w') as p:
@@ -240,7 +240,7 @@ class LoadTreePresetOperator(Operator):
     filename = StringProperty(name="File Name")
 
     def execute(self, context):
-        scene = context.scene
+        mtree_props = context.scene.mtree_props
 
         prsets_directory = os.path.join(os.path.dirname(__file__), "mod_tree_presets")
         prset = os.path.join(prsets_directory, self.filename)  # mtp stands for modular tree preset
@@ -253,98 +253,98 @@ class LoadTreePresetOperator(Operator):
             if ":" in line:
                 setting, value = line.split(":")
                 if setting == 'finish_unwrap':
-                    scene.finish_unwrap = bool(int(value))
+                    mtree_props.finish_unwrap = bool(int(value))
                 elif setting == "preserve_trunk":
-                    scene.preserve_trunk = bool(int(value))  # bools have to be converted to int first (stored as 0/1)
+                    mtree_props.preserve_trunk = bool(int(value))  # bools have to be converted to int first (stored as 0/1)
                 elif setting == "trunk_split_angle":
-                    scene.trunk_split_angle = float(value)
+                    mtree_props.trunk_split_angle = float(value)
                 elif setting == "randomangle":
-                    scene.randomangle = float(value)
+                    mtree_props.randomangle = float(value)
                 elif setting == "trunk_variation":
-                    scene.trunk_variation = float(value)
+                    mtree_props.trunk_variation = float(value)
                 elif setting == "radius":
-                    scene.radius = float(value)
+                    mtree_props.radius = float(value)
                 elif setting == "radius_dec":
-                    scene.radius_dec = float(value)
+                    mtree_props.radius_dec = float(value)
                 elif setting == "iteration":
-                    scene.iteration = int(value)
+                    mtree_props.iteration = int(value)
                 elif setting == "preserve_end":
-                    scene.preserve_end = int(value)
+                    mtree_props.preserve_end = int(value)
                 elif setting == "trunk_length":
-                    scene.trunk_length = int(value)
+                    mtree_props.trunk_length = int(value)
                 elif setting == "trunk_split_proba":
-                    scene.trunk_split_proba = float(value)
+                    mtree_props.trunk_split_proba = float(value)
                 elif setting == "split_proba":
-                    scene.split_proba = float(value)
+                    mtree_props.split_proba = float(value)
                 elif setting == "trunk_space":
-                    scene.trunk_space = float(value)
+                    mtree_props.trunk_space = float(value)
                 elif setting == "branch_length":
-                    scene.branch_length = float(value)
+                    mtree_props.branch_length = float(value)
                 elif setting == "split_angle":
-                    scene.split_angle = float(value)
+                    mtree_props.split_angle = float(value)
                 elif setting == "gravity_strength":
-                    scene.gravity_strength = float(value)
+                    mtree_props.gravity_strength = float(value)
                 elif setting == "gravity_start":
-                    scene.gravity_start = int(value)
+                    mtree_props.gravity_start = int(value)
                 elif setting == "gravity_end":
-                    scene.gravity_end = int(value)
+                    mtree_props.gravity_end = int(value)
                 elif setting == "obstacle":
-                    scene.obstacle = value.replace("\n", "")
+                    mtree_props.obstacle = value.replace("\n", "")
                 elif setting == "obstacle_strength":
-                    scene.obstacle_strength = float(value)
+                    mtree_props.obstacle_strength = float(value)
                 elif setting == "SeedProp":
-                    scene.SeedProp = int(value)
+                    mtree_props.SeedProp = int(value)
                 elif setting == "create_armature":
-                    scene.create_armature = bool(int(value))
+                    mtree_props.create_armature = bool(int(value))
                 elif setting == "bones_iterations":
-                    scene.bones_iterations = int(value)
+                    mtree_props.bones_iterations = int(value)
                 elif setting == "visualize_leafs":
-                    scene.visualize_leafs = bool(int(value))
+                    mtree_props.visualize_leafs = bool(int(value))
                 elif setting == "leafs_iteration_length":
-                    scene.leafs_iteration_length = int(value)
+                    mtree_props.leafs_iteration_length = int(value)
                 elif setting == "uv":
-                    scene.uv = bool(int(value))
+                    mtree_props.uv = bool(int(value))
                 elif setting == "unwrap_end_iteration":
-                    scene.unwrap_end_iteration = int(value)
+                    mtree_props.unwrap_end_iteration = int(value)
                 elif setting == "mat":
-                    scene.mat = bool(int(value))
+                    mtree_props.mat = bool(int(value))
                 elif setting == "roots_iteration":
-                    scene.roots_iteration = int(value)
+                    mtree_props.roots_iteration = int(value)
                 elif setting == "create_roots":
-                    scene.create_roots = bool(int(value))
+                    mtree_props.create_roots = bool(int(value))
                 elif setting == "branch_rotate":
-                    scene.branch_rotate = float(value)
+                    mtree_props.branch_rotate = float(value)
                 elif setting == "branch_random_rotate":
-                    scene.branch_random_rotate = float(value)
+                    mtree_props.branch_random_rotate = float(value)
                 elif setting == "particle":
-                    scene.particle = bool(int(value))
+                    mtree_props.particle = bool(int(value))
                 elif setting == "number":
-                    scene.number = int(value)
+                    mtree_props.number = int(value)
                 elif setting == "display":
-                    scene.display = int(value)
+                    mtree_props.display = int(value)
                 elif setting == "break_chance":
-                    scene.break_chance = float(value)
+                    mtree_props.break_chance = float(value)
                 elif setting == "bark_material":
-                    scene.bark_material = value.replace("\n", "")
+                    mtree_props.bark_material = value.replace("\n", "")
                 elif setting == "leaf_size":
-                    scene.leaf_size = float(value)
+                    mtree_props.leaf_size = float(value)
                 elif setting == "leaf_chance":
-                    scene.leaf_chance = float(value)
+                    mtree_props.leaf_chance = float(value)
                 elif setting == "twig_leaf_material":
-                    scene.twig_leaf_material = value.replace("\n", "")
+                    mtree_props.twig_leaf_material = value.replace("\n", "")
                 elif setting == "twig_bark_material":
-                    scene.twig_bark_material = value.replace("\n", "")
+                    mtree_props.twig_bark_material = value.replace("\n", "")
                 elif setting == "TwigSeedProp":
-                    scene.TwigSeedProp = int(value)
+                    mtree_props.TwigSeedProp = int(value)
                 elif setting == "twig_iteration":
-                    scene.twig_iteration = int(value)
+                    mtree_props.twig_iteration = int(value)
                 elif setting == "tree_number":
-                    scene.tree_number = int(value)
+                    mtree_props.tree_number = int(value)
                 elif setting == "batch_radius_randomness":
-                    scene.batch_radius_randomness = float(value)
+                    mtree_props.batch_radius_randomness = float(value)
                 elif setting == "batch_group_name":
-                    scene.batch_group_name = value.replace("\n", "")
+                    mtree_props.batch_group_name = value.replace("\n", "")
                 elif setting == "batch_space":
-                    scene.batch_space = float(value)
+                    mtree_props.batch_space = float(value)
 
         return {'FINISHED'}

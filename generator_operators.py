@@ -46,8 +46,8 @@ class MakeTreeOperator(Operator):
 
         scene = context.scene
 
-        seed(scene.SeedProp)
-        create_tree(bpy.context.scene.cursor_location)
+        seed(scene.mtree_props.SeedProp)
+        create_tree(scene.cursor_location)
 
         return {'FINISHED'}
 
@@ -66,31 +66,31 @@ class BatchTreeOperator(Operator):
             self.report({message_lvls[i]}, message)
             return {status}
 
-        scene = context.scene
+        mtree_props = context.scene.mtree_props
         trees = []
-        save_radius = scene.radius
-        space = scene.batch_space
+        save_radius = mtree_props.radius
+        space = mtree_props.batch_space
         seeds = []
-        if scene.batch_group_name != "":
-            if scene.batch_group_name not in bpy.data.groups:
-                bpy.ops.group.create(name=scene.batch_group_name)
-        for i in range(scene.tree_number):
+        if mtree_props.batch_group_name != "":
+            if mtree_props.batch_group_name not in bpy.data.groups:
+                bpy.ops.group.create(name=mtree_props.batch_group_name)
+        for i in range(mtree_props.tree_number):
             new_seed = randint(0, 1000)
             while new_seed in seeds:
                 new_seed = randint(0, 1000)
-            pointer = int(sqrt(scene.tree_number))
+            pointer = int(sqrt(mtree_props.tree_number))
             pos_x = i % pointer
             pos_y = i // pointer
             seed(new_seed)
-            scene.radius = save_radius * (1 + scene.batch_radius_randomness * (.5 - random()) * 2)
+            mtree_props.radius = save_radius * (1 + mtree_props.batch_radius_randomness * (.5 - random()) * 2)
             create_tree(Vector((-space * pointer / 2, -space * pointer / 2, 0)) + Vector((pos_x, pos_y, 0)) * space)
             trees.append(bpy.context.active_object)
-            if scene.batch_group_name != "":
-                bpy.ops.object.group_link(group=scene.batch_group_name)
+            if mtree_props.batch_group_name != "":
+                bpy.ops.object.group_link(group=mtree_props.batch_group_name)
         for tree in trees:
             tree.select = True
 
-        scene.radius = save_radius
+        mtree_props.radius = save_radius
         return {'FINISHED'}
 
 
@@ -109,76 +109,78 @@ class MakeTwigOperator(Operator):
             return {status}
 
         scene = context.scene
-        seed(scene.TwigSeedProp)
-        save_preserve_trunk = scene.preserve_trunk
-        save_trunk_split_angle = scene.split_angle  # This variable is never used! Should it be?
-        save_randomangle = scene.randomangle
-        save_trunk_variation = scene.trunk_variation
-        save_radius = scene.radius
-        save_radius_dec = scene.radius_dec
-        save_iteration = scene.iteration
-        save_preserve_end = scene.preserve_end
-        save_trunk_length = scene.trunk_length
-        save_trunk_split_proba = scene.trunk_split_proba
-        save_trunk_space = scene.trunk_space
-        save_split_proba = scene.split_proba
-        save_branch_length = scene.branch_length
-        save_split_angle = scene.split_angle
-        save_gravity_strength = scene.gravity_strength
-        save_gravity_start = scene.gravity_start
-        save_gravity_end = scene.gravity_end
-        save_obstacle = scene.obstacle
-        save_obstacle_strength = scene.obstacle_strength
-        save_SeedProp = scene.SeedProp
-        save_create_armature = scene.create_armature
-        save_bones_iterations = scene.bones_iterations
-        save_visualize_leafs = scene.visualize_leafs
-        save_leafs_iteration_length = scene.leafs_iteration_length
-        save_uv = scene.uv
-        save_mat = scene.mat
-        save_roots_iteration = scene.roots_iteration
-        save_create_roots = scene.create_roots
-        save_branch_rotate = scene.branch_rotate
-        save_branch_random_rotate = scene.branch_random_rotate
-        save_particle = scene.particle
-        save_number = scene.number
-        save_display = scene.display
-        save_break_chance = scene.break_chance
+        mtree_props = scene.mtree_props
 
-        scene.preserve_trunk = False
-        scene.trunk_split_angle = 0
-        scene.randomangle = .5
-        scene.trunk_variation = .1
-        scene.radius = .25
-        scene.radius_dec = .85
-        scene.iteration = scene.twig_iteration
-        scene.preserve_end = 40
-        scene.trunk_length = 0
-        scene.trunk_split_proba = .2
-        scene.trunk_space = .1
-        scene.split_proba = .7
-        scene.branch_length = 3
-        scene.split_angle = .2
-        scene.gravity_strength = 0
-        scene.gravity_start = 0
-        scene.gravity_end = 0
-        scene.obstacle = ''
-        scene.obstacle_strength = 0
-        scene.SeedProp = scene.SeedProp
-        scene.create_armature = False
-        scene.bones_iterations = 10
-        scene.visualize_leafs = False
-        scene.leafs_iteration_length = 7
-        scene.uv = True
-        scene.mat = scene.mat
-        scene.roots_iteration = 0
-        scene.create_roots = False
-        scene.branch_rotate = 0
-        scene.branch_random_rotate = 15
-        scene.particle = False
-        scene.number = 0
-        scene.display = 0
-        scene.break_chance = 0
+        seed(mtree_props.TwigSeedProp)
+        save_preserve_trunk = mtree_props.preserve_trunk
+        save_trunk_split_angle = mtree_props.split_angle  # This variable is never used! Should it be?
+        save_randomangle = mtree_props.randomangle
+        save_trunk_variation = mtree_props.trunk_variation
+        save_radius = mtree_props.radius
+        save_radius_dec = mtree_props.radius_dec
+        save_iteration = mtree_props.iteration
+        save_preserve_end = mtree_props.preserve_end
+        save_trunk_length = mtree_props.trunk_length
+        save_trunk_split_proba = mtree_props.trunk_split_proba
+        save_trunk_space = mtree_props.trunk_space
+        save_split_proba = mtree_props.split_proba
+        save_branch_length = mtree_props.branch_length
+        save_split_angle = mtree_props.split_angle
+        save_gravity_strength = mtree_props.gravity_strength
+        save_gravity_start = mtree_props.gravity_start
+        save_gravity_end = mtree_props.gravity_end
+        save_obstacle = mtree_props.obstacle
+        save_obstacle_strength = mtree_props.obstacle_strength
+        save_SeedProp = mtree_props.SeedProp
+        save_create_armature = mtree_props.create_armature
+        save_bones_iterations = mtree_props.bones_iterations
+        save_visualize_leafs = mtree_props.visualize_leafs
+        save_leafs_iteration_length = mtree_props.leafs_iteration_length
+        save_uv = mtree_props.uv
+        save_mat = mtree_props.mat
+        save_roots_iteration = mtree_props.roots_iteration
+        save_create_roots = mtree_props.create_roots
+        save_branch_rotate = mtree_props.branch_rotate
+        save_branch_random_rotate = mtree_props.branch_random_rotate
+        save_particle = mtree_props.particle
+        save_number = mtree_props.number
+        save_display = mtree_props.display
+        save_break_chance = mtree_props.break_chance
+
+        mtree_props.preserve_trunk = False
+        mtree_props.trunk_split_angle = 0
+        mtree_props.randomangle = .5
+        mtree_props.trunk_variation = .1
+        mtree_props.radius = .25
+        mtree_props.radius_dec = .85
+        mtree_props.iteration = mtree_props.twig_iteration
+        mtree_props.preserve_end = 40
+        mtree_props.trunk_length = 0
+        mtree_props.trunk_split_proba = .2
+        mtree_props.trunk_space = .1
+        mtree_props.split_proba = .7
+        mtree_props.branch_length = 3
+        mtree_props.split_angle = .2
+        mtree_props.gravity_strength = 0
+        mtree_props.gravity_start = 0
+        mtree_props.gravity_end = 0
+        mtree_props.obstacle = ''
+        mtree_props.obstacle_strength = 0
+        mtree_props.SeedProp = mtree_props.SeedProp
+        mtree_props.create_armature = False
+        mtree_props.bones_iterations = 10
+        mtree_props.visualize_leafs = False
+        mtree_props.leafs_iteration_length = 7
+        mtree_props.uv = True
+        mtree_props.mat = mtree_props.mat
+        mtree_props.roots_iteration = 0
+        mtree_props.create_roots = False
+        mtree_props.branch_rotate = 0
+        mtree_props.branch_random_rotate = 15
+        mtree_props.particle = False
+        mtree_props.number = 0
+        mtree_props.display = 0
+        mtree_props.break_chance = 0
 
         if bpy.data.materials.get("twig bark") is None:
             build_bark_material("twig bark")
@@ -186,16 +188,16 @@ class MakeTwigOperator(Operator):
         if bpy.data.materials.get("twig leaf") is None:
             build_leaf_material("twig leaf")
 
-        twig_leafs = create_tree(bpy.context.scene.cursor_location, is_twig=True)
+        twig_leafs = create_tree(scene.cursor_location, is_twig=True)
         twig = bpy.context.active_object
         twig.name = 'twig'
-        twig.active_material = bpy.data.materials.get(scene.twig_bark_material)
+        twig.active_material = bpy.data.materials.get(mtree_props.twig_bark_material)
         for (position, direction, rotation) in twig_leafs:
             for i in range(randint(1, 3)):
-                if random() < scene.leaf_chance:
+                if random() < mtree_props.leaf_chance:
                     add_leaf(position + direction * .5 * random(), direction + Vector((random(), random(), random())),
-                             rotation + random() * 5, (1 + random()) * scene.leaf_size)
-                    bpy.context.active_object.active_material = bpy.data.materials.get(scene.twig_leaf_material)
+                             rotation + random() * 5, (1 + random()) * mtree_props.leaf_size)
+                    bpy.context.active_object.active_material = bpy.data.materials.get(mtree_props.twig_leaf_material)
                     twig.select = True
                     scene.objects.active = twig
         bpy.ops.object.join()
@@ -203,40 +205,40 @@ class MakeTwigOperator(Operator):
         bpy.ops.transform.resize(value=(0.25, 0.25, 0.25))
         bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 
-        scene.preserve_trunk = save_preserve_trunk
-        scene.trunk_split_angle = save_split_angle
-        scene.randomangle = save_randomangle
-        scene.trunk_variation = save_trunk_variation
-        scene.radius = save_radius
-        scene.radius_dec = save_radius_dec
-        scene.iteration = save_iteration
-        scene.preserve_end = save_preserve_end
-        scene.trunk_length = save_trunk_length
-        scene.trunk_split_proba = save_trunk_split_proba
-        scene.trunk_space = save_trunk_space
-        scene.split_proba = save_split_proba
-        scene.branch_length = save_branch_length
-        scene.split_angle = save_split_angle
-        scene.gravity_strength = save_gravity_strength
-        scene.gravity_start = save_gravity_start
-        scene.gravity_end = save_gravity_end
-        scene.obstacle = save_obstacle
-        scene.obstacle_strength = save_obstacle_strength
-        scene.SeedProp = save_SeedProp
-        scene.create_armature = save_create_armature
-        scene.bones_iterations = save_bones_iterations
-        scene.visualize_leafs = save_visualize_leafs
-        scene.leafs_iteration_length = save_leafs_iteration_length
-        scene.uv = save_uv
-        scene.mat = save_mat
-        scene.roots_iteration = save_roots_iteration
-        scene.create_roots = save_create_roots
-        scene.branch_rotate = save_branch_rotate
-        scene.branch_random_rotate = save_branch_random_rotate
-        scene.particle = save_particle
-        scene.number = save_number
-        scene.display = save_display
-        scene.break_chance = save_break_chance
+        mtree_props.preserve_trunk = save_preserve_trunk
+        mtree_props.trunk_split_angle = save_split_angle
+        mtree_props.randomangle = save_randomangle
+        mtree_props.trunk_variation = save_trunk_variation
+        mtree_props.radius = save_radius
+        mtree_props.radius_dec = save_radius_dec
+        mtree_props.iteration = save_iteration
+        mtree_props.preserve_end = save_preserve_end
+        mtree_props.trunk_length = save_trunk_length
+        mtree_props.trunk_split_proba = save_trunk_split_proba
+        mtree_props.trunk_space = save_trunk_space
+        mtree_props.split_proba = save_split_proba
+        mtree_props.branch_length = save_branch_length
+        mtree_props.split_angle = save_split_angle
+        mtree_props.gravity_strength = save_gravity_strength
+        mtree_props.gravity_start = save_gravity_start
+        mtree_props.gravity_end = save_gravity_end
+        mtree_props.obstacle = save_obstacle
+        mtree_props.obstacle_strength = save_obstacle_strength
+        mtree_props.SeedProp = save_SeedProp
+        mtree_props.create_armature = save_create_armature
+        mtree_props.bones_iterations = save_bones_iterations
+        mtree_props.visualize_leafs = save_visualize_leafs
+        mtree_props.leafs_iteration_length = save_leafs_iteration_length
+        mtree_props.uv = save_uv
+        mtree_props.mat = save_mat
+        mtree_props.roots_iteration = save_roots_iteration
+        mtree_props.create_roots = save_create_roots
+        mtree_props.branch_rotate = save_branch_rotate
+        mtree_props.branch_random_rotate = save_branch_random_rotate
+        mtree_props.particle = save_particle
+        mtree_props.number = save_number
+        mtree_props.display = save_display
+        mtree_props.break_chance = save_break_chance
 
         return {'FINISHED'}
 
@@ -255,9 +257,9 @@ class UpdateTreeOperator(Operator):
             self.report({message_lvls[i]}, message)
             return {status}
 
-        scene = context.scene
+        mtree_props = context.scene.mtree_props
 
-        seed(scene.SeedProp)
+        seed(mtree_props.SeedProp)
         obj = bpy.context.active_object
 
         try:
@@ -272,7 +274,7 @@ class UpdateTreeOperator(Operator):
             scale = obj.scale
             rot = obj.rotation_euler
             create_tree(pos)
-            ob = bpy.context.active_object  # this is the new object that has been set active by 'create_tree'
+            ob = context.active_object  # this is the new object that has been set active by 'create_tree'
             ob.scale = scale
             ob.rotation_euler = rot
             ob.select = False
@@ -284,7 +286,7 @@ class UpdateTreeOperator(Operator):
                 arm_rot = obj.parent.rotation_euler
                 obj.parent.select = True
 
-                if scene.create_armature:
+                if mtree_props.create_armature:
                     ob.parent.location = arm_pos
                     ob.parent.scale = arm_scale
                     ob.parent.rotation_euler = arm_rot
@@ -317,9 +319,9 @@ class UpdateTwigOperator(Operator):
             self.report({message_lvls[i]}, message)
             return {status}
 
-        scene = context.scene
+        mtree_props = context.scene.mtree_props
 
-        seed(scene.SeedProp)
+        seed(mtree_props.SeedProp)
         obj = bpy.context.active_object
 
         try:
@@ -329,7 +331,7 @@ class UpdateTwigOperator(Operator):
             return {'CANCELLED'}
 
         if is_tree_prop:
-            pos = obj.location
+            pos = obj.location  # this is never used...should it be?
             scale = obj.scale
             rot = obj.rotation_euler
             bpy.ops.mod_tree.add_twig()
