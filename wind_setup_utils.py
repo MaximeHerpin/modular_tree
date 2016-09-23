@@ -39,13 +39,13 @@ class WindOperator(Operator):
             self.report({message_lvls[i]}, message)
             return {status}
 
-        scene = context.scene
+        mtree_props = context.scene.mtree_props
 
         # check for control object and terrain
-        if not scene.terrain:
+        if not mtree_props.terrain:
             self.report({'ERROR'}, "Missing terrain object!")
             return {'CANCELLED'}
-        if not scene.wind_controller:
+        if not mtree_props.wind_controller:
             self.report({'ERROR'}, "Missing control object!")
             return {'CANCELLED'}
 
@@ -81,7 +81,7 @@ class WindOperator(Operator):
 
             wind_group.add([i for i in range(len(obj.data.vertices))], 1.0, "REPLACE")
 
-            if scene.clear_mods:
+            if mtree_props.clear_mods:
                 # remove all modifiers
                 [obj.modifiers.remove(m) for m in obj.modifiers]
 
@@ -91,9 +91,9 @@ class WindOperator(Operator):
             bpy.ops.object.modifier_add(type='VERTEX_WEIGHT_PROXIMITY')
             vwp = obj.modifiers[orig_mods_len]  # this is an index so if len(0), [0] will be correct
             vwp.vertex_group = wind_group.name
-            vwp.target = bpy.data.objects[scene.terrain]
-            vwp.min_dist = scene.wind_height_start
-            vwp.max_dist = scene.wind_height_full
+            vwp.target = bpy.data.objects[mtree_props.terrain]
+            vwp.min_dist = mtree_props.wind_height_start
+            vwp.max_dist = mtree_props.wind_height_full
             vwp.proximity_mode = 'GEOMETRY'
             vwp.proximity_geometry = {'FACE'}
 
@@ -101,9 +101,9 @@ class WindOperator(Operator):
             bpy.ops.object.modifier_add(type='DISPLACE')
             displace = obj.modifiers[orig_mods_len + 1]
             displace.texture_coords = 'OBJECT'
-            displace.texture_coords_object = bpy.data.objects[scene.wind_controller]
+            displace.texture_coords_object = bpy.data.objects[mtree_props.wind_controller]
             displace.direction = 'RGB_TO_XYZ'
-            displace.strength = scene.wind_strength
+            displace.strength = mtree_props.wind_strength
             displace.texture = bpy.data.textures[wind_texture.name]
             displace.vertex_group = wind_group.name
 
