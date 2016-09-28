@@ -171,7 +171,6 @@ class MakeTwigOperator(Operator):
         mtree_props.bones_iterations = 10
         mtree_props.visualize_leafs = False
         mtree_props.leafs_iteration_length = 7
-        mtree_props.uv = True
         mtree_props.mat = mtree_props.mat
         mtree_props.roots_iteration = 0
         mtree_props.create_roots = False
@@ -189,6 +188,7 @@ class MakeTwigOperator(Operator):
             build_leaf_material("twig leaf")
 
         twig_leafs = create_tree(scene.cursor_location, is_twig=True)
+
         twig = bpy.context.active_object
         twig.name = 'twig'
         twig.active_material = bpy.data.materials.get(mtree_props.twig_bark_material)
