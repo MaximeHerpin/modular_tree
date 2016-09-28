@@ -26,7 +26,7 @@ from collections import defaultdict
 
 
 def rotate():
-    """After automatic unwrap, the uv islands are not correctly oriented, this function corrects it by rotating them acordingly"""
+    """After automatic unwrap, the uv islands are not correctly oriented, this function corrects it by rotating them accordingly."""
     bpy.ops.object.mode_set(mode='EDIT')
     make_islands = MakeIslands()
     bm = make_islands.get_bm()

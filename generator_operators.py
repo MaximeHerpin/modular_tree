@@ -200,6 +200,7 @@ class MakeTwigOperator(Operator):
                     bpy.context.active_object.active_material = bpy.data.materials.get(mtree_props.twig_leaf_material)
                     twig.select = True
                     scene.objects.active = twig
+
         bpy.ops.object.join()
         bpy.ops.transform.rotate(value=-1.5708, axis=(1, 0, 0))
         bpy.ops.transform.resize(value=(0.25, 0.25, 0.25))
