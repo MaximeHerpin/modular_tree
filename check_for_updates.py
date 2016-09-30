@@ -37,7 +37,7 @@ class CheckForUpdates(Operator):
             page = parser.get_results()
 
             #                        "version ":    (n,   n )
-            my_regex = re.compile(r'\"version\":\s*\(2,\s*5\)', re.DOTALL)
+            my_regex = re.compile(r'\"version\":\s*\(2,\s*6\)', re.DOTALL)
             # check if version number is on page
             if re.search(my_regex, page):
                 self.report({'ERROR'}, "You have the latest official release.")
