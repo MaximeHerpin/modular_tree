@@ -899,6 +899,7 @@ def create_tree(position, is_twig=False):
             mesh.vertices[i].select = True
         bpy.ops.object.mode_set(mode='EDIT')
         if mtree_props.finish_unwrap:
+            bpy.context.tool_settings.mesh_select_mode = (True, False, False)
             bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
             rotate()  # this will set the mode to object already
         else:
