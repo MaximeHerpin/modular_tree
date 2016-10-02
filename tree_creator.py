@@ -941,7 +941,7 @@ def create_tree(position, is_twig=False):
         bpy.ops.object.select_all(action='DESELECT')
         obj.select = True
         arm.select = True
-        mtree_props.objects.active = arm
+        scene.objects.active = arm
         bpy.ops.object.parent_set(type='ARMATURE_AUTO')
         bpy.ops.object.select_all(action='DESELECT')
         clock.stop("armature")
