@@ -653,6 +653,8 @@ def create_tree(position, is_twig=False):
 
     twig_leafs = []
 
+    leafs_weight_indexes = []
+
     # deselecting all objects
     for select_ob in bpy.context.selected_objects:
         select_ob.select = False
@@ -723,8 +725,7 @@ def create_tree(position, is_twig=False):
     # branches generation
     print("Generating Branches...")
     for i in range(mtree_props.iteration + mtree_props.trunk_length):
-        if i == mtree_props.iteration + mtree_props.trunk_length - mtree_props.leafs_iteration_length:
-            leafs_start_index = len(verts)
+
         if i == mtree_props.unwrap_end_iteration + mtree_props.trunk_length:
             unwrap_stop_index = len(verts)
 
@@ -769,7 +770,7 @@ def create_tree(position, is_twig=False):
                 nb = (len(bones) + 1, sortie)
                 nextremites.append((ni, radius * 0.98, direction, nsi, nb, trunk2, curr_rotation))
 
-            elif i == mtree_props.iteration + mtree_props.trunk_length - 1 or random() < mtree_props.break_chance:
+            elif i == mtree_props.iteration + mtree_props.trunk_length - 1 or random() < mtree_props.break_chance or (verts[indexes[0]] - verts[indexes[3]]).length < mtree_props.branch_min_radius:
                 end_verts = [Vector(v) for v in end_cap.verts]
                 end_faces = [f for f in end_cap.faces]
                 if is_twig:
@@ -781,6 +782,7 @@ def create_tree(position, is_twig=False):
                 faces += [add_tuple(f, n) for f in end_faces]
                 end_seams = [(1, 0), (2, 1), (3, 2), (4, 3), (5, 4), (6, 5), (7, 6), (0, 7)]
                 seams2 += [add_tuple(f, n) for f in end_seams]
+                leafs_weight_indexes.append(len(verts)-1)
 
             elif i < mtree_props.iteration + mtree_props.trunk_length - 1 and i == mtree_props.trunk_length + 1 or random() < split_probability:
                 variation = mtree_props.trunk_variation if trunk2 else mtree_props.randomangle
@@ -837,6 +839,7 @@ def create_tree(position, is_twig=False):
         extremites = nextremites
     # mesh and object creation
     print("Building Object...")
+
     mesh = bpy.data.meshes.new("tree")
 
     mesh.from_pydata(verts, [], faces)
@@ -850,11 +853,26 @@ def create_tree(position, is_twig=False):
     obj.select = False
 
     vgroups = obj.vertex_groups
-
+    print(len(leafs_weight_indexes))
     # add vertex group for the leaves particle system
     leaves_group = obj.vertex_groups.new("leaf")
     vgroups.active_index = vgroups["leaf"].index
-    leaves_group.add([i for i in range(leafs_start_index, len(verts))], 1.0, "ADD")  # add weights
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='DESELECT')
+    bpy.ops.object.mode_set(mode='OBJECT')
+    for i in leafs_weight_indexes:
+        mesh.vertices[i].select = True
+
+    bpy.ops.object.mode_set(mode='EDIT')
+    for i in range(mtree_props.leafs_iteration_length+5):
+        bpy.ops.mesh.select_more()
+
+    bpy.ops.object.vertex_group_assign()
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.object.mode_set(mode='WEIGHT_PAINT')
+    bpy.context.object.data.use_paint_mask_vertex = True
+    bpy.ops.object.vertex_group_smooth(factor=1, repeat=3)
+    bpy.ops.object.mode_set(mode='OBJECT')
 
     # add vertex group for the wind animations
     wind_group = obj.vertex_groups.new("wind_anim")
