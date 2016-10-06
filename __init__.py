@@ -199,6 +199,7 @@ class TreeBranchesPanel(Panel):
         box.prop(mtree_props, 'split_proba')
         box.prop(mtree_props, 'split_angle')
         box.prop(mtree_props, 'radius_dec')
+        box.prop(mtree_props, 'branch_min_radius')
         col = box.column(align=True)
         col.prop(mtree_props, 'branch_rotate')
         col.prop(mtree_props, 'branch_random_rotate')
@@ -494,6 +495,12 @@ class ModularTreePropertyGroup(PropertyGroup):
         min=0,
         max=360,
         description="randomize the rotation of branches angle")
+
+    branch_min_radius = FloatProperty(
+        name = "Branches minimum radius",
+        default = .04,
+        min = 0,
+        description = "radius at which a branch breaks for being to small")
 
     particle = BoolProperty(
         name="Configure Particle System",
