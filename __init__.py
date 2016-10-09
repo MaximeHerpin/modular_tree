@@ -212,6 +212,13 @@ class TreeBranchesPanel(Panel):
         box.prop_search(mtree_props, "obstacle", scene, "objects")
         if bpy.data.objects.get(mtree_props.obstacle) is not None:
             box.prop(mtree_props, 'obstacle_strength')
+        col1 = box.column()
+        col1.prop(mtree_props, 'use_force_field')
+        if mtree_props.use_force_field:
+            col1.prop(mtree_props, 'fields_point_strength')
+            col1.prop(mtree_props, 'fields_point_strength')
+            col1.prop(mtree_props, 'fields_strength_limit')
+            col1.prop(mtree_props, 'fields_radius_factor')
 
 
 class AdvancedSettingsPanel(Panel):
@@ -497,10 +504,10 @@ class ModularTreePropertyGroup(PropertyGroup):
         description="randomize the rotation of branches angle")
 
     branch_min_radius = FloatProperty(
-        name = "Branches minimum radius",
-        default = .04,
-        min = 0,
-        description = "radius at which a branch breaks for being to small")
+        name="Branches minimum radius",
+        default=.04,
+        min=0,
+        description="radius at which a branch breaks for being to small")
 
     particle = BoolProperty(
         name="Configure Particle System",
@@ -584,6 +591,33 @@ class ModularTreePropertyGroup(PropertyGroup):
         min=0,
         default=10,
         description="The distance from the terrain that the wind effect is at its highest")
+
+    use_force_field = BoolProperty(
+        name="Use Force Field",
+        default=False)
+
+    fields_point_strength = FloatProperty(
+        name="Point Force Strength",
+        min=0.0,
+        default=1)
+
+    fields_wind_strength = FloatProperty(
+        name="Wind Force Strength",
+        min=0.0,
+        default=1)
+
+    fields_strength_limit = FloatProperty(
+        name="Strength Limit",
+        min=0,
+        default=10,
+        description="limits the force so that it can't approaches infinity")
+
+    fields_radius_factor = FloatProperty(
+        name="Radius Factor",
+        min=0,
+        max=1,
+        default=.5,
+        description="How the branch radius affects the force strength. 0 means big branches are as affected as small ones")
 
     clear_mods = BoolProperty(name="Clear Modifiers", default=True)
 
