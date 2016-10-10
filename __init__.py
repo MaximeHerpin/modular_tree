@@ -27,13 +27,15 @@ from .generator_operators import MakeTreeOperator, BatchTreeOperator, MakeTwigOp
 from .presets import TreePresetLoadMenu, TreePresetRemoveMenu, SaveTreePresetOperator, InstallTreePresetOperator, RemoveTreePresetOperator, LoadTreePresetOperator
 from .logo import display_logo
 from .wind_setup_utils import WindOperator, MakeControllerOperator, MakeTerrainOperator
-from .check_for_updates import CheckForUpdates
 from .addon_name import save_addon_name
+
+# third party add-on updater
+from . import addon_updater_ops
 
 bl_info = {
     "name": "Modular trees",
     "author": "Herpin Maxime, Jake Dube",
-    "version": (2, 7),
+    "version": (2, 7, 3),
     "blender": (2, 77, 0),
     "location": "View3D > Tools > Tree > Make Tree",
     "description": "Generates an organic tree with correctly modeled branching.",
@@ -69,6 +71,40 @@ class TreeAddonPrefs(AddonPreferences):
         description="Preset File",
         subtype='FILE_PATH')
 
+    # third party add-on updater
+    auto_check_update = bpy.props.BoolProperty(
+        name="Auto-check for Update",
+        description="If enabled, auto-check for updates using an interval",
+        default=False,
+    )
+
+    updater_intrval_months = bpy.props.IntProperty(
+        name='Months',
+        description="Number of months between checking for updates",
+        default=0,
+        min=0
+    )
+    updater_intrval_days = bpy.props.IntProperty(
+        name='Days',
+        description="Number of days between checking for updates",
+        default=14,
+        min=0,
+    )
+    updater_intrval_hours = bpy.props.IntProperty(
+        name='Hours',
+        description="Number of hours between checking for updates",
+        default=0,
+        min=0,
+        max=23
+    )
+    updater_intrval_minutes = bpy.props.IntProperty(
+        name='Minutes',
+        description="Number of minutes between checking for updates",
+        default=0,
+        min=0,
+        max=59
+    )
+
     def draw(self, context):
         layout = self.layout
 
@@ -83,12 +119,13 @@ class TreeAddonPrefs(AddonPreferences):
             "https://github.com/MaximeHerpin/modular_tree/wiki/Roadmap"
         row.operator("wm.url_open", text="Official Discussion Forum", icon='QUESTION').url = \
             "https://blenderartists.org/forum/showthread.php?405377-Addon-Modular-Tree"
-        row.operator("mod_tree.check_for_updates", icon='RADIO')
 
         box = layout.box()
         box.label("Preset Installer")
         box.prop(self, 'preset_file')
         box.operator("mod_tree.install_preset")
+
+        addon_updater_ops.update_settings_ui(self, context)
 
 
 class MakeTreePanel(Panel):
@@ -122,6 +159,8 @@ class MakeTreePanel(Panel):
             if mtree_props.finish_unwrap:
                 box.prop(mtree_props, "unwrap_end_iteration")
 
+        addon_updater_ops.update_notice_box_ui(self, context)
+
 
 class BatchTreePanel(Panel):
     bl_label = "Batch Tree Generation"
@@ -131,7 +170,7 @@ class BatchTreePanel(Panel):
     bl_context = "objectmode"
     bl_category = 'Tree'
     bl_options = {'DEFAULT_CLOSED'}
-    
+
     def draw(self, context):
         mtree_props = context.scene.mtree_props
         layout = self.layout
@@ -143,7 +182,7 @@ class BatchTreePanel(Panel):
         box.prop(mtree_props, "batch_radius_randomness")
         box.prop_search(mtree_props, "batch_group_name", bpy.data, "groups")
         box.prop(mtree_props, "batch_space")
- 
+
 
 class RootsAndTrunksPanel(Panel):
     bl_label = "Roots and Trunk"
@@ -285,7 +324,7 @@ class MakeTwigPanel(Panel):
         row = layout.row()
         row.scale_y = 1.5
         row.operator("mod_tree.add_twig", icon="SCULPTMODE_HLT")
-        
+
         row = layout.row()
         row.scale_y = 1.5
         row.operator("mod_tree.update_twig", icon="FILE_REFRESH")
@@ -297,7 +336,7 @@ class MakeTwigPanel(Panel):
         box.prop(mtree_props, "TwigSeedProp")
         box.prop(mtree_props, "twig_iteration")
         box.prop_search(mtree_props, "twig_bark_material", bpy.data, "materials")
-        box.prop_search(mtree_props, "twig_leaf_material", bpy.data, "materials")           
+        box.prop_search(mtree_props, "twig_leaf_material", bpy.data, "materials")
 
 
 class MakeTreePresetsPanel(Panel):
@@ -596,8 +635,7 @@ classes = [MakeTreeOperator, BatchTreeOperator, MakeTwigOperator, UpdateTreeOper
            MakeControllerOperator, MakeTerrainOperator,
            MakeTreePanel, BatchTreePanel, RootsAndTrunksPanel, TreeBranchesPanel, AdvancedSettingsPanel,
            MakeTwigPanel, TreePresetLoadMenu, TreePresetRemoveMenu, WindAnimationPanel, MakeTreePresetsPanel,
-           InstallTreePresetOperator, CheckForUpdates,
-           TreeAddonPrefs, ModularTreePropertyGroup]
+           InstallTreePresetOperator, TreeAddonPrefs, ModularTreePropertyGroup]
 
 prefix = "https://github.com/MaximeHerpin/modular_tree/wiki/"
 documentation_mapping = (
@@ -688,6 +726,8 @@ def doc_map():
 def register():
     save_addon_name(__name__)
 
+    addon_updater_ops.register(bl_info)
+
     # register all classes
     for i in classes:
         bpy.utils.register_class(i)
@@ -700,6 +740,8 @@ def register():
 
 
 def unregister():
+    addon_updater_ops.unregister()
+
     # unregister all classes
     for i in classes:
         bpy.utils.unregister_class(i)
