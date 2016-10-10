@@ -35,7 +35,7 @@ from . import addon_updater_ops
 bl_info = {
     "name": "Modular trees",
     "author": "Herpin Maxime, Jake Dube",
-    "version": (2, 7),
+    "version": (2, 7, 3),
     "blender": (2, 77, 0),
     "location": "View3D > Tools > Tree > Make Tree",
     "description": "Generates an organic tree with correctly modeled branching.",
