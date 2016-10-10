@@ -166,6 +166,7 @@ class RootsAndTrunksPanel(Panel):
 
         box = layout.box()
         box.label("Trunk")
+        box.prop(mtree_props, 'use_grease_pencil')
         box.prop(mtree_props, 'trunk_length')
         box.prop(mtree_props, 'trunk_variation')
         box.prop(mtree_props, 'trunk_space')
@@ -584,7 +585,11 @@ class ModularTreePropertyGroup(PropertyGroup):
         min=0,
         default=10,
         description="The distance from the terrain that the wind effect is at its highest")
-
+    
+    use_grease_pencil = BoolProperty(
+        name = "Use Grease Pencil",
+        default = False)
+    
     clear_mods = BoolProperty(name="Clear Modifiers", default=True)
 
     wind_strength = FloatProperty(name="Wind Strength", default=1)
