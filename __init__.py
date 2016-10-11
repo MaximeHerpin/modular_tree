@@ -28,6 +28,7 @@ from .presets import TreePresetLoadMenu, TreePresetRemoveMenu, SaveTreePresetOpe
 from .logo import display_logo
 from .wind_setup_utils import WindOperator, MakeControllerOperator, MakeTerrainOperator
 from .addon_name import save_addon_name
+from .icons import register_icons, unregister_icons, get_icon
 
 # third party add-on updater
 from . import addon_updater_ops
@@ -142,7 +143,7 @@ class MakeTreePanel(Panel):
 
         row = layout.row()
         row.scale_y = 1.5
-        row.operator("mod_tree.add_tree", icon="WORLD")
+        row.operator("mod_tree.add_tree", icon_value=get_icon("TREE"))
 
         row = layout.row()
         row.scale_y = 1.5
@@ -724,6 +725,8 @@ def doc_map():
 
 
 def register():
+    register_icons()
+
     save_addon_name(__name__)
 
     addon_updater_ops.register(bl_info)
@@ -740,6 +743,8 @@ def register():
 
 
 def unregister():
+    unregister_icons()
+    
     addon_updater_ops.unregister()
 
     # unregister all classes
