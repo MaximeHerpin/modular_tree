@@ -35,7 +35,7 @@ from . import addon_updater_ops
 bl_info = {
     "name": "Modular trees",
     "author": "Herpin Maxime, Jake Dube",
-    "version": (2, 7, 3),
+    "version": (2, 8, 0),
     "blender": (2, 77, 0),
     "location": "View3D > Tools > Tree > Make Tree",
     "description": "Generates an organic tree with correctly modeled branching.",
@@ -205,6 +205,11 @@ class RootsAndTrunksPanel(Panel):
 
         box = layout.box()
         box.label("Trunk")
+        sbox = box.box()
+        sbox.prop(mtree_props, 'use_grease_pencil')
+        if mtree_props.use_grease_pencil:
+            sbox.prop(mtree_props, 'smooth_stroke')
+            sbox.prop(mtree_props, 'stroke_step_size')
         box.prop(mtree_props, 'trunk_length')
         box.prop(mtree_props, 'trunk_variation')
         box.prop(mtree_props, 'trunk_space')
@@ -623,7 +628,23 @@ class ModularTreePropertyGroup(PropertyGroup):
         min=0,
         default=10,
         description="The distance from the terrain that the wind effect is at its highest")
+    
+    use_grease_pencil = BoolProperty(
+        name = "Use Grease Pencil",
+        default = False)
 
+    smooth_stroke = FloatProperty(
+        name = "Smooth Iterations",
+        min = 0.0,
+        max = 1,
+        default = .2)
+
+    stroke_step_size = FloatProperty(
+        name = "Step Size",
+        min = 0,
+        default = .5)
+
+    
     clear_mods = BoolProperty(name="Clear Modifiers", default=True)
 
     wind_strength = FloatProperty(name="Wind Strength", default=1)
