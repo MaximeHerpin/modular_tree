@@ -147,7 +147,7 @@ class MakeTreePanel(Panel):
 
         row = layout.row()
         row.scale_y = 1.5
-        row.operator("mod_tree.update_tree", icon="FILE_REFRESH")
+        row.operator("mod_tree.update_tree", icon_value=get_icon("TREE_UPDATE"))
 
         box = layout.box()
         box.label("Basic")
@@ -177,7 +177,7 @@ class BatchTreePanel(Panel):
         layout = self.layout
         row = layout.row()
         row.scale_y = 1.5
-        row.operator("mod_tree.batch_tree", icon="LOGIC")
+        row.operator("mod_tree.batch_tree", icon_value=get_icon("BATCH_TREE"))
         box = layout.box()
         box.prop(mtree_props, "tree_number")
         box.prop(mtree_props, "batch_radius_randomness")
@@ -298,7 +298,7 @@ class WindAnimationPanel(Panel):
         box = layout.box()
         row = box.row()
         row.scale_y = 1.5
-        row.operator("mod_tree.animate_wind", icon="FORCE_VORTEX")
+        row.operator("mod_tree.animate_wind", icon="FORCE_WIND")
         box.operator("mod_tree.make_wind_controller", icon="FORCE_VORTEX")
         box.operator("mod_tree.make_terrain", icon="FORCE_VORTEX")
         box.prop_search(mtree_props, "wind_controller", bpy.data, "objects")
@@ -324,7 +324,7 @@ class MakeTwigPanel(Panel):
 
         row = layout.row()
         row.scale_y = 1.5
-        row.operator("mod_tree.add_twig", icon="SCULPTMODE_HLT")
+        row.operator("mod_tree.add_twig", icon_value=get_icon('TWIG'))
 
         row = layout.row()
         row.scale_y = 1.5

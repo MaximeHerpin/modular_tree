@@ -21,7 +21,7 @@ from os.path import join, dirname
 from bpy.utils import previews
 
 # global variables
-ICONS = {'TREE'}
+ICONS = {'TREE', 'TREE_UPDATE', 'BATCH_TREE', 'TWIG'}
 ICON_COLLECTION = {}
 
 
