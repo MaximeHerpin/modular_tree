@@ -166,7 +166,11 @@ class RootsAndTrunksPanel(Panel):
 
         box = layout.box()
         box.label("Trunk")
-        box.prop(mtree_props, 'use_grease_pencil')
+        sbox = box.box()
+        sbox.prop(mtree_props, 'use_grease_pencil')
+        if mtree_props.use_grease_pencil:
+            sbox.prop(mtree_props, 'smooth_stroke')
+            sbox.prop(mtree_props, 'stroke_step_size')
         box.prop(mtree_props, 'trunk_length')
         box.prop(mtree_props, 'trunk_variation')
         box.prop(mtree_props, 'trunk_space')
@@ -589,6 +593,18 @@ class ModularTreePropertyGroup(PropertyGroup):
     use_grease_pencil = BoolProperty(
         name = "Use Grease Pencil",
         default = False)
+
+    smooth_stroke = FloatProperty(
+        name = "Smooth Iterations",
+        min = 0.0,
+        max = 1,
+        default = .2)
+
+    stroke_step_size = FloatProperty(
+        name = "Step Size",
+        min = 0,
+        default = .5)
+
     
     clear_mods = BoolProperty(name="Clear Modifiers", default=True)
 

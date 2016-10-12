@@ -1010,8 +1010,8 @@ def create_tree(position, is_twig=False):
     save_trunk_length = mtree_props.trunk_length
     save_trunk_space = mtree_props.trunk_space
     if mtree_props.use_grease_pencil and gp is not None and gp.layers.active is not None and gp.layers.active.active_frame is not None and len(gp.layers.active.active_frame.strokes) > 0 and len(gp.layers.active.active_frame.strokes[0].points) > 2:
-        grease_points = rehash_set([i.co for i in gp.layers.active.active_frame.strokes[0].points], .5)
-        grease_points = smooth_stroke(5,.3,grease_points)
+        grease_points = rehash_set([i.co for i in gp.layers.active.active_frame.strokes[0].points], mtree_props.stroke_step_size)
+        grease_points = smooth_stroke(5,mtree_props.smooth_stroke,grease_points)
         mtree_props.trunk_length = len(grease_points) -2
         using_grease = True
     
