@@ -996,7 +996,7 @@ def create_tree(position, is_twig=False):
 
             if i > mtree_props.preserve_end:
                 trunk2 = False
-            pos = Vector((0, 0, 0))
+            pos = position
 
             for k in indexes:
                 pos += verts[k]
