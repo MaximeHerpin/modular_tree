@@ -1026,17 +1026,39 @@ def create_tree(position, is_twig=False):
 
         for E in extremites:
             indexes, radius, direction, s_index, Lb, trunk2, curr_rotation = E
+            real_radius = (verts[indexes[0]] - verts[indexes[3]]).length
             new_rotation = (curr_rotation + mtree_props.branch_rotate + 2 * (1 - random()) * mtree_props.branch_random_rotate) % 360
 
             if i > mtree_props.preserve_end:
                 trunk2 = False
-            pos = Vector((0, 0, 0))
+            pos = position
 
             for k in indexes:
                 pos += verts[k]
             pos /= len(indexes)
             direction.normalize()
             end = pos + direction * 10
+
+            point_forces = [ob for ob in bpy.data.objects if ob.type == 'EMPTY' and ob.field.type == 'FORCE']
+            wind_forces = [ob for ob in bpy.data.objects if ob.type == 'EMPTY' and ob.field.type == 'WIND']
+            factor = mtree_props.fields_radius_factor
+            point_net_force = Vector((0,0,0))
+            for ob in point_forces:
+                force_power = max(1,ob.field.falloff_power)
+                sgn = 1 if ob.field.strength == 0 else ob.field.strength/abs(ob.field.strength)
+                force_direction = pos - ob.location
+                dist = force_direction.length
+                force_direction.normalize()
+                point_net_force += min((1/real_radius*factor + (1-factor))*abs(ob.field.strength)/((dist)**(force_power)), mtree_props.fields_strength_limit)*sgn*(force_direction)
+
+            wind_net_force = Vector((0,0,0))
+            for ob in wind_forces:
+                force_direction = Vector((0,0,1))
+                force_direction.rotate(ob.rotation_euler)
+                wind_net_force += min(ob.field.strength,mtree_props.fields_strength_limit)*force_direction
+
+
+            direction +=  mtree_props.fields_point_strength/10 * point_net_force + mtree_props.fields_wind_strength/30 * wind_net_force
 
             if bpy.data.objects.get(mtree_props.obstacle) is not None:
                 obs = scene.objects[mtree_props.obstacle]
