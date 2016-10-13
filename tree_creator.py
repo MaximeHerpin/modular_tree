@@ -880,7 +880,31 @@ def add_leaf(position, direction, rotation, scale):
     bpy.ops.object.mode_set(mode='OBJECT')
     bpy.ops.object.shade_smooth()
 
+def rehash_set(s, p_dist):
+    new_set = []
+    new_set.append(s[0])
+    i = 1
+    while i < len(s):
+        n_dist = (s[i] - new_set[-1]).length
+        if n_dist >= p_dist:
+            new_set.append(new_set[-1] + p_dist/n_dist * (s[i] - new_set[-1]))
+        else:
+            i+=1
+    return new_set
 
+
+
+def smooth_stroke(iterations,smooth,points):
+    
+    for i in range(iterations):
+        new_points = []
+        new_points.append(points[0])
+        for j in range (1,len(points)-1):
+            new_points.append(smooth/2*(points[j-1]+points[j+1]) + (1-smooth)* points[j])
+        new_points.append(points[-1])
+        points = new_points
+    return points
+    
 def create_tree(position, is_twig=False):
     """Creates a tree
 
@@ -979,7 +1003,18 @@ def create_tree(position, is_twig=False):
 
     radius = mtree_props.radius
     extremites = [(extr, radius, Vector((0, 0, 1)), extr[0], last_bone, trunk2, 0)]
-
+    curr_grease_point = 0
+    using_grease = False
+    gp = bpy.context.scene.grease_pencil
+    grease_points = []
+    save_trunk_length = mtree_props.trunk_length
+    save_trunk_space = mtree_props.trunk_space
+    if mtree_props.use_grease_pencil and gp is not None and gp.layers.active is not None and gp.layers.active.active_frame is not None and len(gp.layers.active.active_frame.strokes) > 0 and len(gp.layers.active.active_frame.strokes[0].points) > 2:
+        grease_points = rehash_set([i.co for i in gp.layers.active.active_frame.strokes[0].points], mtree_props.stroke_step_size)
+        grease_points = smooth_stroke(5,mtree_props.smooth_stroke,grease_points)
+        mtree_props.trunk_length = len(grease_points) -2
+        using_grease = True
+    
     # branches generation
     print("Generating Branches...")
     for i in range(mtree_props.iteration + mtree_props.trunk_length):
@@ -1039,10 +1074,22 @@ def create_tree(position, is_twig=False):
 
             if i <= mtree_props.trunk_length:
                 branch_verts = [v for v in branch.verts]
-                ni, direction, nsi = join_branch(verts, faces, indexes, radius, mtree_props.trunk_space, branch_verts,
-                                                 direction,
-                                                 mtree_props.trunk_variation, s_index, seams2)
-                sortie = pos + direction * mtree_props.branch_length
+                if not using_grease:
+                    ni, direction, nsi = join_branch(verts, faces, indexes, radius, mtree_props.trunk_space, branch_verts,
+                                                     direction,
+                                                     mtree_props.trunk_variation, s_index, seams2)
+                    sortie = pos + direction * mtree_props.branch_length
+
+                else:
+                    grease_dir = grease_points[curr_grease_point+1] - grease_points[curr_grease_point]
+                    grease_length = grease_dir.length
+                    grease_dir.normalize()
+                    ni, direction, nsi = join_branch(verts, faces, indexes, radius,grease_length,
+                                                     branch_verts,
+                                                     grease_dir,
+                                                     0, s_index, seams2)
+                    sortie = pos + grease_dir * grease_length
+                    curr_grease_point +=1
 
                 if i <= mtree_props.bones_iterations:
                     bones.append((Lb[0], len(bones) + 2, Lb[1], sortie))
@@ -1118,6 +1165,8 @@ def create_tree(position, is_twig=False):
 
         extremites = nextremites
     # mesh and object creation
+    mtree_props.trunk_length = save_trunk_length
+    mtree_props.trunk_space = save_trunk_space
     print("Building Object...")
 
     mesh = bpy.data.meshes.new("tree")
@@ -1125,7 +1174,7 @@ def create_tree(position, is_twig=False):
     mesh.from_pydata(verts, [], faces)
     mesh.update(calc_edges=False)
     obj = bpy.data.objects.new("tree", mesh)
-    obj.location = position
+    obj.location = position if not using_grease else grease_points[0] - Vector((0,0,1))
     scene.objects.link(obj)
     scene.objects.active = obj
     obj.select = True
