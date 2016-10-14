@@ -278,6 +278,7 @@ class AdvancedSettingsPanel(Panel):
     def draw(self, context):
         mtree_props = context.scene.mtree_props
         layout = self.layout
+        scene = context.scene
 
         box = layout.box()
         box.prop(mtree_props, 'mat')
@@ -292,6 +293,8 @@ class AdvancedSettingsPanel(Panel):
         if mtree_props.particle:
             box.prop(mtree_props, 'number')
             box.prop(mtree_props, 'display')
+            box.prop_search(mtree_props, "twig_particle", scene, "objects")
+            box.prop(mtree_props, 'particle_size')
 
 
 class WindAnimationPanel(Panel):
@@ -333,6 +336,7 @@ class MakeTwigPanel(Panel):
     def draw(self, context):
         mtree_props = context.scene.mtree_props
         layout = self.layout
+        scene = context.scene
 
         row = layout.row()
         row.scale_y = 1.5
@@ -345,11 +349,12 @@ class MakeTwigPanel(Panel):
         box = layout.box()
         box.label("Twig Options")
         box.prop(mtree_props, "leaf_size")
+        box.prop_search(mtree_props, "leaf_object", scene, "objects")
         box.prop(mtree_props, "leaf_chance")
+        box.prop(mtree_props, "leaf_weight")
         box.prop(mtree_props, "TwigSeedProp")
         box.prop(mtree_props, "twig_iteration")
         box.prop_search(mtree_props, "twig_bark_material", bpy.data, "materials")
-        box.prop_search(mtree_props, "twig_leaf_material", bpy.data, "materials")
 
 
 class MakeTreePresetsPanel(Panel):
@@ -566,6 +571,15 @@ class ModularTreePropertyGroup(PropertyGroup):
         name="Particles in Viewport",
         default=500)
 
+    twig_particle = StringProperty(
+        name='twig or leaf object',
+        default='')
+
+    particle_size = FloatProperty(
+        name="twig/leaf size",
+        min=0,
+        default=1.5)
+
     break_chance = FloatProperty(
         name="Break Chance",
         default=0.02)
@@ -583,8 +597,11 @@ class ModularTreePropertyGroup(PropertyGroup):
         min=0,
         default=.5)
 
-    twig_leaf_material = StringProperty(
-        name="Leaf Material")
+    leaf_weight = FloatProperty(
+        name="Leaf Weight",
+        min=0,
+        max=1,
+        default=.2)
 
     twig_bark_material = StringProperty(
         name="Twig Bark Material")
@@ -598,6 +615,11 @@ class ModularTreePropertyGroup(PropertyGroup):
         min=3,
         soft_max=10,
         default=9)
+
+    leaf_object = StringProperty(
+        name="leaf object",
+        default="",
+        description="The object used for the leaves.  \nThe leaf must be on Y axis and the rotation must be applied")
 
     tree_number = IntProperty(
         name="Tree Number",
