@@ -1024,8 +1024,8 @@ def create_tree(position, is_twig=False):
     save_trunk_space = mtree_props.trunk_space
     if mtree_props.use_grease_pencil and gp is not None and gp.layers.active is not None and gp.layers.active.active_frame is not None and len(gp.layers.active.active_frame.strokes) > 0 and len(gp.layers.active.active_frame.strokes[0].points) > 2:
         grease_points = rehash_set([i.co for i in gp.layers.active.active_frame.strokes[0].points], mtree_props.stroke_step_size)
-        grease_points = smooth_stroke(5,mtree_props.smooth_stroke,grease_points)
-        mtree_props.trunk_length = len(grease_points) -2
+        grease_points = smooth_stroke(5, mtree_props.smooth_stroke, grease_points)
+        mtree_props.trunk_length = len(grease_points) - 2
         using_grease = True
     
     # branches generation
@@ -1044,15 +1044,15 @@ def create_tree(position, is_twig=False):
             new_rotation = (curr_rotation + mtree_props.branch_rotate + 2 * (1 - random()) * mtree_props.branch_random_rotate) % 360
 
             if i > mtree_props.preserve_end:
-                trunk2 = False
-            pos = Vector((0,0,0))
+                trunk2 = False  # shadows name "trunk2" from outer scope
+            pos = Vector((0, 0, 0))
 
             for k in indexes:
                 pos += verts[k]
             pos /= len(indexes)
             direction.normalize()
 
-            if is_twig and i>2:
+            if is_twig and i > 2:
                 twig_leafs.append((pos, direction))
 
             end = pos + direction * 10
@@ -1104,7 +1104,9 @@ def create_tree(position, is_twig=False):
                     sortie = pos + direction * mtree_props.branch_length
 
                 else:
-                    grease_dir = grease_points[curr_grease_point+1] - grease_points[curr_grease_point]
+                    gp1 = grease_points[curr_grease_point + 1]
+                    gp2 = grease_points[curr_grease_point]
+                    grease_dir = gp1 - gp2
                     grease_length = grease_dir.length
                     grease_dir.normalize()
                     ni, direction, nsi = join_branch(verts, faces, indexes, radius,grease_length,
@@ -1112,7 +1114,7 @@ def create_tree(position, is_twig=False):
                                                      grease_dir,
                                                      0, s_index, seams2)
                     sortie = pos + grease_dir * grease_length
-                    curr_grease_point +=1
+                    curr_grease_point += 1
 
                 if i <= mtree_props.bones_iterations:
                     bones.append((Lb[0], len(bones) + 2, Lb[1], sortie))
@@ -1120,7 +1122,10 @@ def create_tree(position, is_twig=False):
                 nb = (len(bones) + 1, sortie)
                 nextremites.append((ni, radius * 0.98, direction, nsi, nb, trunk2, curr_rotation))
 
-            elif i == mtree_props.iteration + mtree_props.trunk_length - 1 or random() < mtree_props.break_chance or real_radius < mtree_props.branch_min_radius:
+            elif i == mtree_props.iteration + mtree_props.trunk_length - 1 \
+                    or random() < mtree_props.break_chance \
+                    or real_radius < mtree_props.branch_min_radius:
+
                 end_verts = [Vector(v) for v in end_cap.verts]
                 end_faces = [f for f in end_cap.faces]
 
@@ -1134,7 +1139,10 @@ def create_tree(position, is_twig=False):
                 if real_radius < mtree_props.radius / 4:
                     leafs_weight_indexes.append(len(verts)-1)
 
-            elif i < mtree_props.iteration + mtree_props.trunk_length - 1 and i == mtree_props.trunk_length + 1 or random() < split_probability:
+            elif i < mtree_props.iteration + mtree_props.trunk_length - 1 \
+                    and i == mtree_props.trunk_length + 1 \
+                    or random() < split_probability:
+
                 variation = mtree_props.trunk_variation if trunk2 else mtree_props.randomangle
                 rand_j = randint(1,5)
                 rand_T = randint(0,4)
@@ -1206,8 +1214,9 @@ def create_tree(position, is_twig=False):
     obj.select = False
 
     vgroups = obj.vertex_groups
-   # add vertex group for the leaves particle system
-    leaves_group = obj.vertex_groups.new("leaf")
+
+    # add vertex group for the leaves particle system
+    obj.vertex_groups.new("leaf")
     vgroups.active_index = vgroups["leaf"].index
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='DESELECT')
