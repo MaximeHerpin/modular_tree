@@ -1097,7 +1097,7 @@ def create_tree(position, is_twig=False):
 
             if i <= mtree_props.trunk_length:
                 branch_verts = [v for v in branch.verts]
-                if not using_grease:
+                if not using_grease or curr_grease_point >= len(grease_points)-2:
                     ni, direction, nsi = join_branch(verts, faces, indexes, radius, mtree_props.trunk_space, branch_verts,
                                                      direction,
                                                      mtree_props.trunk_variation, s_index, seams2)
