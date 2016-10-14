@@ -85,11 +85,21 @@ def always_save():
     return "SUCCESS", None
 
 
-def save_everything():
-    # save files
-    save_return, bad_file = always_save()
+def save_everything(twig=False):
     messages = []
     message_lvls = []
+    scene = bpy.context.scene
+    mtree_props = scene.mtree_props
+
+    if twig:
+        # do illegal settings checks here
+        if mtree_props.leaf_object not in scene.objects:
+            messages += ["Requires a valid leaf object! Add one with the object selector in the twig UI."]
+            message_lvls += ['ERROR']
+            return messages, message_lvls, 'CANCELLED'
+
+    # save files
+    save_return, bad_file = always_save()
     if save_return == "BLEND_ERROR":
         messages += ["Save file or disable always save " + "in user prefs."]
         message_lvls += ['ERROR']

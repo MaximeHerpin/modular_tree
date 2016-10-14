@@ -101,15 +101,16 @@ class MakeTwigOperator(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
+        scene = context.scene
+        mtree_props = scene.mtree_props
+
         # this block saves everything and cancels operator if something goes wrong
         display_logo()
-        messages, message_lvls, status = save_everything()
+        messages, message_lvls, status = save_everything(twig=True)
         for i, message in enumerate(messages):
             self.report({message_lvls[i]}, message)
             return {status}
 
-        scene = context.scene
-        mtree_props = scene.mtree_props
 
         seed(mtree_props.TwigSeedProp)
         save_preserve_trunk = mtree_props.preserve_trunk
@@ -324,7 +325,7 @@ class UpdateTwigOperator(Operator):
     def execute(self, context):
         # this block saves everything and cancels operator if something goes wrong
         display_logo()
-        messages, message_lvls, status = save_everything()
+        messages, message_lvls, status = save_everything(twig=True)
         for i, message in enumerate(messages):
             self.report({message_lvls[i]}, message)
             return {status}
