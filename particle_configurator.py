@@ -17,8 +17,10 @@
 # along with Modular Tree.  If not, see <http://www.gnu.org/licenses/>.
 # ##### END GPL LICENSE BLOCK #####
 
+import bpy
 
-def create_system(ob, number, display, vertex_group):
+
+def create_system(ob, number, display, vertex_group, object_name, size):
     """ Creates a particle system
 
     Args:
@@ -31,7 +33,7 @@ def create_system(ob, number, display, vertex_group):
     g = vertex_group
 
     # customize the particle system
-    leaf = ob.modifiers.new("psys name", 'PARTICLE_SYSTEM')
+    leaf = ob.modifiers.new("leafs", 'PARTICLE_SYSTEM')
     part = ob.particle_systems[0]
     part.vertex_group_density = g.name
     settings = leaf.particle_system.settings
@@ -46,7 +48,9 @@ def create_system(ob, number, display, vertex_group):
     settings.use_rotations = True
     settings.phase_factor = 1
     settings.phase_factor_random = 1
-    settings.particle_size = 0.015
+    settings.particle_size = 0.1 * size
     settings.size_random = 0.25
     settings.brownian_factor = 1
     settings.render_type = "OBJECT"
+    if bpy.data.objects.get(object_name) is not None:
+        settings.dupli_object = bpy.context.scene.objects[object_name]

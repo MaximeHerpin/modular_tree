@@ -35,7 +35,7 @@ from . import addon_updater_ops
 bl_info = {
     "name": "Modular trees",
     "author": "Herpin Maxime, Jake Dube",
-    "version": (2, 8, 0),
+    "version": (2, 8, 1),
     "blender": (2, 77, 0),
     "location": "View3D > Tools > Tree > Make Tree",
     "description": "Generates an organic tree with correctly modeled branching.",
@@ -256,6 +256,13 @@ class TreeBranchesPanel(Panel):
         box.prop_search(mtree_props, "obstacle", scene, "objects")
         if bpy.data.objects.get(mtree_props.obstacle) is not None:
             box.prop(mtree_props, 'obstacle_strength')
+        col1 = box.column()
+        col1.prop(mtree_props, 'use_force_field')
+        if mtree_props.use_force_field:
+            col1.prop(mtree_props, 'fields_point_strength')
+            col1.prop(mtree_props, 'fields_point_strength')
+            col1.prop(mtree_props, 'fields_strength_limit')
+            col1.prop(mtree_props, 'fields_radius_factor')
 
 
 class AdvancedSettingsPanel(Panel):
@@ -270,6 +277,7 @@ class AdvancedSettingsPanel(Panel):
     def draw(self, context):
         mtree_props = context.scene.mtree_props
         layout = self.layout
+        scene = context.scene
 
         box = layout.box()
         box.prop(mtree_props, 'mat')
@@ -284,6 +292,8 @@ class AdvancedSettingsPanel(Panel):
         if mtree_props.particle:
             box.prop(mtree_props, 'number')
             box.prop(mtree_props, 'display')
+            box.prop_search(mtree_props, "twig_particle", scene, "objects")
+            box.prop(mtree_props, 'particle_size')
 
 
 class WindAnimationPanel(Panel):
@@ -325,6 +335,7 @@ class MakeTwigPanel(Panel):
     def draw(self, context):
         mtree_props = context.scene.mtree_props
         layout = self.layout
+        scene = context.scene
 
         row = layout.row()
         row.scale_y = 1.5
@@ -337,11 +348,12 @@ class MakeTwigPanel(Panel):
         box = layout.box()
         box.label("Twig Options")
         box.prop(mtree_props, "leaf_size")
+        box.prop_search(mtree_props, "leaf_object", scene, "objects")
         box.prop(mtree_props, "leaf_chance")
+        box.prop(mtree_props, "leaf_weight")
         box.prop(mtree_props, "TwigSeedProp")
         box.prop(mtree_props, "twig_iteration")
         box.prop_search(mtree_props, "twig_bark_material", bpy.data, "materials")
-        box.prop_search(mtree_props, "twig_leaf_material", bpy.data, "materials")
 
 
 class MakeTreePresetsPanel(Panel):
@@ -541,10 +553,10 @@ class ModularTreePropertyGroup(PropertyGroup):
         description="randomize the rotation of branches angle")
 
     branch_min_radius = FloatProperty(
-        name = "Branches minimum radius",
-        default = .04,
-        min = 0,
-        description = "radius at which a branch breaks for being to small")
+        name="Branches minimum radius",
+        default=.04,
+        min=0,
+        description="radius at which a branch breaks for being to small")
 
     particle = BoolProperty(
         name="Configure Particle System",
@@ -557,6 +569,15 @@ class ModularTreePropertyGroup(PropertyGroup):
     display = IntProperty(
         name="Particles in Viewport",
         default=500)
+
+    twig_particle = StringProperty(
+        name='twig or leaf object',
+        default='')
+
+    particle_size = FloatProperty(
+        name="twig/leaf size",
+        min=0,
+        default=1.5)
 
     break_chance = FloatProperty(
         name="Break Chance",
@@ -575,8 +596,11 @@ class ModularTreePropertyGroup(PropertyGroup):
         min=0,
         default=.5)
 
-    twig_leaf_material = StringProperty(
-        name="Leaf Material")
+    leaf_weight = FloatProperty(
+        name="Leaf Weight",
+        min=0,
+        max=1,
+        default=.2)
 
     twig_bark_material = StringProperty(
         name="Twig Bark Material")
@@ -590,6 +614,11 @@ class ModularTreePropertyGroup(PropertyGroup):
         min=3,
         soft_max=10,
         default=9)
+
+    leaf_object = StringProperty(
+        name="leaf object",
+        default="",
+        description="The object used for the leaves.  \nThe leaf must be on Y axis and the rotation must be applied")
 
     tree_number = IntProperty(
         name="Tree Number",
@@ -630,21 +659,48 @@ class ModularTreePropertyGroup(PropertyGroup):
         description="The distance from the terrain that the wind effect is at its highest")
     
     use_grease_pencil = BoolProperty(
-        name = "Use Grease Pencil",
-        default = False)
+        name="Use Grease Pencil",
+        default=False)
 
     smooth_stroke = FloatProperty(
-        name = "Smooth Iterations",
-        min = 0.0,
-        max = 1,
-        default = .2)
+        name="Smooth Iterations",
+        min=0.0,
+        max=1,
+        default=.2)
 
     stroke_step_size = FloatProperty(
-        name = "Step Size",
-        min = 0,
-        default = .5)
+        name="Step Size",
+        min=0,
+        default=.5)
 
-    
+    use_force_field = BoolProperty(
+        name="Use Force Field",
+        default=False)
+
+    fields_point_strength = FloatProperty(
+        name="Point Force Strength",
+        min=0.0,
+        default=1)
+
+    fields_wind_strength = FloatProperty(
+        name="Wind Force Strength",
+        min=0.0,
+        default=1)
+
+    fields_strength_limit = FloatProperty(
+        name="Strength Limit",
+        min=0,
+        default=10,
+        description="limits the force so that it can't approaches infinity")
+
+    fields_radius_factor = FloatProperty(
+        name="Radius Factor",
+        min=0,
+        max=1,
+        default=.5,
+        description="How the branch radius affects the force strength. "
+                    "\n0 means big branches are as affected as small ones.")
+
     clear_mods = BoolProperty(name="Clear Modifiers", default=True)
 
     wind_strength = FloatProperty(name="Wind Strength", default=1)

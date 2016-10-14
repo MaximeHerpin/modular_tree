@@ -101,19 +101,19 @@ class MakeTwigOperator(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
+        scene = context.scene
+        mtree_props = scene.mtree_props
+
         # this block saves everything and cancels operator if something goes wrong
         display_logo()
-        messages, message_lvls, status = save_everything()
+        messages, message_lvls, status = save_everything(twig=True)
         for i, message in enumerate(messages):
             self.report({message_lvls[i]}, message)
             return {status}
 
-        scene = context.scene
-        mtree_props = scene.mtree_props
 
         seed(mtree_props.TwigSeedProp)
         save_preserve_trunk = mtree_props.preserve_trunk
-        save_trunk_split_angle = mtree_props.split_angle  # This variable is never used! Should it be?
         save_randomangle = mtree_props.randomangle
         save_trunk_variation = mtree_props.trunk_variation
         save_radius = mtree_props.radius
@@ -146,6 +146,7 @@ class MakeTwigOperator(Operator):
         save_number = mtree_props.number
         save_display = mtree_props.display
         save_break_chance = mtree_props.break_chance
+        save_use_grease_pencil = mtree_props.use_grease_pencil
 
         mtree_props.preserve_trunk = False
         mtree_props.trunk_split_angle = 0
@@ -180,6 +181,7 @@ class MakeTwigOperator(Operator):
         mtree_props.number = 0
         mtree_props.display = 0
         mtree_props.break_chance = 0
+        mtree_props.use_grease_pencil = False
 
         if bpy.data.materials.get("twig bark") is None:
             build_bark_material("twig bark")
@@ -191,16 +193,23 @@ class MakeTwigOperator(Operator):
 
         twig = bpy.context.active_object
         twig.name = 'twig'
+        leafs = []
         twig.active_material = bpy.data.materials.get(mtree_props.twig_bark_material)
-        for (position, direction, rotation) in twig_leafs:
-            for i in range(randint(1, 3)):
-                if random() < mtree_props.leaf_chance:
-                    add_leaf(position + direction * .5 * random(), direction + Vector((random(), random(), random())),
-                             rotation + random() * 5, (1 + random()) * mtree_props.leaf_size)
-                    bpy.context.active_object.active_material = bpy.data.materials.get(mtree_props.twig_leaf_material)
-                    twig.select = True
-                    scene.objects.active = twig
-
+        for (position, direction) in twig_leafs:
+            if random() < mtree_props.leaf_chance:
+                for i in range(randint(1, 3)):
+                    if random() < mtree_props.leaf_chance:
+                        add_leaf(position+direction*random(), direction+Vector((random()-.5, random()-.5, 0))*.2, mtree_props.leaf_size*(2+random()), mtree_props.leaf_object, mtree_props.leaf_weight)
+                        leafs.append(bpy.context.active_object)
+                        if not bpy.context.active_object.data.materials.items():
+                            mat = bpy.data.materials.get("leaf_mat")
+                            if mat is None:
+                                mat = bpy.data.materials.new(name="leaf_mat")
+                            bpy.context.active_object.active_material = mat
+                        twig.select = True
+                        scene.objects.active = twig
+        for i in leafs:
+            i.select = True
         bpy.ops.object.join()
         bpy.ops.transform.rotate(value=-1.5708, axis=(1, 0, 0))
         bpy.ops.transform.resize(value=(0.25, 0.25, 0.25))
@@ -240,6 +249,7 @@ class MakeTwigOperator(Operator):
         mtree_props.number = save_number
         mtree_props.display = save_display
         mtree_props.break_chance = save_break_chance
+        mtree_props.use_grease_pencil = save_use_grease_pencil
 
         return {'FINISHED'}
 
@@ -315,7 +325,7 @@ class UpdateTwigOperator(Operator):
     def execute(self, context):
         # this block saves everything and cancels operator if something goes wrong
         display_logo()
-        messages, message_lvls, status = save_everything()
+        messages, message_lvls, status = save_everything(twig=True)
         for i, message in enumerate(messages):
             self.report({message_lvls[i]}, message)
             return {status}
@@ -332,7 +342,6 @@ class UpdateTwigOperator(Operator):
             return {'CANCELLED'}
 
         if is_tree_prop:
-            pos = obj.location  # this is never used...should it be?
             scale = obj.scale
             rot = obj.rotation_euler
             bpy.ops.mod_tree.add_twig()
