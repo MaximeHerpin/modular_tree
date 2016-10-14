@@ -809,7 +809,7 @@ def add_tuple(t, x):
     """Adds a value x to each component of the tuple
 
     Args:
-        t - (tupe)
+        t - (tuple)
         x - (int,float)
 
     Returns:
@@ -822,8 +822,8 @@ def rot_scale(v_co, scale, directions, rot_z):
 
     Args:
         v_co - (list of (float, float, float))  The coordinates of the vectors
-        scale - (foat) The scalar by xhich each vector is multiplied
-        directions - (tuple) A vector that would be collinear whith a former (0,0,1) vector after the rotation
+        scale - (float) The scalar by which each vector is multiplied
+        directions - (tuple) A vector that would be collinear with a former (0,0,1) vector after the rotation
         rot_z - (float) The rotation of the set of vector around directions
 
     Returns:
@@ -848,48 +848,54 @@ def fix_normals(inside):
     bpy.ops.object.mode_set(mode='OBJECT')
 
 
-def sign (a):
+def sign(a):
+    """Returns the side of the number line a is on.
+
+    +-------------------------------------------------+
+    | Number line: ...-3...-2...-1...0...1...2...3... |
+    | Returns:        -1   -1   -1   0   1   1   1    |
+    +-------------------------------------------------+
+    if a is less than 0, returns -1.
+    if a is equal to 0, returns 0.
+    if a is greater than 0, returns 1.
+    """
     return 1 if a > 0 else -1 if a < 0 else 0
 
 
-def add_leaf(position, direction, scale,leaf,leaf_weight):
+def add_leaf(position, direction, scale, leaf, leaf_weight):
     scene = bpy.context.scene
-    direction= Vector((0,1,0)) * leaf_weight + (1-leaf_weight) * direction
+    direction= Vector((0, 1, 0)) * leaf_weight + (1-leaf_weight) * direction
     direction.normalize()
 
     for select_ob in bpy.context.selected_objects:
         select_ob.select = False
     leaf_object = scene.objects[leaf]
-    # scene.objects[leaf].select = True
-    # bpy.context.scene.objects.active = scene.objects[leaf]
-    # bpy.ops.object.duplicate()
+
     new_leaf = leaf_object.copy()
     new_leaf.data = leaf_object.data.copy()
     bpy.context.scene.objects.link(new_leaf)
     leaf_object = new_leaf
     leaf_object.select = True
     bpy.context.scene.objects.active = leaf_object
-    # scene.objects[leaf].select = False
-    # leaf_object = bpy.context.active_object
+
     dim = max(bpy.context.object.dimensions)
-    bpy.ops.transform.resize(value = (scale/dim, scale/dim, scale/dim))
+    bpy.ops.transform.resize(value=(scale/dim, scale/dim, scale/dim))
     leaf_object.location = position
     bpy.ops.transform.rotate(value=pi/2, axis=(1, 0, 0))
-    Y = Vector((direction.x,0,direction.z))
-    X = Vector((0,direction.y, direction.z))
-    angle_Y = 0 if Y == Vector((0,0,0)) else Vector((0,0,1)).angle(Y)*sign(direction.x)
-    angle_X = 0 if X == Vector((0, 0, 0)) else Vector((0, 0, 1)).angle(X) * sign(-direction.y)
-    if abs(angle_Y) > pi/2:
-        angle_Y /= 3
-    if angle_X > 0:
-        angle_X /= 4
-    bpy.ops.transform.rotate(value = angle_Y, axis=(0, 1, 0))
-    bpy.ops.transform.rotate(value=angle_X, axis=(1, 0, 0))
-
+    y = Vector((direction.x, 0, direction.z))
+    x = Vector((0, direction.y, direction.z))
+    angle__y = 0 if y == Vector((0, 0, 0)) else Vector((0, 0, 1)).angle(y)*sign(direction.x)
+    angle__x = 0 if x == Vector((0, 0, 0)) else Vector((0, 0, 1)).angle(x) * sign(-direction.y)
+    if abs(angle__y) > pi/2:
+        angle__y /= 3
+    if angle__x > 0:
+        angle__x /= 4
+    bpy.ops.transform.rotate(value=angle__y, axis=(0, 1, 0))
+    bpy.ops.transform.rotate(value=angle__x, axis=(1, 0, 0))
 
 
 def rehash_set(s, p_dist):
-    new_set = []
+    new_set = list()
     new_set.append(s[0])
     i = 1
     while i < len(s):
@@ -897,22 +903,22 @@ def rehash_set(s, p_dist):
         if n_dist >= p_dist:
             new_set.append(new_set[-1] + p_dist/n_dist * (s[i] - new_set[-1]))
         else:
-            i+=1
+            i += 1
     return new_set
-
 
 
 def smooth_stroke(iterations,smooth,points):
     
     for i in range(iterations):
-        new_points = []
+        new_points = list()
         new_points.append(points[0])
-        for j in range (1,len(points)-1):
-            new_points.append(smooth/2*(points[j-1]+points[j+1]) + (1-smooth)* points[j])
+        for j in range(1, len(points)-1):
+            new_points.append(smooth / 2 * (points[j-1] + points[j+1]) + (1 - smooth) * points[j])
         new_points.append(points[-1])
         points = new_points
     return points
-    
+
+
 def create_tree(position, is_twig=False):
     """Creates a tree
 
@@ -956,7 +962,6 @@ def create_tree(position, is_twig=False):
     # the list of bones is a list of...
     # [(string : parent name, string : bone name, Vector : tail position, Vector : head position), ...]
     bones = []
-    leafs_start_index = 0
     unwrap_stop_index = 0
     big_j = S1
     seams2 = [s for s in R1.Seams]
@@ -1055,23 +1060,28 @@ def create_tree(position, is_twig=False):
             point_forces = [ob for ob in bpy.data.objects if ob.type == 'EMPTY' and ob.field.type == 'FORCE']
             wind_forces = [ob for ob in bpy.data.objects if ob.type == 'EMPTY' and ob.field.type == 'WIND']
             factor = mtree_props.fields_radius_factor
-            point_net_force = Vector((0,0,0))
+            point_net_force = Vector((0, 0, 0))
             for ob in point_forces:
-                force_power = max(1,ob.field.falloff_power)
+                force_power = max(1, ob.field.falloff_power)
                 sgn = 1 if ob.field.strength == 0 else ob.field.strength/abs(ob.field.strength)
                 force_direction = pos - ob.location
                 dist = force_direction.length
                 force_direction.normalize()
-                point_net_force += min((1/real_radius*factor + (1-factor))*abs(ob.field.strength)/((dist)**(force_power)), mtree_props.fields_strength_limit)*sgn*(force_direction)
 
-            wind_net_force = Vector((0,0,0))
+                # please comment
+                point_net_force += min(
+                    (1/real_radius*factor + (1-factor))*abs(ob.field.strength)/(dist**force_power),
+                     mtree_props.fields_strength_limit
+                    ) * sgn * force_direction
+
+            wind_net_force = Vector((0, 0, 0))
             for ob in wind_forces:
-                force_direction = Vector((0,0,1))
+                force_direction = Vector((0, 0, 1))
                 force_direction.rotate(ob.rotation_euler)
-                wind_net_force += min(ob.field.strength,mtree_props.fields_strength_limit)*force_direction
+                wind_net_force += min(ob.field.strength, mtree_props.fields_strength_limit) * force_direction
 
-
-            direction +=  mtree_props.fields_point_strength/10 * point_net_force + mtree_props.fields_wind_strength/30 * wind_net_force
+            # this desperately needs a good comment or two explaining :-)
+            direction += mtree_props.fields_point_strength / 10 * point_net_force + mtree_props.fields_wind_strength / 30 * wind_net_force
 
             if bpy.data.objects.get(mtree_props.obstacle) is not None:
                 obs = scene.objects[mtree_props.obstacle]
