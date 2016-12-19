@@ -295,6 +295,11 @@ class AdvancedSettingsPanel(Panel):
             box.prop(mtree_props, 'display')
             box.prop_search(mtree_props, "twig_particle", scene, "objects")
             box.prop(mtree_props, 'particle_size')
+        box = layout.box()
+        box.prop(mtree_props, 'pruning')
+        if mtree_props.pruning:
+            box.prop(mtree_props, 'pruning_intensity')
+            box.prop(mtree_props, 'pruning_resolution')
 
 
 class WindAnimationPanel(Panel):
@@ -541,7 +546,7 @@ class ModularTreePropertyGroup(PropertyGroup):
 
     branch_rotate = FloatProperty(
         name="Branches Rotation Angle",
-        default=90,
+        default=45,
         min=0,
         max=360,
         description="angle between new split and previous split")
@@ -701,6 +706,20 @@ class ModularTreePropertyGroup(PropertyGroup):
         default=.5,
         description="How the branch radius affects the force strength. "
                     "\n0 means big branches are as affected as small ones.")
+
+    pruning = BoolProperty(
+        name='pruning',
+        default=False)
+
+    pruning_intensity = FloatProperty(
+        name="Pruning intensity",
+        min=0,
+        default=1)
+
+    pruning_resolution = IntProperty(
+        name="voxel size",
+        min=1,
+        default=2)
 
     clear_mods = BoolProperty(name="Clear Modifiers", default=True)
 

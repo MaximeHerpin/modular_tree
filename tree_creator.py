@@ -23,6 +23,7 @@ from math import pi, radians
 
 import bpy
 
+from .pruning import *
 from .clock import Clock
 from .uv_tools import rotate, add_seams
 from .particle_configurator import create_system
@@ -919,6 +920,17 @@ def smooth_stroke(iterations,smooth,points):
     return points
 
 
+def resolution(coord):
+    scene = bpy.context.scene
+    mtree_props = scene.mtree_props
+    res = mtree_props.pruning_resolution
+
+    def f(x): return int(x/res)*res
+
+    (x, y, z) = coord
+    return f(x), f(y), f(z)
+
+
 def create_tree(position, is_twig=False):
     """Creates a tree
 
@@ -1014,6 +1026,10 @@ def create_tree(position, is_twig=False):
                 next_roots.append((ni2, radius * roots_rad_dec * r2, dir2, nsi2))
             roots = next_roots
 
+    pruning_res = 1
+    if mtree_props.pruning:
+        pruning_tree = SearchTree(resolution(position), mtree_props.radius)
+
     radius = mtree_props.radius
     extremites = [(extr, radius, Vector((0, 0, 1)), extr[0], last_bone, trunk2, 0)]
     curr_grease_point = 0
@@ -1093,7 +1109,15 @@ def create_tree(position, is_twig=False):
                         (hit_pos - pos).length + 1) * 2
                     direction += face_normal * force
 
+            if mtree_props.pruning:
+                pruning_tree.add(resolution(pos), (2+real_radius)/3)
+
+            if trunk2:
+                print(trunk2)
+
             split_probability = mtree_props.trunk_split_proba if trunk2 else mtree_props.split_proba
+            if mtree_props.pruning and i > mtree_props.trunk_length and not trunk2:
+                split_probability /= max(1, mtree_props.pruning_intensity/mtree_props.pruning_resolution * pruning_tree.get_value(resolution(pos)))
 
             if i <= mtree_props.trunk_length:
                 branch_verts = [v for v in branch.verts]
@@ -1102,6 +1126,7 @@ def create_tree(position, is_twig=False):
                                                      direction,
                                                      mtree_props.trunk_variation, s_index, seams2)
                     sortie = pos + direction * mtree_props.branch_length
+
 
                 else:
                     gp1 = grease_points[curr_grease_point + 1]
@@ -1333,6 +1358,9 @@ def create_tree(position, is_twig=False):
         vgroups.active_index = vgroups["leaf"].index
         bpy.ops.paint.weight_paint_toggle()
         clock.stop("vis leaves")
+
+    # if mtree_props.pruning:
+    #     pruning_tree.create_vis(.5)
 
     obj.select = True
     scene.objects.active = obj
