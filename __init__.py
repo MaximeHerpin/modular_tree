@@ -254,14 +254,18 @@ class TreeBranchesPanel(Panel):
         col.prop(mtree_props, 'gravity_strength')
         col.prop(mtree_props, 'gravity_start')
         col.prop(mtree_props, 'gravity_end')
-        box.prop_search(mtree_props, "obstacle", scene, "objects")
+        sbox = box.box()
+        sbox.prop_search(mtree_props, "obstacle", scene, "objects")
         if bpy.data.objects.get(mtree_props.obstacle) is not None:
-            box.prop(mtree_props, 'obstacle_strength')
-        col1 = box.column()
+            sbox.prop(mtree_props, 'obstacle_strength')
+            sbox.prop(mtree_props, 'obstacle_flip_normals')
+            sbox.prop(mtree_props, 'obstacle_kill')
+        sbox = box.box()
+        col1 = sbox.column()
         col1.prop(mtree_props, 'use_force_field')
         if mtree_props.use_force_field:
             col1.prop(mtree_props, 'fields_point_strength')
-            col1.prop(mtree_props, 'fields_point_strength')
+            col1.prop(mtree_props, 'fields_wind_strength')
             col1.prop(mtree_props, 'fields_strength_limit')
             col1.prop(mtree_props, 'fields_radius_factor')
 
@@ -295,6 +299,11 @@ class AdvancedSettingsPanel(Panel):
             box.prop(mtree_props, 'display')
             box.prop_search(mtree_props, "twig_particle", scene, "objects")
             box.prop(mtree_props, 'particle_size')
+        box = layout.box()
+        box.prop(mtree_props, 'pruning')
+        if mtree_props.pruning:
+            box.prop(mtree_props, 'pruning_intensity')
+            box.prop(mtree_props, 'pruning_resolution')
 
 
 class WindAnimationPanel(Panel):
@@ -435,7 +444,7 @@ class ModularTreePropertyGroup(PropertyGroup):
 
     trunk_length = IntProperty(
         name="Trunk Iterations",
-        min=5,
+        min=1,
         default=9,
         description="Iteration from from which first split occurs")
 
@@ -494,6 +503,15 @@ class ModularTreePropertyGroup(PropertyGroup):
         description='Strength with which to avoid obstacles',
         default=1)
 
+    obstacle_flip_normals = BoolProperty(
+        name="Flip Normals",
+        default=False)
+
+    obstacle_kill = BoolProperty(
+        name="Kill Branches",
+        default=False,
+        description='does not repel branches near the domain object, but ends them')
+
     SeedProp = IntProperty(
         name="Seed",
         default=randint(0, 1000))
@@ -541,7 +559,7 @@ class ModularTreePropertyGroup(PropertyGroup):
 
     branch_rotate = FloatProperty(
         name="Branches Rotation Angle",
-        default=90,
+        default=45,
         min=0,
         max=360,
         description="angle between new split and previous split")
@@ -701,6 +719,20 @@ class ModularTreePropertyGroup(PropertyGroup):
         default=.5,
         description="How the branch radius affects the force strength. "
                     "\n0 means big branches are as affected as small ones.")
+
+    pruning = BoolProperty(
+        name='pruning',
+        default=False)
+
+    pruning_intensity = FloatProperty(
+        name="Pruning intensity",
+        min=0,
+        default=1)
+
+    pruning_resolution = IntProperty(
+        name="voxel size",
+        min=1,
+        default=2)
 
     clear_mods = BoolProperty(name="Clear Modifiers", default=True)
 
