@@ -254,14 +254,18 @@ class TreeBranchesPanel(Panel):
         col.prop(mtree_props, 'gravity_strength')
         col.prop(mtree_props, 'gravity_start')
         col.prop(mtree_props, 'gravity_end')
-        box.prop_search(mtree_props, "obstacle", scene, "objects")
+        sbox = box.box()
+        sbox.prop_search(mtree_props, "obstacle", scene, "objects")
         if bpy.data.objects.get(mtree_props.obstacle) is not None:
-            box.prop(mtree_props, 'obstacle_strength')
-        col1 = box.column()
+            sbox.prop(mtree_props, 'obstacle_strength')
+            sbox.prop(mtree_props, 'obstacle_flip_normals')
+            sbox.prop(mtree_props, 'obstacle_kill')
+        sbox = box.box()
+        col1 = sbox.column()
         col1.prop(mtree_props, 'use_force_field')
         if mtree_props.use_force_field:
             col1.prop(mtree_props, 'fields_point_strength')
-            col1.prop(mtree_props, 'fields_point_strength')
+            col1.prop(mtree_props, 'fields_wind_strength')
             col1.prop(mtree_props, 'fields_strength_limit')
             col1.prop(mtree_props, 'fields_radius_factor')
 
@@ -440,7 +444,7 @@ class ModularTreePropertyGroup(PropertyGroup):
 
     trunk_length = IntProperty(
         name="Trunk Iterations",
-        min=5,
+        min=1,
         default=9,
         description="Iteration from from which first split occurs")
 
@@ -498,6 +502,15 @@ class ModularTreePropertyGroup(PropertyGroup):
         name="Obstacle Strength",
         description='Strength with which to avoid obstacles',
         default=1)
+
+    obstacle_flip_normals = BoolProperty(
+        name="Flip Normals",
+        default=False)
+
+    obstacle_kill = BoolProperty(
+        name="Kill Branches",
+        default=False,
+        description='does not repel branches near the domain object, but ends them')
 
     SeedProp = IntProperty(
         name="Seed",

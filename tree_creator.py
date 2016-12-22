@@ -19,7 +19,7 @@
 
 from mathutils import Vector, Matrix
 from random import random, randint
-from math import pi, radians
+from math import pi, radians, exp
 
 import bpy
 
@@ -953,6 +953,7 @@ def create_tree(position, is_twig=False):
     scene = bpy.context.scene
     mtree_props = scene.mtree_props
 
+
     clock = Clock("create_tree")
     if not mtree_props.uv:
         mtree_props.finish_unwrap = False
@@ -966,6 +967,22 @@ def create_tree(position, is_twig=False):
     # deselecting all objects
     for select_ob in bpy.context.selected_objects:
         select_ob.select = False
+
+    if bpy.data.objects.get(mtree_props.obstacle) is not None:
+        obs = scene.objects[mtree_props.obstacle]
+        obs.select = True
+        scene.objects.active = obs
+        bpy.ops.object.duplicate()
+        obs = scene.objects.active
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        if mtree_props.obstacle_flip_normals:
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.flip_normals()
+            bpy.ops.object.mode_set(mode='OBJECT')
+
+        obs.select = False
+        # obs = scene.objects[mtree_props.obstacle]
+        scene.update()
 
     make_roots = mtree_props.create_roots
     trunk2 = mtree_props.preserve_trunk
@@ -1071,53 +1088,52 @@ def create_tree(position, is_twig=False):
             if is_twig and i > 2:
                 twig_leafs.append((pos, direction))
 
-            end = pos + direction * 10
+            world_pos = position + pos
+            end = world_pos + direction * 10
+            if mtree_props.use_force_field:
+                point_forces = [ob for ob in bpy.data.objects if ob.type == 'EMPTY' and ob.field.type == 'FORCE']
+                wind_forces = [ob for ob in bpy.data.objects if ob.type == 'EMPTY' and ob.field.type == 'WIND']
+                factor = mtree_props.fields_radius_factor
+                point_net_force = Vector((0, 0, 0))
+                for ob in point_forces:
+                    force_power = max(1, ob.field.falloff_power)
+                    sgn = 1 if ob.field.strength == 0 else ob.field.strength/abs(ob.field.strength)
+                    force_direction = pos - ob.location
+                    dist = force_direction.length
+                    force_direction.normalize()
 
-            point_forces = [ob for ob in bpy.data.objects if ob.type == 'EMPTY' and ob.field.type == 'FORCE']
-            wind_forces = [ob for ob in bpy.data.objects if ob.type == 'EMPTY' and ob.field.type == 'WIND']
-            factor = mtree_props.fields_radius_factor
-            point_net_force = Vector((0, 0, 0))
-            for ob in point_forces:
-                force_power = max(1, ob.field.falloff_power)
-                sgn = 1 if ob.field.strength == 0 else ob.field.strength/abs(ob.field.strength)
-                force_direction = pos - ob.location
-                dist = force_direction.length
-                force_direction.normalize()
+                    # please comment
+                    point_net_force += min(
+                        (exp(-3 * real_radius)*factor + (1-factor))*abs(ob.field.strength)/(dist**force_power),
+                         mtree_props.fields_strength_limit
+                        ) * sgn * force_direction
 
-                # please comment
-                point_net_force += min(
-                    (1/real_radius*factor + (1-factor))*abs(ob.field.strength)/(dist**force_power),
-                     mtree_props.fields_strength_limit
-                    ) * sgn * force_direction
+                wind_net_force = Vector((0, 0, 0))
+                for ob in wind_forces:
+                    force_direction = Vector((0, 0, 1))
+                    force_direction.rotate(ob.rotation_euler)
+                    wind_net_force += min(ob.field.strength*(exp(-3 * real_radius)*factor + (1-factor)), mtree_props.fields_strength_limit) * force_direction
 
-            wind_net_force = Vector((0, 0, 0))
-            for ob in wind_forces:
-                force_direction = Vector((0, 0, 1))
-                force_direction.rotate(ob.rotation_euler)
-                wind_net_force += min(ob.field.strength, mtree_props.fields_strength_limit) * force_direction
-
-            # this desperately needs a good comment or two explaining :-)
-            direction += mtree_props.fields_point_strength / 10 * point_net_force + mtree_props.fields_wind_strength / 30 * wind_net_force
-
+                # this desperately needs a good comment or two explaining :-)
+                direction += mtree_props.fields_point_strength / 10 * point_net_force + mtree_props.fields_wind_strength / 30 * wind_net_force
+            break_chance = mtree_props.break_chance
             if bpy.data.objects.get(mtree_props.obstacle) is not None:
-                obs = scene.objects[mtree_props.obstacle]
                 scene.update()
-
-                result, hit_pos, face_normal, face_index = obs.ray_cast(pos, end)
+                result, hit_pos, face_normal, face_index = obs.ray_cast(world_pos, end)
                 if result:
-                    force = abs(min(direction.dot(face_normal), 0)) * mtree_props.obstacle_strength / (
-                        (hit_pos - pos).length + 1) * 2
-                    direction += face_normal * force
+                    if mtree_props.obstacle_kill:
+                        break_chance += 1/((hit_pos - world_pos).length)**3
+                    else:
+                        force = abs(min(direction.dot(face_normal), 0)) * mtree_props.obstacle_strength / ((hit_pos - world_pos).length + 1) * 2
+                        direction += face_normal * force
 
             if mtree_props.pruning:
                 pruning_tree.add(resolution(pos), (2+real_radius)/3)
 
-            if trunk2:
-                print(trunk2)
-
             split_probability = mtree_props.trunk_split_proba if trunk2 else mtree_props.split_proba
             if mtree_props.pruning and i > mtree_props.trunk_length and not trunk2:
                 split_probability /= max(1, mtree_props.pruning_intensity/mtree_props.pruning_resolution * pruning_tree.get_value(resolution(pos)))
+                break_chance += mtree_props.pruning_intensity/mtree_props.pruning_resolution * pruning_tree.get_value(resolution(pos))/100
 
             if i <= mtree_props.trunk_length:
                 branch_verts = [v for v in branch.verts]
@@ -1148,7 +1164,7 @@ def create_tree(position, is_twig=False):
                 nextremites.append((ni, radius * 0.98, direction, nsi, nb, trunk2, curr_rotation))
 
             elif i == mtree_props.iteration + mtree_props.trunk_length - 1 \
-                    or random() < mtree_props.break_chance \
+                    or random() < break_chance \
                     or real_radius < mtree_props.branch_min_radius:
 
                 end_verts = [Vector(v) for v in end_cap.verts]
@@ -1237,6 +1253,10 @@ def create_tree(position, is_twig=False):
     bpy.ops.object.mode_set(mode='EDIT')
 
     obj.select = False
+
+    if bpy.data.objects.get(mtree_props.obstacle) is not None:
+        scene.objects.unlink(obs)
+        bpy.data.objects.remove(obs)
 
     vgroups = obj.vertex_groups
 
