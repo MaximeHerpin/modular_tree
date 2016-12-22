@@ -1372,12 +1372,6 @@ def create_tree(position, is_twig=False):
         bpy.ops.object.select_all(action='DESELECT')
         clock.stop("armature")
 
-    if mtree_props.visualize_leafs:
-        clock.add_sub_job("vis leaves")
-        scene.objects.active = obj
-        vgroups.active_index = vgroups["leaf"].index
-        bpy.ops.paint.weight_paint_toggle()
-        clock.stop("vis leaves")
 
     # if mtree_props.pruning:
     #     pruning_tree.create_vis(.5)

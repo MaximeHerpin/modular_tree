@@ -291,7 +291,6 @@ class AdvancedSettingsPanel(Panel):
         box.prop(mtree_props, 'create_armature')
         if mtree_props.create_armature:
             box.prop(mtree_props, 'bones_iterations')
-        box.prop(mtree_props, 'visualize_leafs')
         box.prop(mtree_props, 'leafs_iteration_length')
         box.prop(mtree_props, 'particle')
         if mtree_props.particle:
@@ -523,10 +522,6 @@ class ModularTreePropertyGroup(PropertyGroup):
     bones_iterations = IntProperty(
         name='Bones Iterations',
         default=8)
-
-    visualize_leafs = BoolProperty(
-        name='Visualize Particle Weights',
-        default=False)
 
     leafs_iteration_length = IntProperty(
         name='Leafs Group Length',
@@ -787,7 +782,6 @@ documentation_mapping = (
     ("bpy.types.ModularTreePropertyGroup.bark_material", "Advanced-Settings#bark-material"),
     ("bpy.types.ModularTreePropertyGroup.create_armature", "Advanced-Settings#create-armature"),
     ("bpy.types.ModularTreePropertyGroup.bones_iterations", "Advanced-Settings#bones-iterations"),
-    ("bpy.types.ModularTreePropertyGroup.visualize_leafs", "Advanced-Settings#visualize-particle-weights"),
     ("bpy.types.ModularTreePropertyGroup.leafs_iteration_length", "Advanced-Settings#leafs-group-length"),
     ("bpy.types.ModularTreePropertyGroup.particle", "Advanced-Settings#configure-particle-system"),
     ("bpy.types.ModularTreePropertyGroup.number", "Advanced-Settings#number-of-leaves"),
