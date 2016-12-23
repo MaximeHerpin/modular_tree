@@ -51,19 +51,19 @@ class TreeAddonPrefs(AddonPreferences):
 
     always_save_prior = BoolProperty(
         name="Save .blend File",
-        default=True,
+        default=False,
         description="Always save .blend file before executing " +
                     "time-consuming operations")
 
     save_all_images = BoolProperty(
         name="Save Images",
-        default=True,
+        default=False,
         description="Always save images before executing " +
                     "time-consuming operations")
 
     save_all_texts = BoolProperty(
         name="Save Texts",
-        default=True,
+        default=False,
         description="Always save texts before executing " +
                     "time-consuming operations")
 
@@ -158,10 +158,6 @@ class MakeTreePanel(Panel):
         box.prop(mtree_props, "iteration")
         box.prop(mtree_props, 'radius')
         box.prop(mtree_props, 'uv')
-        if mtree_props.uv:
-            box.prop(mtree_props, 'finish_unwrap')
-            if mtree_props.finish_unwrap:
-                box.prop(mtree_props, "unwrap_end_iteration")
 
         addon_updater_ops.update_notice_box_ui(self, context)
 
@@ -452,10 +448,6 @@ class ModularTreePropertyGroup(PropertyGroup):
             ('SIMPLE', 'Simple', "", 0),
             ('COMPLETE', 'Complete', "", 1)))
 
-    finish_unwrap = BoolProperty(
-        name="Unwrap",
-        description="Run 'Unwrap' operator. WARNING: slow, enable for final only",
-        default=True)
 
     preserve_trunk = BoolProperty(
         name="Preserve Trunk", default=False,
@@ -588,15 +580,10 @@ class ModularTreePropertyGroup(PropertyGroup):
         description="The number of branches iterations where leafs will appear")
 
     uv = BoolProperty(
-        name="Create UV Seams",
+        name="Unwrap",
         default=False,
-        description="Create uv seams for tree (enable unwrap to auto unwrap)")
+        description="Unwrap tree")
 
-    unwrap_end_iteration = IntProperty(
-        name="Last Unwrapped Iteration",
-        min=1,
-        soft_max=20,
-        default=8)
 
     mat = BoolProperty(
         name="Create New Material",
@@ -814,8 +801,6 @@ documentation_mapping = (
     ("bpy.types.ModularTreePropertyGroup.iteration", "Make-Tree-Panel#branch-iterations"),
     ("bpy.types.ModularTreePropertyGroup.radius", "Make-Tree-Panel#radius"),
     ("bpy.types.ModularTreePropertyGroup.uv", "Make-Tree-Panel#create-uv-seams"),
-    ("bpy.types.ModularTreePropertyGroup.finish_unwrap", "Make-Tree-Panel#unwrap"),
-    ("bpy.types.ModularTreePropertyGroup.unwrap_end_iteration", "Make-Tree-Panel#last-unwrapped-iteration"),
     # roots and trunk
     ("bpy.types.ModularTreePropertyGroup.create_roots", "Roots-and-Trunk#create-roots"),
     ("bpy.types.ModularTreePropertyGroup.roots_iteration", "Roots-and-Trunk#roots-iterations"),
