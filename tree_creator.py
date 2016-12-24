@@ -26,7 +26,7 @@ import bmesh
 
 from .pruning import *
 from .clock import Clock
-from .uv_tools import rotate, add_seams
+
 from .particle_configurator import create_system
 from .material_tools import build_bark_material
 
@@ -379,7 +379,6 @@ S4 = Split(
      [(0.25, 0.21), (0.19, 0.22), (0.12, 0.18), (0.2, 0.16)], [(0.21, 0.1), (0.2, 0.16), (0.12, 0.18), (0.1, 0.1)]])
 
 
-
 root = Module(
     # entree
     [],
@@ -459,7 +458,7 @@ branch = Module(
      [(0.62, 0.1), (0.62, 0.0), (0.75, 0.0), (0.75, 0.1)], [(0.5, 0.1), (0.5, 0.0), (0.62, 0.0), (0.62, 0.1)],
      [(0.37, 0.1), (0.37, 0.0), (0.5, 0.0), (0.5, 0.1)], [(0.25, 0.1), (0.25, 0.0), (0.37, 0.0), (0.37, 0.1)],
      [(0.13, 0.1), (0.13, 0.0), (0.25, 0.0), (0.25, 0.1)], [(0.0, 0.1), (0.0, 0.0), (0.13, 0.0), (0.13, 0.1)]],
-    0.095)
+    .1000976216) #0.095244106
 
 trunk = Split(
     # entree
@@ -786,8 +785,10 @@ trunk5 = Split(
      [(0.62, 0.1), (0.59, 0.05), (0.64, 0.01), (0.68, 0.05)]],
     .278)
 
+
 Trunks = [trunk, trunk2, trunk3, trunk4, trunk5]
 Joncts = [S1, S2, S3, S4, trunk, trunk2, trunk5]
+
 
 class Trunk:
     """This is used to represent the base of a trunk with roots"""
@@ -938,8 +939,8 @@ def joindre(verts, faces, v1_i, v2_i):
         faces.append([v2_i[(decalage + i * k) % n], v1_i[i], v1_i[(i + 1) % n], v2_i[(decalage + (i + 1) * k) % n]])
 
 
-def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entree, directions, branch_length, s_index,
-         uv_list, jonc_uv, random_angle, branch_rotation, height):
+def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entree, directions, branch_length,
+         uv_list, jonc_uv, random_angle, branch_rotation, height, real_radius):
     """ The goal is to add a split to the tree. To do that, there is the list of existing vertices, the list of existing faces, the list of vertices to add and the list of faces to add.
         To know where to add the split, the indexes of eight vertices is given.
 
@@ -986,6 +987,11 @@ def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entre
     barycentre /= len(indexes)
 
     directions.normalize()
+
+
+    uv_scale = 3*branch_length/real_radius
+    m = Matrix([(1, 0), (0, uv_scale)])
+
     barycentre += directions * branch_length
     r1 = (object_verts[i1[0]] - object_verts[i1[4]]).length / 2
     r2 = (object_verts[i2[0]] - object_verts[i2[4]]).length / 2
@@ -995,27 +1001,21 @@ def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entre
 
     n = len(verts)
     nentree = [n + i for i in entree]
-    uv_list += [[tuple([uv[0], uv[1] + height]) for uv in u] for u in jonc_uv]
+    uv_list += [[Vector(uv)+Vector((0, height)) for uv in u] for u in jonc_uv]
     faces += [add_tuple(f, n) for f in object_faces]
     verts += [barycentre + i for i in v]
     joindre(verts, faces, indexes, nentree)
-    uv_list += [u for u in branch.uv]
+    uv_list += [[m*Vector(uv) for uv in u] for u in branch.uv]
 
     i1 = [n + i for i in i1]
     i2 = [n + i for i in i2]
 
     dist = 1000
-    ns_index = 0
-    for i in nentree:
-        length = (verts[s_index] - verts[i]).length
-        if length < dist:
-            dist = length
-            ns_index = i
-    # seams.append((s_index, ns_index))
-    return i1, i2, d1, d2, r1, r2, i1[0], i2[0]  # no need to return i1[0] and i2[0]...just do that outside of the func
+            
+    return i1, i2, d1, d2, r1, r2  # no need to return i1[0] and i2[0]...just do that outside of the func
 
 
-def join_branch(verts, faces, indexes, scale, branch_length, branch_verts, direction, rand, s_index, uv_list, height):
+def join_branch(verts, faces, indexes, scale, branch_length, branch_verts, direction, rand, uv_list, height, real_radius):
     """ The goal is to add a Module to the tree. To do that, there is the list of existing vertices, the list of existing faces, the list of vertices to add and the list of faces to add.
         To know where to add the Module, the indexes of eight vertices is given.
 
@@ -1052,22 +1052,18 @@ def join_branch(verts, faces, indexes, scale, branch_length, branch_verts, direc
     direction = (((direction * rand_x) * rand_y) * rand_z)
     barycentre += direction * branch_length
     n = len(verts)
-    v = rot_scale(branch_verts, scale, direction, ((random() + 27) / 28) * randint(0, 8) / 8 * 2 * pi)
+    v = rot_scale(branch_verts, scale, direction, 0)
     nentree = [n + i for i in range(8)]
     verts += [ve + barycentre for ve in v]
     joindre(verts, faces, indexes, nentree)
-    uv_list += [[tuple([uv[0], uv[1] + height]) for uv in u] for u in branch.uv]
 
-    ns_index = 0
+    uv_scale = 3*branch_length / real_radius
+    m = Matrix([(1, 0), (0, uv_scale)])
+    uv_list += [[m*Vector(uv) + Vector((0, height)) for uv in u] for u in branch.uv]
+
     dist = 1000
-    for i in nentree:
-        length = (verts[s_index] - verts[i]).length
-        if length < dist:
-            dist = length
-            ns_index = i
-    # seams.append((s_index, ns_index))
 
-    return nentree, direction, ns_index
+    return nentree, direction
 
 
 def gravity(direction, gravity_strength):
@@ -1145,7 +1141,7 @@ def sign(a):
 
 def add_leaf(position, direction, scale, leaf, leaf_weight):
     scene = bpy.context.scene
-    direction= Vector((0, 1, 0)) * leaf_weight + (1-leaf_weight) * direction
+    direction = Vector((0, 1, 0)) * leaf_weight + (1-leaf_weight) * direction
     direction.normalize()
 
     for select_ob in bpy.context.selected_objects:
@@ -1188,7 +1184,7 @@ def rehash_set(s, p_dist):
     return new_set
 
 
-def smooth_stroke(iterations,smooth,points):
+def smooth_stroke(iterations, smooth, points):
     
     for i in range(iterations):
         new_points = list()
@@ -1205,7 +1201,7 @@ def resolution(coord):
     mtree_props = scene.mtree_props
     res = mtree_props.pruning_resolution
 
-    def f(x): return int(x/res)*res
+    def f(scalar): return int(scalar/res)*res
 
     (x, y, z) = coord
     return f(x), f(y), f(z)
@@ -1232,7 +1228,6 @@ def create_tree(position, is_twig=False):
     """
     scene = bpy.context.scene
     mtree_props = scene.mtree_props
-
 
     clock = Clock("create_tree")
 
@@ -1261,13 +1256,12 @@ def create_tree(position, is_twig=False):
         scene.update()
 
     make_roots = mtree_props.create_roots
-    trunk2 = mtree_props.preserve_trunk
+    is_trunk = mtree_props.preserve_trunk
     radius = mtree_props.radius
 
     # the list of bones is a list of...
     # [(string : parent name, string : bone name, Vector : tail position, Vector : head position), ...]
     bones = []
-    unwrap_stop_index = 0
     big_j = S1
 
     # seams2 = [s for s in R1.Seams]
@@ -1295,7 +1289,7 @@ def create_tree(position, is_twig=False):
         for i in range(mtree_props.roots_iteration):
             next_roots = []
             for E in roots:
-                indexes, radius, direction, s_index = E
+                indexes, radius, direction = E
                 big_j = Joncts[1]
                 i1 = [i for i in big_j.sortie[0]]
                 i2 = [i for i in big_j.sortie[1]]
@@ -1310,24 +1304,23 @@ def create_tree(position, is_twig=False):
 
                 if i > 2:
                     direction += 0.7 * Vector((0, 0, -1)) / (max(1, 20 * abs(barycentre.z)))
-                ni1, ni2, dir1, dir2, r1, r2, nsi1, nsi2 = join(verts, faces, indexes, jonct_verts, big_j.faces,
+                ni1, ni2, dir1, dir2, r1, r2 = join(verts, faces, indexes, jonct_verts, big_j.faces,
                                                                 radius * roots_rad_dec, i1, i2, entree, direction,
-                                                                roots_length, s_index, uv_list, jonct_uv,
+                                                                roots_length, uv_list, jonct_uv,
                                                                 roots_variations,
                                                                 ((random() + 27) / 28) * randint(0, 8) / 8 * 2 * pi, 0)
                 dir1 = gravity(dir1, -2)
                 dir2 = gravity(dir2, -2)
-                next_roots.append((ni1, radius * roots_rad_dec * r1, dir1, nsi1))
-                next_roots.append((ni2, radius * roots_rad_dec * r2, dir2, nsi2))
+                next_roots.append((ni1, radius * roots_rad_dec * r1, dir1))
+                next_roots.append((ni2, radius * roots_rad_dec * r2, dir2))
             roots = next_roots
 
-    pruning_res = 1
     if mtree_props.pruning:
         pruning_tree = SearchTree(resolution(position), mtree_props.radius)
 
     height = root.uv_height
     radius = mtree_props.radius
-    extremites = [(extr, radius, Vector((0, 0, 1)), extr[0], last_bone, trunk2, 0, height)]
+    extremites = [(extr, radius, Vector((0, 0, 1)), last_bone, is_trunk, 0, height)]
     curr_grease_point = 0
     using_grease = False
     gp = bpy.context.scene.grease_pencil
@@ -1344,17 +1337,18 @@ def create_tree(position, is_twig=False):
     print("Generating Branches...")
     for i in range(mtree_props.iteration + mtree_props.trunk_length):
 
-
         nextremites = []
 
         for E in extremites:
-            indexes, radius, direction, s_index, Lb, trunk2, curr_rotation, curr_height = E
+            indexes, radius, direction, lb, is_trunk, curr_rotation, curr_height = E
 
-            real_radius = (verts[indexes[0]] - verts[indexes[3]]).length
+            real_radius = (verts[indexes[0]] - verts[indexes[4]]).length
+            uv_scale = 3*branch.uv_height/real_radius
+
             new_rotation = (curr_rotation + mtree_props.branch_rotate + 2 * (1 - random()) * mtree_props.branch_random_rotate) % 360
 
             if i > mtree_props.preserve_end:
-                trunk2 = False  # shadows name "trunk2" from outer scope
+                is_trunk = False
             pos = Vector((0, 0, 0))
 
             for k in indexes:
@@ -1382,7 +1376,7 @@ def create_tree(position, is_twig=False):
                     # please comment
                     point_net_force += min(
                         (exp(-3 * real_radius)*factor + (1-factor))*abs(ob.field.strength)/(dist**force_power),
-                         mtree_props.fields_strength_limit
+                        mtree_props.fields_strength_limit
                         ) * sgn * force_direction
 
                 wind_net_force = Vector((0, 0, 0))
@@ -1399,7 +1393,7 @@ def create_tree(position, is_twig=False):
                 result, hit_pos, face_normal, face_index = obs.ray_cast(world_pos, end)
                 if result:
                     if mtree_props.obstacle_kill:
-                        break_chance += 1.5/((hit_pos - world_pos).length)**2
+                        break_chance += 1.5/(hit_pos - world_pos).length**2
                     else:
                         force = abs(min(direction.dot(face_normal), 0)) * mtree_props.obstacle_strength / ((hit_pos - world_pos).length + 1) * 2
                         direction += face_normal * force
@@ -1407,19 +1401,22 @@ def create_tree(position, is_twig=False):
             if mtree_props.pruning:
                 pruning_tree.add(resolution(pos), (2+real_radius)/3)
 
-            split_probability = mtree_props.trunk_split_proba if trunk2 else mtree_props.split_proba
-            if mtree_props.pruning and i > mtree_props.trunk_length and not trunk2:
+            split_probability = mtree_props.trunk_split_proba if is_trunk else mtree_props.split_proba
+            if mtree_props.pruning and i > mtree_props.trunk_length and not is_trunk:
                 split_probability /= max(1, mtree_props.pruning_intensity/mtree_props.pruning_resolution * pruning_tree.get_value(resolution(pos)))
                 break_chance += mtree_props.pruning_intensity/mtree_props.pruning_resolution * pruning_tree.get_value(resolution(pos))/100
+
+            if is_trunk and mtree_props.dont_break_trunk:
+                break_chance = 0
 
             if i <= mtree_props.trunk_length:
                 branch_verts = [v for v in branch.verts]
                 if not using_grease or curr_grease_point >= len(grease_points)-2:
-                    ni, direction, nsi = join_branch(verts, faces, indexes, radius, mtree_props.trunk_space, branch_verts,
+                    ni, direction = join_branch(verts, faces, indexes, radius, mtree_props.trunk_space, branch_verts,
                                                      direction,
-                                                     mtree_props.trunk_variation, s_index, uv_list, curr_height)
-                    sortie = pos + direction * mtree_props.branch_length
-
+                                                     mtree_props.trunk_variation, uv_list, curr_height, real_radius)
+                    sortie = pos + direction * mtree_props.trunk_space
+                    new_heigth = mtree_props.trunk_space
 
                 else:
                     gp1 = grease_points[curr_grease_point + 1]
@@ -1427,30 +1424,31 @@ def create_tree(position, is_twig=False):
                     grease_dir = gp1 - gp2
                     grease_length = grease_dir.length
                     grease_dir.normalize()
-                    ni, direction, nsi = join_branch(verts, faces, indexes, radius,grease_length,
+                    ni, direction = join_branch(verts, faces, indexes, radius, grease_length,
                                                      branch_verts,
                                                      grease_dir,
-                                                     0, s_index, uv_list, curr_height)
+                                                     0, uv_list, curr_height,real_radius)
                     sortie = pos + grease_dir * grease_length
+                    new_heigth = grease_length
                     curr_grease_point += 1
 
                 if i <= mtree_props.bones_iterations:
-                    bones.append((Lb[0], len(bones) + 2, Lb[1], sortie))
+                    bones.append((lb[0], len(bones) + 2, lb[1], sortie))
 
                 nb = (len(bones) + 1, sortie)
-                nextremites.append((ni, radius * 0.98, direction, nsi, nb, trunk2, curr_rotation, curr_height + branch.uv_height))
+                new_heigth = new_heigth*uv_scale
+                nextremites.append((ni, radius * 0.98, direction, nb, is_trunk, curr_rotation, curr_height + new_heigth))
 
             elif i == mtree_props.iteration + mtree_props.trunk_length - 1 \
-                    or random() < break_chance \
-                    or real_radius < mtree_props.branch_min_radius\
-                    and not mtree_props.dont_break_trunk:
+                    or random() < break_chance*exp(-real_radius) \
+                    or real_radius < mtree_props.branch_min_radius:
 
                 end_verts = [Vector(v) for v in end_cap.verts]
                 end_faces = [f for f in end_cap.faces]
 
                 n = len(verts)
                 join_branch(verts, faces, indexes, radius, mtree_props.trunk_space, end_verts, direction,
-                            mtree_props.trunk_variation, s_index, uv_list, 0)
+                            mtree_props.trunk_variation, uv_list, 0, real_radius)
 
                 faces += [add_tuple(f, n) for f in end_faces]
                 uv_list += [u for u in end_cap.uv]
@@ -1461,28 +1459,28 @@ def create_tree(position, is_twig=False):
                     and i == mtree_props.trunk_length + 1 \
                     or random() < split_probability:
 
-                variation = mtree_props.trunk_variation if trunk2 else mtree_props.randomangle
-                rand_j = randint(1,5)
-                rand_T = randint(0,4)
-                big_j = Joncts[rand_j] if (not trunk2) else Trunks[rand_T]
+                variation = mtree_props.trunk_variation if is_trunk else mtree_props.randomangle
+                rand_j = randint(1, 5)
+                rand_t = randint(0, 4)
+                big_j = Joncts[rand_j] if (not is_trunk) else Trunks[rand_t]
                 i1 = [i for i in big_j.sortie[0]]
                 i2 = [i for i in big_j.sortie[1]]
                 jonct_uv = [u for u in big_j.uv]
 
-                inter_fact = mtree_props.trunk_split_angle if trunk2 else mtree_props.split_angle
+                inter_fact = mtree_props.trunk_split_angle if is_trunk else mtree_props.split_angle
                 jonct_verts = interpolate(big_j.verts1, big_j.verts2, inter_fact)
-                length = mtree_props.trunk_space if trunk2 else mtree_props.branch_length
-                ni1, ni2, dir1, dir2, r1, r2, nsi1, nsi2 = join(verts, faces, indexes, jonct_verts, big_j.faces,
+                length = mtree_props.trunk_space if is_trunk else mtree_props.branch_length
+                ni1, ni2, dir1, dir2, r1, r2 = join(verts, faces, indexes, jonct_verts, big_j.faces,
                                                                 radius * (1 + mtree_props.radius_dec) / 2, i1, i2, entree,
-                                                                direction, length, s_index, uv_list, jonct_uv,
-                                                                variation, new_rotation, curr_height)
+                                                                direction, length, uv_list, jonct_uv,
+                                                                variation, new_rotation, curr_height, real_radius)
                 sortie1 = (verts[ni1[0]] + verts[ni1[4]]) / 2
                 sortie2 = (verts[ni2[0]] + verts[ni2[4]]) / 2
                 nb = len(bones)
 
                 if i <= mtree_props.bones_iterations:
-                    bones.append((Lb[0], nb + 2, Lb[1], sortie1))
-                    bones.append((Lb[0], nb + 3, Lb[1], sortie2))
+                    bones.append((lb[0], nb + 2, lb[1], sortie1))
+                    bones.append((lb[0], nb + 3, lb[1], sortie2))
 
                 nb1 = (nb + 2, sortie1)
                 nb2 = (nb + 3, sortie2)
@@ -1490,28 +1488,29 @@ def create_tree(position, is_twig=False):
                     dir1 = gravity(dir1, mtree_props.gravity_strength)
                     dir2 = gravity(dir2, mtree_props.gravity_strength)
 
-                new_heigth = curr_height + branch.uv_height + big_j.uv_height
+                new_heigth = curr_height + length*uv_scale + big_j.uv_height
 
-                nextremites.append((ni1, radius * mtree_props.radius_dec * r1, dir1, nsi1, nb1, trunk2, new_rotation, new_heigth))
-                nextremites.append((ni2, radius * mtree_props.radius_dec * r2, dir2, nsi2, nb2, False, new_rotation, new_heigth))
+                nextremites.append((ni1, radius * mtree_props.radius_dec * r1, dir1, nb1, is_trunk, new_rotation, new_heigth))
+                nextremites.append((ni2, radius * mtree_props.radius_dec * r2, dir2, nb2, False, new_rotation, new_heigth))
 
             else:
                 branch_verts = [v for v in branch.verts]
 
-                variation = mtree_props.trunk_variation if trunk2 else mtree_props.randomangle
-                length = mtree_props.trunk_space if trunk2 else mtree_props.branch_length
-                ni, direction, nsi = join_branch(verts, faces, indexes, radius, length, branch_verts, direction,
-                                                 variation, s_index, uv_list, curr_height)
+                variation = mtree_props.trunk_variation if is_trunk else mtree_props.randomangle
+                length = mtree_props.trunk_space if is_trunk else mtree_props.branch_length
+                ni, direction = join_branch(verts, faces, indexes, radius, length, branch_verts, direction,
+                                                 variation, uv_list, curr_height, real_radius)
 
                 sortie = pos + direction * mtree_props.branch_length
 
                 if i <= mtree_props.bones_iterations:
-                    bones.append((Lb[0], len(bones) + 2, Lb[1], sortie))
+                    bones.append((lb[0], len(bones) + 2, lb[1], sortie))
 
                 nb = (len(bones) + 1, sortie)
                 if mtree_props.gravity_start <= i <= mtree_props.gravity_end:
                     direction = gravity(direction, mtree_props.gravity_strength)
-                nextremites.append((ni, radius * mtree_props.radius_dec, direction, nsi, nb, trunk2, curr_rotation, curr_height + branch.uv_height))
+                new_heigth = length*uv_scale
+                nextremites.append((ni, radius * mtree_props.radius_dec, direction, nb, is_trunk, curr_rotation, curr_height + new_heigth))
 
         extremites = nextremites
     # mesh and object creation
@@ -1531,7 +1530,7 @@ def create_tree(position, is_twig=False):
     bm.free()
 
     obj = bpy.data.objects.new("tree", mesh)
-    obj.location = position if not using_grease else grease_points[0] - Vector((0,0,1))
+    obj.location = position if not using_grease else grease_points[0] - Vector((0, 0, 1))
     scene.objects.link(obj)
     scene.objects.active = obj
     obj.select = True
@@ -1569,7 +1568,7 @@ def create_tree(position, is_twig=False):
     bpy.ops.object.mode_set(mode='OBJECT')
 
     # add vertex group for the wind animations
-    wind_group = obj.vertex_groups.new("wind_anim")
+    obj.vertex_groups.new("wind_anim")
 
     # fix normals, then make sure they are fixed :)
     print("Setting Normals...")
@@ -1635,10 +1634,6 @@ def create_tree(position, is_twig=False):
         bpy.ops.object.parent_set(type='ARMATURE_AUTO')
         bpy.ops.object.select_all(action='DESELECT')
         clock.stop("armature")
-
-
-    # if mtree_props.pruning:
-    #     pruning_tree.create_vis(.5)
 
     obj.select = True
     scene.objects.active = obj
