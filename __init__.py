@@ -35,7 +35,7 @@ from . import addon_updater_ops
 bl_info = {
     "name": "Modular trees",
     "author": "Herpin Maxime, Jake Dube",
-    "version": (2, 8, 1),
+    "version": (2, 8, 2),
     "blender": (2, 77, 0),
     "location": "View3D > Tools > Tree > Make Tree",
     "description": "Generates an organic tree with correctly modeled branching.",
@@ -50,19 +50,19 @@ class TreeAddonPrefs(AddonPreferences):
 
     always_save_prior = BoolProperty(
         name="Save .blend File",
-        default=True,
+        default=False,
         description="Always save .blend file before executing " +
                     "time-consuming operations")
 
     save_all_images = BoolProperty(
         name="Save Images",
-        default=True,
+        default=False,
         description="Always save images before executing " +
                     "time-consuming operations")
 
     save_all_texts = BoolProperty(
         name="Save Texts",
-        default=True,
+        default=False,
         description="Always save texts before executing " +
                     "time-consuming operations")
 
@@ -150,14 +150,13 @@ class MakeTreePanel(Panel):
 
         box = layout.box()
         box.label("Basic")
+        sbox = box.box()
+        sbox.label("UI")
+        sbox.prop(mtree_props, 'ui_mode', expand=True)
         box.prop(mtree_props, "SeedProp")
         box.prop(mtree_props, "iteration")
         box.prop(mtree_props, 'radius')
         box.prop(mtree_props, 'uv')
-        if mtree_props.uv:
-            box.prop(mtree_props, 'finish_unwrap')
-            if mtree_props.finish_unwrap:
-                box.prop(mtree_props, "unwrap_end_iteration")
 
         addon_updater_ops.update_notice_box_ui(self, context)
 
@@ -178,10 +177,13 @@ class BatchTreePanel(Panel):
         row.scale_y = 1.5
         row.operator("mod_tree.batch_tree", icon="LOGIC")
         box = layout.box()
-        box.prop(mtree_props, "tree_number")
-        box.prop(mtree_props, "batch_radius_randomness")
-        box.prop_search(mtree_props, "batch_group_name", bpy.data, "groups")
-        box.prop(mtree_props, "batch_space")
+        if mtree_props.ui_mode == 'COMPLETE':
+            box.prop(mtree_props, "tree_number")
+            box.prop(mtree_props, "batch_radius_randomness")
+            box.prop_search(mtree_props, "batch_group_name", bpy.data, "groups")
+            box.prop(mtree_props, "batch_space")
+        else:
+            box.prop(mtree_props, 'tree_number')
 
 
 class RootsAndTrunksPanel(Panel):
@@ -197,28 +199,37 @@ class RootsAndTrunksPanel(Panel):
         mtree_props = context.scene.mtree_props
         layout = self.layout
 
-        box = layout.box()
-        box.label("Roots")
-        box.prop(mtree_props, 'create_roots')
-        if mtree_props.create_roots:
-            box.prop(mtree_props, 'roots_iteration')
+        if mtree_props.ui_mode == 'COMPLETE':
+            box = layout.box()
+            box.label("Roots")
+            box.prop(mtree_props, 'create_roots')
+            if mtree_props.create_roots:
+                box.prop(mtree_props, 'roots_iteration')
 
-        box = layout.box()
-        box.label("Trunk")
-        sbox = box.box()
-        sbox.prop(mtree_props, 'use_grease_pencil')
-        if mtree_props.use_grease_pencil:
-            sbox.prop(mtree_props, 'smooth_stroke')
-            sbox.prop(mtree_props, 'stroke_step_size')
-        box.prop(mtree_props, 'trunk_length')
-        box.prop(mtree_props, 'trunk_variation')
-        box.prop(mtree_props, 'trunk_space')
-        sbox = box.box()
-        sbox.prop(mtree_props, 'preserve_trunk')
-        if mtree_props.preserve_trunk:
-            sbox.prop(mtree_props, 'preserve_end')
-            sbox.prop(mtree_props, 'trunk_split_proba')
-            sbox.prop(mtree_props, 'trunk_split_angle')
+            box = layout.box()
+            box.label("Trunk")
+            sbox = box.box()
+            sbox.prop(mtree_props, 'use_grease_pencil')
+            if mtree_props.use_grease_pencil:
+                sbox.prop(mtree_props, 'smooth_stroke')
+                sbox.prop(mtree_props, 'stroke_step_size')
+            box.prop(mtree_props, 'trunk_length')
+            box.prop(mtree_props, 'trunk_variation')
+            box.prop(mtree_props, 'trunk_space')
+            sbox = box.box()
+            sbox.prop(mtree_props, 'preserve_trunk')
+            if mtree_props.preserve_trunk:
+                sbox.prop(mtree_props, 'preserve_end')
+                sbox.prop(mtree_props, 'trunk_split_proba')
+                sbox.prop(mtree_props, 'trunk_split_angle')
+        else:
+            box = layout.box()
+            box.prop(mtree_props, 'use_grease_pencil')
+            box.prop(mtree_props, 'trunk_length')
+            box.prop(mtree_props, 'preserve_trunk')
+
+
+
 
 
 class TreeBranchesPanel(Panel):
@@ -235,34 +246,54 @@ class TreeBranchesPanel(Panel):
         mtree_props = scene.mtree_props
         layout = self.layout
 
-        box = layout.box()
-        box.label("Branches")
-        box.prop(mtree_props, 'break_chance')
-        box.prop(mtree_props, 'branch_length')
-        box.prop(mtree_props, 'randomangle')
-        box.prop(mtree_props, 'split_proba')
-        box.prop(mtree_props, 'split_angle')
-        box.prop(mtree_props, 'radius_dec')
-        box.prop(mtree_props, 'branch_min_radius')
-        col = box.column(align=True)
-        col.prop(mtree_props, 'branch_rotate')
-        col.prop(mtree_props, 'branch_random_rotate')
+        if mtree_props.ui_mode == 'COMPLETE':
 
-        box = layout.box()
-        col = box.column(True)
-        col.prop(mtree_props, 'gravity_strength')
-        col.prop(mtree_props, 'gravity_start')
-        col.prop(mtree_props, 'gravity_end')
-        box.prop_search(mtree_props, "obstacle", scene, "objects")
-        if bpy.data.objects.get(mtree_props.obstacle) is not None:
-            box.prop(mtree_props, 'obstacle_strength')
-        col1 = box.column()
-        col1.prop(mtree_props, 'use_force_field')
-        if mtree_props.use_force_field:
-            col1.prop(mtree_props, 'fields_point_strength')
-            col1.prop(mtree_props, 'fields_point_strength')
-            col1.prop(mtree_props, 'fields_strength_limit')
-            col1.prop(mtree_props, 'fields_radius_factor')
+            box = layout.box()
+            box.label("Branches")
+            box.prop(mtree_props, 'break_chance')
+            box.prop(mtree_props, 'dont_break_trunk')
+            box.prop(mtree_props, 'branch_length')
+            box.prop(mtree_props, 'randomangle')
+            box.prop(mtree_props, 'split_proba')
+            box.prop(mtree_props, 'split_angle')
+            box.prop(mtree_props, 'radius_dec')
+            box.prop(mtree_props, 'branch_min_radius')
+            col = box.column(align=True)
+            col.prop(mtree_props, 'branch_rotate')
+            col.prop(mtree_props, 'branch_random_rotate')
+
+            box = layout.box()
+            col = box.column(True)
+            col.prop(mtree_props, 'gravity_strength')
+            col.prop(mtree_props, 'gravity_start')
+            col.prop(mtree_props, 'gravity_end')
+            sbox = box.box()
+            sbox.prop_search(mtree_props, "obstacle", scene, "objects")
+            if bpy.data.objects.get(mtree_props.obstacle) is not None:
+                sbox.prop(mtree_props, 'obstacle_strength')
+                sbox.prop(mtree_props, 'obstacle_flip_normals')
+                sbox.prop(mtree_props, 'obstacle_kill')
+            sbox = box.box()
+            col1 = sbox.column()
+            col1.prop(mtree_props, 'use_force_field')
+            if mtree_props.use_force_field:
+                col1.prop(mtree_props, 'fields_point_strength')
+                col1.prop(mtree_props, 'fields_wind_strength')
+                col1.prop(mtree_props, 'fields_strength_limit')
+                col1.prop(mtree_props, 'fields_radius_factor')
+        else:
+            box = layout.box()
+            box.prop(mtree_props, 'branch_length')
+            box.prop(mtree_props, 'split_angle')
+            box.prop(mtree_props, 'split_proba')
+            box.prop(mtree_props, 'gravity_strength')
+            box.prop(mtree_props, 'use_force_field')
+            sbox = box.box()
+            sbox.prop_search(mtree_props, "obstacle", scene, "objects")
+            if bpy.data.objects.get(mtree_props.obstacle) is not None:
+                sbox.prop(mtree_props, 'obstacle_strength')
+                sbox.prop(mtree_props, 'obstacle_kill')
+
 
 
 class AdvancedSettingsPanel(Panel):
@@ -279,21 +310,39 @@ class AdvancedSettingsPanel(Panel):
         layout = self.layout
         scene = context.scene
 
-        box = layout.box()
-        box.prop(mtree_props, 'mat')
-        if not mtree_props.mat:
-            box.prop_search(mtree_props, "bark_material", bpy.data, "materials")
-        box.prop(mtree_props, 'create_armature')
-        if mtree_props.create_armature:
-            box.prop(mtree_props, 'bones_iterations')
-        box.prop(mtree_props, 'visualize_leafs')
-        box.prop(mtree_props, 'leafs_iteration_length')
-        box.prop(mtree_props, 'particle')
-        if mtree_props.particle:
-            box.prop(mtree_props, 'number')
-            box.prop(mtree_props, 'display')
-            box.prop_search(mtree_props, "twig_particle", scene, "objects")
-            box.prop(mtree_props, 'particle_size')
+        if mtree_props.ui_mode == 'COMPLETE':
+
+            box = layout.box()
+            box.prop(mtree_props, 'mat')
+            if not mtree_props.mat:
+                box.prop_search(mtree_props, "bark_material", bpy.data, "materials")
+            box.prop(mtree_props, 'create_armature')
+            if mtree_props.create_armature:
+                box.prop(mtree_props, 'bones_iterations')
+            box.prop(mtree_props, 'leafs_iteration_length')
+            box.prop(mtree_props, 'particle')
+            if mtree_props.particle:
+                box.prop(mtree_props, 'number')
+                box.prop(mtree_props, 'display')
+                box.prop_search(mtree_props, "twig_particle", scene, "objects")
+                box.prop(mtree_props, 'particle_size')
+            box = layout.box()
+            box.prop(mtree_props, 'pruning')
+            if mtree_props.pruning:
+                box.prop(mtree_props, 'pruning_intensity')
+                box.prop(mtree_props, 'pruning_resolution')
+        else:
+            box = layout.box()
+            box.prop(mtree_props, 'mat')
+            if not mtree_props.mat:
+                box.prop_search(mtree_props, "bark_material", bpy.data, "materials")
+            box.prop(mtree_props, 'particle')
+            if mtree_props.particle:
+                box.prop(mtree_props, 'number')
+                box.prop_search(mtree_props, "twig_particle", scene, "objects")
+            box.prop(mtree_props, 'pruning')
+            if mtree_props.pruning:
+                box.prop(mtree_props, 'pruning_intensity')
 
 
 class WindAnimationPanel(Panel):
@@ -347,13 +396,21 @@ class MakeTwigPanel(Panel):
 
         box = layout.box()
         box.label("Twig Options")
-        box.prop(mtree_props, "leaf_size")
-        box.prop_search(mtree_props, "leaf_object", scene, "objects")
-        box.prop(mtree_props, "leaf_chance")
-        box.prop(mtree_props, "leaf_weight")
-        box.prop(mtree_props, "TwigSeedProp")
-        box.prop(mtree_props, "twig_iteration")
-        box.prop_search(mtree_props, "twig_bark_material", bpy.data, "materials")
+        sbox = box.box()
+        sbox.label("UI")
+        sbox.prop(mtree_props, 'ui_mode', expand=True)
+        if mtree_props.ui_mode == 'COMPLETE':
+            box.prop(mtree_props, "leaf_size")
+            box.prop_search(mtree_props, "leaf_object", scene, "objects")
+            box.prop(mtree_props, "leaf_chance")
+            box.prop(mtree_props, "leaf_weight")
+            box.prop(mtree_props, "TwigSeedProp")
+            box.prop(mtree_props, "twig_iteration")
+            box.prop_search(mtree_props, "twig_bark_material", bpy.data, "materials")
+        else:
+            box.prop(mtree_props, 'leaf_size')
+            box.prop(mtree_props, 'TwigSeedProp')
+            box.prop_search(mtree_props, "twig_bark_material", bpy.data, "materials")
 
 
 class MakeTreePresetsPanel(Panel):
@@ -384,10 +441,12 @@ class ModularTreePropertyGroup(PropertyGroup):
     """This is the set of all of the properties for modular tree."""
     preset_name = StringProperty(name="Preset Name", default="MyPreset")
 
-    finish_unwrap = BoolProperty(
-        name="Unwrap",
-        description="Run 'Unwrap' operator. WARNING: slow, enable for final only",
-        default=True)
+    ui_mode = EnumProperty(
+        name="UI Mode",
+        items=(
+            ('SIMPLE', 'Simple', "", 0),
+            ('COMPLETE', 'Complete', "", 1)))
+
 
     preserve_trunk = BoolProperty(
         name="Preserve Trunk", default=False,
@@ -423,7 +482,7 @@ class ModularTreePropertyGroup(PropertyGroup):
     iteration = IntProperty(
         name="Branch Iterations",
         min=2,
-        soft_max=30,
+        soft_max=50,
         default=20)
 
     preserve_end = IntProperty(
@@ -434,7 +493,7 @@ class ModularTreePropertyGroup(PropertyGroup):
 
     trunk_length = IntProperty(
         name="Trunk Iterations",
-        min=5,
+        min=1,
         default=9,
         description="Iteration from from which first split occurs")
 
@@ -493,6 +552,15 @@ class ModularTreePropertyGroup(PropertyGroup):
         description='Strength with which to avoid obstacles',
         default=1)
 
+    obstacle_flip_normals = BoolProperty(
+        name="Flip Normals",
+        default=False)
+
+    obstacle_kill = BoolProperty(
+        name="Kill Branches",
+        default=False,
+        description='does not repel branches near the domain object, but ends them')
+
     SeedProp = IntProperty(
         name="Seed",
         default=randint(0, 1000))
@@ -505,25 +573,16 @@ class ModularTreePropertyGroup(PropertyGroup):
         name='Bones Iterations',
         default=8)
 
-    visualize_leafs = BoolProperty(
-        name='Visualize Particle Weights',
-        default=False)
-
     leafs_iteration_length = IntProperty(
         name='Leafs Group Length',
         default=4,
         description="The number of branches iterations where leafs will appear")
 
     uv = BoolProperty(
-        name="Create UV Seams",
+        name="Unwrap",
         default=False,
-        description="Create uv seams for tree (enable unwrap to auto unwrap)")
+        description="Unwrap tree")
 
-    unwrap_end_iteration = IntProperty(
-        name="Last Unwrapped Iteration",
-        min=1,
-        soft_max=20,
-        default=8)
 
     mat = BoolProperty(
         name="Create New Material",
@@ -540,7 +599,7 @@ class ModularTreePropertyGroup(PropertyGroup):
 
     branch_rotate = FloatProperty(
         name="Branches Rotation Angle",
-        default=90,
+        default=45,
         min=0,
         max=360,
         description="angle between new split and previous split")
@@ -582,6 +641,10 @@ class ModularTreePropertyGroup(PropertyGroup):
     break_chance = FloatProperty(
         name="Break Chance",
         default=0.02)
+
+    dont_break_trunk = BoolProperty(
+        name="Don't Break Trunk",
+        default=True)
 
     bark_material = StringProperty(
         name="Bark Material")
@@ -701,6 +764,20 @@ class ModularTreePropertyGroup(PropertyGroup):
         description="How the branch radius affects the force strength. "
                     "\n0 means big branches are as affected as small ones.")
 
+    pruning = BoolProperty(
+        name='pruning',
+        default=False)
+
+    pruning_intensity = FloatProperty(
+        name="Pruning intensity",
+        min=0,
+        default=1)
+
+    pruning_resolution = IntProperty(
+        name="voxel size",
+        min=1,
+        default=2)
+
     clear_mods = BoolProperty(name="Clear Modifiers", default=True)
 
     wind_strength = FloatProperty(name="Wind Strength", default=1)
@@ -723,8 +800,6 @@ documentation_mapping = (
     ("bpy.types.ModularTreePropertyGroup.iteration", "Make-Tree-Panel#branch-iterations"),
     ("bpy.types.ModularTreePropertyGroup.radius", "Make-Tree-Panel#radius"),
     ("bpy.types.ModularTreePropertyGroup.uv", "Make-Tree-Panel#create-uv-seams"),
-    ("bpy.types.ModularTreePropertyGroup.finish_unwrap", "Make-Tree-Panel#unwrap"),
-    ("bpy.types.ModularTreePropertyGroup.unwrap_end_iteration", "Make-Tree-Panel#last-unwrapped-iteration"),
     # roots and trunk
     ("bpy.types.ModularTreePropertyGroup.create_roots", "Roots-and-Trunk#create-roots"),
     ("bpy.types.ModularTreePropertyGroup.roots_iteration", "Roots-and-Trunk#roots-iterations"),
@@ -754,7 +829,6 @@ documentation_mapping = (
     ("bpy.types.ModularTreePropertyGroup.bark_material", "Advanced-Settings#bark-material"),
     ("bpy.types.ModularTreePropertyGroup.create_armature", "Advanced-Settings#create-armature"),
     ("bpy.types.ModularTreePropertyGroup.bones_iterations", "Advanced-Settings#bones-iterations"),
-    ("bpy.types.ModularTreePropertyGroup.visualize_leafs", "Advanced-Settings#visualize-particle-weights"),
     ("bpy.types.ModularTreePropertyGroup.leafs_iteration_length", "Advanced-Settings#leafs-group-length"),
     ("bpy.types.ModularTreePropertyGroup.particle", "Advanced-Settings#configure-particle-system"),
     ("bpy.types.ModularTreePropertyGroup.number", "Advanced-Settings#number-of-leaves"),
