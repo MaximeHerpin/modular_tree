@@ -583,6 +583,25 @@ class ModularTreePropertyGroup(PropertyGroup):
         default=False,
         description="Unwrap tree")
 
+    finish_unwrap = BoolProperty(
+        name="Finish Unwrap",
+        default=False,
+        description="Finish unwrap")
+
+    visualize_leafs = IntProperty(
+        name="Visualize Leafs",
+        default=0,
+        description="Visualize Leafs")
+
+    unwrap_end_iteration = IntProperty(
+        name="Unwrap End Iteration",
+        default=0,
+        description="Unwrap End Iteration")
+
+    twig_leaf_material = StringProperty(
+        name="Twig Leaf Material",
+        default="",
+        description="Twig Leaf Material")
 
     mat = BoolProperty(
         name="Create New Material",
