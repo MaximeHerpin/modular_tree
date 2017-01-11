@@ -244,8 +244,6 @@ class LoadTreePresetOperator(Operator):
             # verify that a colon is in the line to avoid an error with line.split(":")
             if ":" in line:
                 setting, value = line.split(":")
-                #if setting == 'finish_unwrap':
-                #    mtree_props.finish_unwrap = bool(int(value))
                 if setting == "preserve_trunk":
                     mtree_props.preserve_trunk = bool(int(value))  # bools have to be converted to int first (stored as 0/1)
                 elif setting == "trunk_split_angle":
@@ -290,14 +288,10 @@ class LoadTreePresetOperator(Operator):
                     mtree_props.create_armature = bool(int(value))
                 elif setting == "bones_iterations":
                     mtree_props.bones_iterations = int(value)
-                #elif setting == "visualize_leafs":
-                #    mtree_props.visualize_leafs = bool(int(value))
                 elif setting == "leafs_iteration_length":
                     mtree_props.leafs_iteration_length = int(value)
                 elif setting == "uv":
                     mtree_props.uv = bool(int(value))
-                #elif setting == "unwrap_end_iteration":
-                #    mtree_props.unwrap_end_iteration = int(value)
                 elif setting == "mat":
                     mtree_props.mat = bool(int(value))
                 elif setting == "roots_iteration":
@@ -322,8 +316,6 @@ class LoadTreePresetOperator(Operator):
                     mtree_props.leaf_size = float(value)
                 elif setting == "leaf_chance":
                     mtree_props.leaf_chance = float(value)
-                #elif setting == "twig_leaf_material":
-                #    mtree_props.twig_leaf_material = value.replace("\n", "")
                 elif setting == "twig_bark_material":
                     mtree_props.twig_bark_material = value.replace("\n", "")
                 elif setting == "TwigSeedProp":
