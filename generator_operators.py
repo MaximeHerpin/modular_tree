@@ -134,7 +134,6 @@ class MakeTwigOperator(Operator):
         save_SeedProp = mtree_props.SeedProp
         save_create_armature = mtree_props.create_armature
         save_bones_iterations = mtree_props.bones_iterations
-        save_visualize_leafs = mtree_props.visualize_leafs
         save_leafs_iteration_length = mtree_props.leafs_iteration_length
         save_uv = mtree_props.uv
         save_mat = mtree_props.mat
@@ -170,7 +169,6 @@ class MakeTwigOperator(Operator):
         mtree_props.SeedProp = mtree_props.SeedProp
         mtree_props.create_armature = False
         mtree_props.bones_iterations = 10
-        mtree_props.visualize_leafs = False
         mtree_props.leafs_iteration_length = 7
         mtree_props.mat = mtree_props.mat
         mtree_props.roots_iteration = 0
@@ -237,7 +235,6 @@ class MakeTwigOperator(Operator):
         mtree_props.SeedProp = save_SeedProp
         mtree_props.create_armature = save_create_armature
         mtree_props.bones_iterations = save_bones_iterations
-        mtree_props.visualize_leafs = save_visualize_leafs
         mtree_props.leafs_iteration_length = save_leafs_iteration_length
         mtree_props.uv = save_uv
         mtree_props.mat = save_mat
