@@ -583,26 +583,6 @@ class ModularTreePropertyGroup(PropertyGroup):
         default=False,
         description="Unwrap tree")
 
-    # finish_unwrap = BoolProperty(
-    #     name="Finish Unwrap",
-    #     default=False,
-    #     description="Finish unwrap")
-
-    # visualize_leafs = IntProperty(
-    #     name="Visualize Leafs",
-    #     default=0,
-    #     description="Visualize Leafs")
-
-    # unwrap_end_iteration = IntProperty(
-    #     name="Unwrap End Iteration",
-    #     default=0,
-    #     description="Unwrap End Iteration")
-
-    # twig_leaf_material = StringProperty(
-    #     name="Twig Leaf Material",
-    #     default="",
-    #     description="Twig Leaf Material")
-
     mat = BoolProperty(
         name="Create New Material",
         default=False,
@@ -866,7 +846,6 @@ documentation_mapping = (
     ("bpy.types.ModularTreePropertyGroup.TwigSeedProp", "Make-Twig#twig-seed"),
     ("bpy.types.ModularTreePropertyGroup.twig_iteration", "Make-Twig#twig-iteration"),
     ("bpy.types.ModularTreePropertyGroup.twig_bark_material", "Make-Twig#twig-bark-material"),
-    ("bpy.types.ModularTreePropertyGroup.twig_leaf_material", "Make-Twig#twig-leaf-material"),
     # wind animation
     ("bpy.ops.mod_tree.animate_wind", "Wind-Animation#animate-wind"),
     ("bpy.ops.mod_tree.make_wind_controller", "Wind-Animation#make-wind-controller"),
