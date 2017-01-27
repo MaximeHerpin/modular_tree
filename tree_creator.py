@@ -107,7 +107,7 @@ class Split:
         __init__ - Initialises the variables
     """
 
-    def __init__(self, entree, sortie, verts1, verts2, faces, uv, uv_height=0.0):
+    def __init__(self, entree, sortie, verts1, verts2, faces, uv, uv_height=0.0, seams = []):
         """Initialises the variables
 
         Args:
@@ -458,7 +458,7 @@ branch = Module(
      [(0.62, 0.1), (0.62, 0.0), (0.75, 0.0), (0.75, 0.1)], [(0.5, 0.1), (0.5, 0.0), (0.62, 0.0), (0.62, 0.1)],
      [(0.37, 0.1), (0.37, 0.0), (0.5, 0.0), (0.5, 0.1)], [(0.25, 0.1), (0.25, 0.0), (0.37, 0.0), (0.37, 0.1)],
      [(0.13, 0.1), (0.13, 0.0), (0.25, 0.0), (0.25, 0.1)], [(0.0, 0.1), (0.0, 0.0), (0.13, 0.0), (0.13, 0.1)]],
-    .1000976216) #0.095244106
+    .1000976216)
 
 trunk = Split(
     # entree
@@ -988,7 +988,6 @@ def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entre
 
     directions.normalize()
 
-
     uv_scale = 3*branch_length/real_radius
     m = Matrix([(1, 0), (0, uv_scale)])
 
@@ -1000,7 +999,10 @@ def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entre
     d1 = v[-2]
 
     n = len(verts)
+    to_be_painted = []
     nentree = [n + i for i in entree]
+    to_be_painted += nentree
+    to_be_painted += indexes
     uv_list += [[Vector(uv)+Vector((0, height)) for uv in u] for u in jonc_uv]
     faces += [add_tuple(f, n) for f in object_faces]
     verts += [barycentre + i for i in v]
@@ -1009,10 +1011,8 @@ def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entre
 
     i1 = [n + i for i in i1]
     i2 = [n + i for i in i2]
-
-    dist = 1000
             
-    return i1, i2, d1, d2, r1, r2  # no need to return i1[0] and i2[0]...just do that outside of the func
+    return i1, i2, d1, d2, r1, r2, to_be_painted  # no need to return i1[0] and i2[0]...just do that outside of the func
 
 
 def join_branch(verts, faces, indexes, scale, branch_length, branch_verts, direction, rand, uv_list, height, real_radius):
@@ -1061,7 +1061,6 @@ def join_branch(verts, faces, indexes, scale, branch_length, branch_verts, direc
     m = Matrix([(1, 0), (0, uv_scale)])
     uv_list += [[m*Vector(uv) + Vector((0, height)) for uv in u] for u in branch.uv]
 
-    dist = 1000
 
     return nentree, direction
 
@@ -1232,6 +1231,7 @@ def create_tree(position, is_twig=False):
     clock = Clock("create_tree")
 
     twig_leafs = []
+    paint_indexes = []
 
     leafs_weight_indexes = []
 
@@ -1304,7 +1304,7 @@ def create_tree(position, is_twig=False):
 
                 if i > 2:
                     direction += 0.7 * Vector((0, 0, -1)) / (max(1, 20 * abs(barycentre.z)))
-                ni1, ni2, dir1, dir2, r1, r2 = join(verts, faces, indexes, jonct_verts, big_j.faces,
+                ni1, ni2, dir1, dir2, r1, r2, to_be_painted = join(verts, faces, indexes, jonct_verts, big_j.faces,
                                                                 radius * roots_rad_dec, i1, i2, entree, direction,
                                                                 roots_length, uv_list, jonct_uv,
                                                                 roots_variations,
@@ -1470,12 +1470,13 @@ def create_tree(position, is_twig=False):
                 inter_fact = mtree_props.trunk_split_angle if is_trunk else mtree_props.split_angle
                 jonct_verts = interpolate(big_j.verts1, big_j.verts2, inter_fact)
                 length = mtree_props.trunk_space if is_trunk else mtree_props.branch_length
-                ni1, ni2, dir1, dir2, r1, r2 = join(verts, faces, indexes, jonct_verts, big_j.faces,
+                ni1, ni2, dir1, dir2, r1, r2, to_be_painted = join(verts, faces, indexes, jonct_verts, big_j.faces,
                                                                 radius * (1 + mtree_props.radius_dec) / 2, i1, i2, entree,
                                                                 direction, length, uv_list, jonct_uv,
                                                                 variation, new_rotation, curr_height, real_radius)
                 sortie1 = (verts[ni1[0]] + verts[ni1[4]]) / 2
                 sortie2 = (verts[ni2[0]] + verts[ni2[4]]) / 2
+                paint_indexes += to_be_painted
                 nb = len(bones)
 
                 if i <= mtree_props.bones_iterations:
@@ -1575,6 +1576,27 @@ def create_tree(position, is_twig=False):
     fix_normals(inside=False)
     if obj.data.polygons[0].normal.x < 0:
         fix_normals(inside=True)
+
+    # vertex paint
+    paint = [False]*len(verts)
+    for i in paint_indexes:
+        paint[i] = True
+    clock.add_sub_job("vertex_paint")
+    bpy.ops.object.mode_set(mode='OBJECT')
+    color = (0,0,0)
+    if mesh.vertex_colors:
+        vcol_layer = mesh.vertex_colors.active
+    else:
+        vcol_layer = mesh.vertex_colors.new()
+
+    for loop_index, loop in enumerate(mesh.loops):
+        loop_vert_index = loop.vertex_index
+        if paint[loop_vert_index]:
+            vcol_layer.data[loop_index].color = color
+
+
+    clock.stop("vertex_paint")
+
 
     # particle setup
     if mtree_props.particle:
