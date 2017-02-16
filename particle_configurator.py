@@ -49,6 +49,7 @@ def create_system(ob, number, display, vertex_group, object_name, size):
     bpy.data.particles["leaf"].rotation_factor_random = 0.12
     settings.normal_factor = 0.250
     settings.factor_random = 0.7
+    settings.use_render_emitter = False
     settings.use_rotations = True
     settings.phase_factor = 1
     settings.phase_factor_random = 1
