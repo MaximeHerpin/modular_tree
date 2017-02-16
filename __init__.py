@@ -51,19 +51,19 @@ class TreeAddonPrefs(AddonPreferences):
 
     always_save_prior = BoolProperty(
         name="Save .blend File",
-        default=False,
+        default=True,
         description="Always save .blend file before executing " +
                     "time-consuming operations")
 
     save_all_images = BoolProperty(
         name="Save Images",
-        default=False,
+        default=True,
         description="Always save images before executing " +
                     "time-consuming operations")
 
     save_all_texts = BoolProperty(
         name="Save Texts",
-        default=False,
+        default=True,
         description="Always save texts before executing " +
                     "time-consuming operations")
 
@@ -203,9 +203,15 @@ class RootsAndTrunksPanel(Panel):
         if mtree_props.ui_mode == 'COMPLETE':
             box = layout.box()
             box.label("Roots")
-            box.prop(mtree_props, 'create_roots')
+            sbox = box.box()
+            sbox.prop(mtree_props, 'create_roots')
             if mtree_props.create_roots:
-                box.prop(mtree_props, 'roots_iteration')
+                sbox.prop(mtree_props, 'roots_iteration')
+                sbox.prop(mtree_props, 'roots_split_proba')
+                sbox.prop(mtree_props, 'roots_length')
+                sbox.prop(mtree_props, 'roots_stay_under_ground')
+                if mtree_props.roots_stay_under_ground:
+                    sbox.prop(mtree_props, 'roots_ground_height')
 
             box = layout.box()
             box.label("Trunk")
@@ -593,6 +599,25 @@ class ModularTreePropertyGroup(PropertyGroup):
     roots_iteration = IntProperty(
         name="Roots Iterations",
         default=4)
+
+    roots_split_proba = FloatProperty(
+        name="Roots Split Probability",
+        default=.25,
+        min=0,
+        max=1)
+
+    roots_ground_height = FloatProperty(
+        name="Ground Height",
+        default=0)
+
+    roots_stay_under_ground = BoolProperty(
+        name="Stay Under The Ground",
+        default=True)
+
+    roots_length = FloatProperty(
+        name="Roots Length",
+        default=.5,
+        min=.005)
 
     create_roots = BoolProperty(
         name="Create Roots",
