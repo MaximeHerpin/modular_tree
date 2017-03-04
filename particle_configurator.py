@@ -43,8 +43,13 @@ def create_system(ob, number, display, vertex_group, object_name, size):
     settings.draw_percentage = 100 * display / number
     settings.count = number
     settings.distribution = "RAND"
+    settings.use_rotation_dupli = True
+    bpy.data.particles["leaf"].rotation_mode = 'OB_Z'
+    bpy.data.particles["leaf"].phase_factor_random = 2
+    bpy.data.particles["leaf"].rotation_factor_random = 0.12
     settings.normal_factor = 0.250
     settings.factor_random = 0.7
+    settings.use_render_emitter = False
     settings.use_rotations = True
     settings.phase_factor = 1
     settings.phase_factor_random = 1

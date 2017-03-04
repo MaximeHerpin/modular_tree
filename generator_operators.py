@@ -174,7 +174,7 @@ class MakeTwigOperator(Operator):
         mtree_props.roots_iteration = 0
         mtree_props.create_roots = False
         mtree_props.branch_rotate = 0
-        mtree_props.branch_random_rotate = 15
+        mtree_props.branch_random_rotate = 5
         mtree_props.particle = False
         mtree_props.number = 0
         mtree_props.display = 0
@@ -210,6 +210,7 @@ class MakeTwigOperator(Operator):
             i.select = True
         bpy.ops.object.join()
         bpy.ops.transform.rotate(value=-1.5708, axis=(1, 0, 0))
+        bpy.ops.transform.rotate(value=1.5708, axis=(0, 1, 0))
         bpy.ops.transform.resize(value=(0.25, 0.25, 0.25))
         bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 

@@ -23,33 +23,32 @@ import bpy
 
 # Material node_tree
 Bark_Nodes, Bark_Links = ([('NodeReroute', Vector((-580.0, 460.0)), 'Reroute', ''),
-    ('ShaderNodeSeparateXYZ', Vector((-560.0, 140.0)), 'Separate XYZ', ''),
-    ('ShaderNodeMixRGB', Vector((-380.0, 140.0)), 'Mix', ''),
-    ('ShaderNodeTexNoise', Vector((-560.0, 0.0)), 'Noise Texture', ''),
-    ('ShaderNodeVectorMath', Vector((-740.0, 0.0)), 'Vector Math', ''),
-    ('ShaderNodeObjectInfo', Vector((-940.0, -140.0)), 'Object Info', ''),
-    ('ShaderNodeTexImage', Vector((-220.0, 440.0)), 'Bark texture', 'Bark texture'),
-    ('ShaderNodeMapping', Vector((-560.0, 440.0)), 'Mapping', ''),
-    ('ShaderNodeMapping', Vector((-561.4127807617188, 749.75927734375)), 'Mapping.001', ''),
-    ('ShaderNodeTexImage', Vector((-213.890625, 727.4722900390625)), 'Bark texture.001', 'Bark texture'),
-    ('ShaderNodeTexCoord', Vector((-935.7615966796875, 212.72984313964844)), 'Texture Coordinate', ''),
-    ('NodeReroute', Vector((280.0, 140.0)), 'Reroute.003', ''),
-    ('ShaderNodeOutputMaterial', Vector((1580.0, 440.0)), 'Material Output', ''),
-    ('ShaderNodeTexNoise', Vector((880.0, 540.0)), 'Noise Texture.001', ''),
-    ('ShaderNodeBrightContrast', Vector((1060.0, 540.0)), 'Bright/Contrast', ''),
-    ('NodeReroute', Vector((360.0, -20.0)), 'Reroute.001', ''),
-    ('ShaderNodeInvert', Vector((880.0, 300.0)), 'Invert', ''),
-    ('NodeReroute', Vector((960.0, -20.0)), 'Reroute.002', ''),
-    ('ShaderNodeMixRGB', Vector((300.0, 300.0)), 'Mix.002', ''),
-    ('ShaderNodeValToRGB', Vector((620.0, 300.0)), 'moss height', 'moss height'),
-    ('ShaderNodeMath', Vector((460.0, 300.0)), 'Math.001', ''),
-    ('ShaderNodeMixRGB', Vector((1040.0, 300.0)), 'moss color', 'moss color'),
-    ('ShaderNodeMixRGB', Vector((1240.0, 440.0)), 'color variation', 'color variation'),
-    ('ShaderNodeAttribute', Vector((-220.0, 900.0)), 'Attribute', ''),
-    ('ShaderNodeMixRGB', Vector((-3.890625, 533.7361450195312)), 'Mix.001', ''),
-    ('ShaderNodeBsdfDiffuse', Vector((1400.0, 440.0)), 'Diffuse BSDF', '')],
-    [([10, 'Object'], [4, 'Vector']), ([10, 'Generated'], [1, 'Vector']), ([1, 'Z'], [2, 'Color1']), ([3, 'Fac'], [2, 'Color2']), ([19, 'Color'], [16, 'Color']), ([16, 'Color'], [21, 'Fac']), ([17, 'Output'], [21, 'Color1']), ([20, 'Value'], [19, 'Fac']), ([2, 'Color'], [18, 'Color1']), ([18, 'Color'], [20, 'Value']), ([11, 'Output'], [18, 'Color2']), ([0, 'Output'], [13, 'Vector']), ([22, 'Color'], [25, 'Color']), ([21, 'Color'], [22, 'Color1']), ([13, 'Fac'], [14, 'Color']), ([14, 'Color'], [22, 'Fac']), ([11, 'Output'], [15, 'Input']), ([15, 'Output'], [17, 'Input']), ([10, 'UV'], [7, 'Vector']), ([7, 'Vector'], [6, 'Vector']), ([4, 'Vector'], [3, 'Vector']), ([4, 'Vector'], [0, 'Input']), ([5, 'Location'], [4, 'Vector']), ([8, 'Vector'], [9, 'Vector']), ([10, 'Generated'], [8, 'Vector']), ([9, 'Color'], [24, 'Color2']), ([24, 'Color'], [11, 'Input']), ([23, 'Fac'], [24, 'Fac']), ([6, 'Color'], [24, 'Color1']), ([25, 'BSDF'], [12, 'Surface'])])
-
+                          ('ShaderNodeSeparateXYZ', Vector((-560.0, 140.0)), 'Separate XYZ', ''),
+                          ('ShaderNodeMixRGB', Vector((-380.0, 140.0)), 'Mix', ''),
+                          ('ShaderNodeTexNoise', Vector((-560.0, 0.0)), 'Noise Texture', ''),
+                          ('ShaderNodeVectorMath', Vector((-740.0, 0.0)), 'Vector Math', ''),
+                          ('ShaderNodeObjectInfo', Vector((-940.0, -140.0)), 'Object Info', ''),
+                          ('ShaderNodeMapping', Vector((-560.0, 440.0)), 'Mapping', ''),
+                          ('ShaderNodeMapping', Vector((-561.4127807617188, 749.75927734375)),
+                           'Mapping.001', ''), ('ShaderNodeTexCoord', Vector((-935.7615966796875, 212.72984313964844)), 'Texture Coordinate', ''),
+                          ('NodeReroute', Vector((280.0, 140.0)), 'Reroute.003', ''),
+                          ('ShaderNodeOutputMaterial', Vector((1580.0, 440.0)), 'Material Output', ''),
+                          ('ShaderNodeTexNoise', Vector((880.0, 540.0)), 'Noise Texture.001', ''),
+                          ('ShaderNodeBrightContrast', Vector((1060.0, 540.0)), 'Bright/Contrast', ''),
+                          ('NodeReroute', Vector((360.0, -20.0)), 'Reroute.001', ''),
+                          ('ShaderNodeInvert', Vector((880.0, 300.0)), 'Invert', ''),
+                          ('NodeReroute', Vector((960.0, -20.0)), 'Reroute.002', ''),
+                          ('ShaderNodeMixRGB', Vector((300.0, 300.0)), 'Mix.002', ''),
+                          ('ShaderNodeValToRGB', Vector((620.0, 300.0)), 'moss height', 'moss height'),
+                          ('ShaderNodeMath', Vector((460.0, 300.0)), 'Math.001', ''),
+                          ('ShaderNodeMixRGB', Vector((1040.0, 300.0)), 'moss color', 'moss color'),
+                          ('ShaderNodeMixRGB', Vector((1240.0, 440.0)), 'color variation', 'color variation'),
+                          ('ShaderNodeTexImage', Vector((-213.890625, 727.4722900390625)), 'Bark texture.001', 'Bark texture'),
+                          ('ShaderNodeTexImage', Vector((-220.0, 440.0)), 'Bark texture', 'Bark texture'),
+                          ('ShaderNodeAttribute', Vector((-220.0, 900.0)), 'Attribute', ''),
+                          ('ShaderNodeMixRGB', Vector((96.73806762695312, 608.3135375976562)), 'Mix.001', ''),
+                          ('ShaderNodeBsdfDiffuse', Vector((1400.0, 440.0)), 'Diffuse BSDF', '')],
+                         [([8, 'Object'], [4, 'Vector']), ([8, 'Generated'], [1, 'Vector']), ([1, 'Z'], [2, 'Color1']), ([3, 'Fac'], [2, 'Color2']), ([17, 'Color'], [14, 'Color']), ([14, 'Color'], [19, 'Fac']), ([15, 'Output'], [19, 'Color1']), ([18, 'Value'], [17, 'Fac']), ([2, 'Color'], [16, 'Color1']), ([16, 'Color'], [18, 'Value']), ([9, 'Output'], [16, 'Color2']), ([0, 'Output'], [11, 'Vector']), ([20, 'Color'], [25, 'Color']), ([19, 'Color'], [20, 'Color1']), ([11, 'Fac'], [12, 'Color']), ([12, 'Color'], [20, 'Fac']), ([9, 'Output'], [13, 'Input']), ([13, 'Output'], [15, 'Input']), ([8, 'UV'], [6, 'Vector']), ([6, 'Vector'], [22, 'Vector']), ([4, 'Vector'], [3, 'Vector']), ([4, 'Vector'], [0, 'Input']), ([5, 'Location'], [4, 'Vector']), ([7, 'Vector'], [21, 'Vector']), ([8, 'Generated'], [7, 'Vector']), ([21, 'Color'], [24, 'Color1']), ([24, 'Color'], [9, 'Input']), ([23, 'Fac'], [24, 'Fac']), ([22, 'Color'], [24, 'Color2']), ([25, 'BSDF'], [10, 'Surface'])])
 
 Leaf_Nodes, Leaf_Links = ([('ShaderNodeMapping', Vector((-1020.0, 440.0)), 'Mapping', ''),
      ('ShaderNodeTexCoord', Vector((-1200.0, 440.0)), 'Texture Coordinate', ''),
@@ -88,10 +87,10 @@ def build_bark_material(mat_name):
         new_node.label = label
 
     nodes = mat.node_tree.nodes
-    nodes['Mapping'].scale = (15, 15, 15)
-    nodes['Mapping.001'].scale = (20, 20, 20)
+    nodes['Mapping'].scale = (1.5, 1.5, 1.5)
+    nodes['Mapping.001'].scale = (9, 9, 9)
     nodes["Bark texture.001"].projection = 'BOX'
-    nodes['Attribute'].attribute_name = "Col"
+    nodes['Attribute'].attribute_name = "seams"
     nodes["Noise Texture"].inputs[1].default_value = 2
     nodes["Noise Texture"].inputs[2].default_value = 10
     nodes["Mix"].blend_type = 'MULTIPLY'
