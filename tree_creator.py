@@ -1434,6 +1434,7 @@ def create_tree(position, is_twig=False):
     extremites = [(extr, mtree_props.radius, Vector((0, 0, 1)), last_bone, mtree_props.preserve_trunk, 0, height)]
     curr_grease_point = 0
     using_grease = False
+    vcol_rad = [mtree_props.radius]*len(verts)
     gp = bpy.context.scene.grease_pencil
     grease_points = []
     save_trunk_length = mtree_props.trunk_length
@@ -1446,7 +1447,7 @@ def create_tree(position, is_twig=False):
         print(grease_points)
         using_grease = True
 
-    def add_branch_layer(extremities, iteration, branch_type="Branch",  faces=faces, verts=verts, uv_list=uv_list, paint_indexes = paint_indexes):
+    def add_branch_layer(extremities, iteration, branch_type="Branch",  faces=faces, verts=verts, uv_list=uv_list, paint_indexes=paint_indexes, vcol_rad=vcol_rad):
         nextremites = []
         nonlocal curr_grease_point
 
@@ -1538,6 +1539,7 @@ def create_tree(position, is_twig=False):
 
             if iteration <= mtree_props.trunk_length and branch_type == "Branch":
                 branch_verts = [v for v in branch.verts]
+                vcol_rad += [real_radius]*8
                 if not using_grease or curr_grease_point >= len(grease_points) - 2:
                     ni, direction = join_branch(verts, faces, indexes, radius, mtree_props.trunk_space, branch_verts,
                                                 direction,
@@ -1556,6 +1558,7 @@ def create_tree(position, is_twig=False):
                                                 grease_dir,
                                                 0, uv_list, curr_height, real_radius)
                     sortie = pos + grease_dir * grease_length
+
                     new_height = grease_length
                     curr_grease_point += 1
 
@@ -1578,11 +1581,13 @@ def create_tree(position, is_twig=False):
                     length = mtree_props.roots_length * sqrt(real_radius)
 
                 n = len(verts)
+
                 join_branch(verts, faces, indexes, radius, length, end_verts, direction,
                             mtree_props.trunk_variation, uv_list, 0, real_radius)
 
                 faces += [add_tuple(f, n) for f in end_faces]
                 uv_list += [u for u in end_cap.uv]
+                vcol_rad += [real_radius]*len(end_verts)
                 if real_radius < mtree_props.radius / 4 and branch_type == "Branch":
                     leafs_weight_indexes.append(len(verts) - 1)
 
@@ -1616,7 +1621,7 @@ def create_tree(position, is_twig=False):
                 sortie2 = (verts[ni2[0]] + verts[ni2[4]]) / 2
                 paint_indexes += to_be_painted
                 nb = len(bones)
-
+                vcol_rad += [real_radius]*len(jonct_verts)
                 if iteration <= mtree_props.bones_iterations and branch_type == "Branch":
                     bones.append((lb[0], nb + 2, lb[1], sortie1))
                     bones.append((lb[0], nb + 3, lb[1], sortie2))
@@ -1644,6 +1649,7 @@ def create_tree(position, is_twig=False):
                                             variation, uv_list, curr_height, real_radius)
 
                 sortie = pos + direction * mtree_props.branch_length
+                vcol_rad += [real_radius]*8
 
                 if iteration <= mtree_props.bones_iterations and branch_type == "Branch":
                     bones.append((lb[0], len(bones) + 2, lb[1], sortie))
@@ -1751,15 +1757,18 @@ def create_tree(position, is_twig=False):
     clock.add_sub_job("vertex_paint")
     bpy.ops.object.mode_set(mode='OBJECT')
     color = (0,0,0)
-    if mesh.vertex_colors:
-        vcol_layer = mesh.vertex_colors.active
-    else:
-        vcol_layer = mesh.vertex_colors.new()
+    vcol_layer = mesh.vertex_colors.new()
+    vcol_rad_layer = mesh.vertex_colors.new()
+    vcol_layer.name = "seams"
+    vcol_rad_layer.name = "radius"
 
     for loop_index, loop in enumerate(mesh.loops):
         loop_vert_index = loop.vertex_index
         if paint[loop_vert_index]:
             vcol_layer.data[loop_index].color = color
+        value = vcol_rad[loop_vert_index]/mtree_props.radius
+        vcol_rad_layer.data[loop_index].color = Vector((value,value,value))
+
 
 
     clock.stop("vertex_paint")

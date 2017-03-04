@@ -90,7 +90,7 @@ def build_bark_material(mat_name):
     nodes['Mapping'].scale = (1.5, 1.5, 1.5)
     nodes['Mapping.001'].scale = (9, 9, 9)
     nodes["Bark texture.001"].projection = 'BOX'
-    nodes['Attribute'].attribute_name = "Col"
+    nodes['Attribute'].attribute_name = "seams"
     nodes["Noise Texture"].inputs[1].default_value = 2
     nodes["Noise Texture"].inputs[2].default_value = 10
     nodes["Mix"].blend_type = 'MULTIPLY'
