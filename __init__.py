@@ -28,7 +28,6 @@ from .presets import TreePresetLoadMenu, TreePresetRemoveMenu, SaveTreePresetOpe
 from .logo import display_logo
 from .wind_setup_utils import WindOperator, MakeControllerOperator, MakeTerrainOperator
 from .addon_name import save_addon_name
-from .icons import register_icons, unregister_icons, get_icon
 
 # third party add-on updater
 from . import addon_updater_ops
@@ -143,11 +142,11 @@ class MakeTreePanel(Panel):
 
         row = layout.row()
         row.scale_y = 1.5
-        row.operator("mod_tree.add_tree", icon_value=get_icon("TREE"))
+        row.operator("mod_tree.add_tree", icon="WORLD")
 
         row = layout.row()
         row.scale_y = 1.5
-        row.operator("mod_tree.update_tree", icon_value=get_icon("TREE_UPDATE"))
+        row.operator("mod_tree.update_tree", icon="FILE_REFRESH")
 
         box = layout.box()
         box.label("Basic")
@@ -176,7 +175,7 @@ class BatchTreePanel(Panel):
         layout = self.layout
         row = layout.row()
         row.scale_y = 1.5
-        row.operator("mod_tree.batch_tree", icon_value=get_icon("BATCH_TREE"))
+        row.operator("mod_tree.batch_tree", icon="LOGIC")
         box = layout.box()
         if mtree_props.ui_mode == 'COMPLETE':
             box.prop(mtree_props, "tree_number")
@@ -368,7 +367,7 @@ class WindAnimationPanel(Panel):
         box = layout.box()
         row = box.row()
         row.scale_y = 1.5
-        row.operator("mod_tree.animate_wind", icon="FORCE_WIND")
+        row.operator("mod_tree.animate_wind", icon="FORCE_VORTEX")
         box.operator("mod_tree.make_wind_controller", icon="FORCE_VORTEX")
         box.operator("mod_tree.make_terrain", icon="FORCE_VORTEX")
         box.prop_search(mtree_props, "wind_controller", bpy.data, "objects")
@@ -395,7 +394,7 @@ class MakeTwigPanel(Panel):
 
         row = layout.row()
         row.scale_y = 1.5
-        row.operator("mod_tree.add_twig", icon_value=get_icon('TWIG'))
+        row.operator("mod_tree.add_twig", icon="SCULPTMODE_HLT")
 
         row = layout.row()
         row.scale_y = 1.5
@@ -589,7 +588,6 @@ class ModularTreePropertyGroup(PropertyGroup):
         name="Unwrap",
         default=False,
         description="Unwrap tree")
-
 
     mat = BoolProperty(
         name="Create New Material",
@@ -873,7 +871,6 @@ documentation_mapping = (
     ("bpy.types.ModularTreePropertyGroup.TwigSeedProp", "Make-Twig#twig-seed"),
     ("bpy.types.ModularTreePropertyGroup.twig_iteration", "Make-Twig#twig-iteration"),
     ("bpy.types.ModularTreePropertyGroup.twig_bark_material", "Make-Twig#twig-bark-material"),
-    ("bpy.types.ModularTreePropertyGroup.twig_leaf_material", "Make-Twig#twig-leaf-material"),
     # wind animation
     ("bpy.ops.mod_tree.animate_wind", "Wind-Animation#animate-wind"),
     ("bpy.ops.mod_tree.make_wind_controller", "Wind-Animation#make-wind-controller"),
@@ -901,8 +898,6 @@ def doc_map():
 
 
 def register():
-    register_icons()
-
     save_addon_name(__name__)
 
     addon_updater_ops.register(bl_info)
@@ -919,8 +914,6 @@ def register():
 
 
 def unregister():
-    unregister_icons()
-    
     addon_updater_ops.unregister()
 
     # unregister all classes
