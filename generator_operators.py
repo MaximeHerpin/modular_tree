@@ -24,7 +24,7 @@ from math import sqrt
 import bpy
 from bpy.types import Operator
 
-from .tree_creator import create_tree, add_leaf
+from .tree_creator import create_tree, add_leaf, alt_create_tree
 from .prep_manager import save_everything
 from .logo import display_logo
 from .material_tools import build_bark_material, build_leaf_material
@@ -47,7 +47,15 @@ class MakeTreeOperator(Operator):
         scene = context.scene
 
         seed(scene.mtree_props.SeedProp)
-        create_tree(scene.cursor_location)
+
+        #create_tree(scene.cursor_location)
+        node_tree = bpy.data.node_groups[context.scene.mtree_props.node_tree]
+        factor = random()
+        # print(factor)
+        # update_all(node_tree, 0)
+        alt_create_tree()
+
+
 
         return {'FINISHED'}
 

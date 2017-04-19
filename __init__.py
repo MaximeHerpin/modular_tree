@@ -29,6 +29,8 @@ from .logo import display_logo
 from .wind_setup_utils import WindOperator, MakeControllerOperator, MakeTerrainOperator
 from .addon_name import save_addon_name
 from .icons import register_icons, unregister_icons, get_icon
+from .Nodes import nodes_to_register, node_categories
+import nodeitems_utils
 
 # third party add-on updater
 from . import addon_updater_ops
@@ -151,6 +153,10 @@ class MakeTreePanel(Panel):
 
         box = layout.box()
         box.label("Basic")
+        box.prop(mtree_props, 'use_node_workflow')
+        if mtree_props.use_node_workflow:
+            box.prop_search(mtree_props, "node_tree", bpy.data, "node_groups")
+
         sbox = box.box()
         sbox.label("UI")
         sbox.prop(mtree_props, 'ui_mode', expand=True)
@@ -524,6 +530,11 @@ class ModularTreePropertyGroup(PropertyGroup):
         default=.7,
         description="Length of the trunk")
 
+    trunk_radius_shape = FloatProperty(
+        name='Trunk_radius_shape',
+        default=1,
+        min=0)
+
     branch_length = FloatProperty(
         name="Branch Length",
         min=0.01,
@@ -804,6 +815,15 @@ class ModularTreePropertyGroup(PropertyGroup):
         min=1,
         default=2)
 
+    use_node_workflow = BoolProperty(
+        name="use node workflow",
+        default=True)
+
+    node_tree = StringProperty(
+        name="node tree",
+        default="")
+
+
     clear_mods = BoolProperty(name="Clear Modifiers", default=True)
 
     wind_strength = FloatProperty(name="Wind Strength", default=1)
@@ -816,6 +836,7 @@ classes = [MakeTreeOperator, BatchTreeOperator, MakeTwigOperator, UpdateTreeOper
            MakeTreePanel, BatchTreePanel, RootsAndTrunksPanel, TreeBranchesPanel, AdvancedSettingsPanel,
            MakeTwigPanel, TreePresetLoadMenu, TreePresetRemoveMenu, WindAnimationPanel, MakeTreePresetsPanel,
            InstallTreePresetOperator, TreeAddonPrefs, ModularTreePropertyGroup]
+classes += nodes_to_register
 
 prefix = "https://github.com/MaximeHerpin/modular_tree/wiki/"
 documentation_mapping = (
@@ -901,6 +922,7 @@ def doc_map():
 
 
 def register():
+    nodeitems_utils.register_node_categories("MOD_TREE_NODES", node_categories)
     register_icons()
 
     save_addon_name(__name__)
@@ -919,6 +941,7 @@ def register():
 
 
 def unregister():
+    nodeitems_utils.unregister_node_categories("MOD_TREE_NODES")
     unregister_icons()
     
     addon_updater_ops.unregister()
