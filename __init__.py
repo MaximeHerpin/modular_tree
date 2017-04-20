@@ -29,7 +29,7 @@ from .logo import display_logo
 from .wind_setup_utils import WindOperator, MakeControllerOperator, MakeTerrainOperator
 from .addon_name import save_addon_name
 from .icons import register_icons, unregister_icons, get_icon
-from .Nodes import nodes_to_register, node_categories
+from .nodes import nodes_to_register, node_categories
 import nodeitems_utils
 
 # third party add-on updater
@@ -600,6 +600,7 @@ class ModularTreePropertyGroup(PropertyGroup):
         name="Unwrap",
         default=False,
         description="Unwrap tree")
+
 
 
     mat = BoolProperty(

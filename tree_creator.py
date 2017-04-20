@@ -25,7 +25,7 @@ import bpy
 import bmesh
 
 
-from .Nodes import get_node_group, curve_node_mapping
+from .nodes import get_node_group, curve_node_mapping
 from .pruning import *
 from .clock import Clock
 
@@ -1518,6 +1518,7 @@ class Tree:
             if iteration <= mtree_props.trunk_length and branch_type == "Branch":
                 branch_verts = [v for v in branch.verts]
                 self.vcol_rad += [real_radius] * 8
+                radius = mtree_props.trunk_radius_shape
                 if not self.using_grease or self.curr_grease_point >= len(self.grease_points) - 2:
                     ni, direction = join_branch(self.verts, self.faces, indexes, radius, mtree_props.trunk_space, branch_verts,
                                                 direction,
@@ -1573,6 +1574,7 @@ class Tree:
             elif iteration < mtree_props.iteration + mtree_props.trunk_length - 1 \
                     and iteration == mtree_props.trunk_length + 1 \
                     and branch_type == "Branch" \
+                    and not mtree_props.preserve_trunk \
                     or random() < split_probability:
 
                 variation = mtree_props.trunk_variation if is_trunk else mtree_props.randomangle
@@ -1645,8 +1647,8 @@ class Tree:
 
 
 names_table = {'Roots': {'Length': 'roots_length', 'split_proba': 'roots_split_proba', 'ground_height': 'roots_groung_height'},
-               'Trunk': {'Trunk_length': 'trunk_length', 'split_proba': 'trunk_split_proba', 'split_angle': 'trunk_split_angle', 'randomness': 'trunk_variation', 'Radius_Shape': 'trunk_radius_shape'},
-               'Branches': {'length': 'branch_length', 'variations': 'randomangle', 'split_proba': 'split_proba', 'split_angle': 'split_angle'}
+               'Trunk': {'Trunk_length': 'trunk_space', 'split_proba': 'trunk_split_proba', 'split_angle': 'trunk_split_angle', 'randomness': 'trunk_variation', 'Radius_Shape': 'trunk_radius_shape'},
+               'Branches': {'length': 'branch_length', 'variations': 'randomangle', 'split_proba': 'split_proba', 'split_angle': 'split_angle', 'break_chance': 'break_chance', 'radius_decrease': 'radius_dec', 'min_radius': 'branch_min_radius'}
                }
 
 
@@ -1681,8 +1683,8 @@ def update_static_properties(node_tree, static_props):
         if node.bl_label == 'Trunk':
             mtree_props.preserve_trunk = node.preserve_trunk
             mtree_props.use_grease_pencil = node.use_grease_pencil
-            if not mtree_props.use_grease_pencil:
-                mtree_props.trunk_length = node.trunk_iterations
+            mtree_props.trunk_length = node.trunk_iterations
+            mtree_props.preserve_end = node.trunk_end
 
         if node.bl_label == 'Branches':
             mtree_props.iteration = node.iterations
@@ -1749,11 +1751,11 @@ def alt_create_tree():
         tree = Tree(Vector((0, 0, 0)))
         tree.static_props, tree.iteration_curve_props, tree.branch_curve_props = eval_inputs(node_tree)
         update_static_properties(node_tree, tree.static_props)
-        roots(tree)
+        root_size = roots(tree)
         trunk(tree)
         branches(tree)
         if tree.roots_to_create:
-            late_roots(tree)
+            late_roots(tree, root_size)
 
         mesh, obj = tree_object_creation(tree)
         vgroups = tree_vertex_groups_creation(tree, mesh, obj)
@@ -1943,7 +1945,8 @@ def roots(tree):
     scene = bpy.context.scene
     mtree_props = scene.mtree_props
     print("generating Roots")
-    tree.verts = [Vector(v) * mtree_props.radius for v in root.verts]
+    update_curve_properties(tree.iteration_curve_props, 0)
+    tree.verts = [Vector(v) * mtree_props.trunk_radius_shape for v in root.verts]
     tree.faces = [f for f in root.faces]
     extr = [i for i in root.sortie[1]]
     tree.uv_list = [u for u in root.uv]
@@ -1956,14 +1959,16 @@ def roots(tree):
         mtree_props.create_roots = True
         tree.roots_to_create = True
 
+    return mtree_props.trunk_radius_shape
 
-def late_roots(tree):
+
+def late_roots(tree, size):
     scene = bpy.context.scene
     mtree_props = scene.mtree_props
     print("generating late roots")
     tree.last_iteration = mtree_props.roots_iteration
     n = len(tree.verts)
-    tree.verts += [Vector(v) * mtree_props.radius for v in R1.verts]
+    tree.verts += [Vector(v) * size for v in R1.verts]
     tree.faces += [add_tuple(f, n) for f in R1.faces]
     tree.uv_list += R1.uv
     tree.extremities = []
@@ -1993,7 +1998,7 @@ def branches(tree):
     mtree_props = scene.mtree_props
     print("generating branches")
     tree.last_iteration = mtree_props.iteration
-    for iteration in range(mtree_props.trunk_length, mtree_props.iteration):
+    for iteration in range(mtree_props.trunk_length, mtree_props.iteration + mtree_props.trunk_length):
         update_curve_properties(tree.iteration_curve_props, iteration / tree.last_iteration)
         tree.add_branch_layer(iteration)
 
