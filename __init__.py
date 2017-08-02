@@ -31,6 +31,7 @@ from .addon_name import save_addon_name
 from .icons import register_icons, unregister_icons, get_icon
 from .nodes import nodes_to_register, node_categories
 import nodeitems_utils
+import copy
 
 # third party add-on updater
 from . import addon_updater_ops
@@ -53,19 +54,19 @@ class TreeAddonPrefs(AddonPreferences):
 
     always_save_prior = BoolProperty(
         name="Save .blend File",
-        default=True,
+        default=False,
         description="Always save .blend file before executing " +
                     "time-consuming operations")
 
     save_all_images = BoolProperty(
         name="Save Images",
-        default=True,
+        default=False,
         description="Always save images before executing " +
                     "time-consuming operations")
 
     save_all_texts = BoolProperty(
         name="Save Texts",
-        default=True,
+        default=False,
         description="Always save texts before executing " +
                     "time-consuming operations")
 
@@ -155,7 +156,8 @@ class MakeTreePanel(Panel):
         box.label("Basic")
         box.prop(mtree_props, 'use_node_workflow')
         if mtree_props.use_node_workflow:
-            box.prop_search(mtree_props, "node_tree", bpy.data, "node_groups")
+            box.prop_search(mtree_props, "node_tree",bpy.data, "node_groups")
+
 
         sbox = box.box()
         sbox.label("UI")
@@ -530,10 +532,10 @@ class ModularTreePropertyGroup(PropertyGroup):
         default=.7,
         description="Length of the trunk")
 
-    trunk_radius_shape = FloatProperty(
-        name='Trunk_radius_shape',
-        default=1,
-        min=0)
+    trunk_radius_dec = FloatProperty(
+        name='Trunk_radius_decrease',
+        default=.95,
+        min=0.00001)
 
     branch_length = FloatProperty(
         name="Branch Length",
@@ -558,7 +560,7 @@ class ModularTreePropertyGroup(PropertyGroup):
 
     gravity_end = IntProperty(
         name="Gravity End Iteration",
-        default=40)
+        default=100)
 
     obstacle = StringProperty(
         name='Obstacle',
@@ -601,8 +603,6 @@ class ModularTreePropertyGroup(PropertyGroup):
         default=False,
         description="Unwrap tree")
 
-
-
     mat = BoolProperty(
         name="Create New Material",
         default=False,
@@ -637,7 +637,7 @@ class ModularTreePropertyGroup(PropertyGroup):
 
     branch_rotate = FloatProperty(
         name="Branches Rotation Angle",
-        default=45,
+        default=90,
         min=0,
         max=360,
         description="angle between new split and previous split")
@@ -823,6 +823,17 @@ class ModularTreePropertyGroup(PropertyGroup):
     node_tree = StringProperty(
         name="node tree",
         default="")
+
+    create_leaf_vertex_group = BoolProperty(
+        name='create vertex group for leafs',
+        default=True)
+
+    create_vertex_paint = BoolProperty(
+        name='create vertex paint layer',
+        default=True)
+
+    is_tree_selected = BoolProperty(
+        default=False)
 
 
     clear_mods = BoolProperty(name="Clear Modifiers", default=True)

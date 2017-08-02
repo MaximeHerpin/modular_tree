@@ -50,10 +50,7 @@ class MakeTreeOperator(Operator):
 
         #create_tree(scene.cursor_location)
         node_tree = bpy.data.node_groups[context.scene.mtree_props.node_tree]
-        factor = random()
-        # print(factor)
-        # update_all(node_tree, 0)
-        alt_create_tree()
+        alt_create_tree(self)
 
 
 
@@ -290,7 +287,7 @@ class UpdateTreeOperator(Operator):
             pos = obj.location
             scale = obj.scale
             rot = obj.rotation_euler
-            create_tree(pos)
+            alt_create_tree(self)
             ob = context.active_object  # this is the new object that has been set active by 'create_tree'
             ob.scale = scale
             ob.rotation_euler = rot
