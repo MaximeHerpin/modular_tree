@@ -462,10 +462,14 @@ class ModularTreePropertyGroup(PropertyGroup):
             ('SIMPLE', 'Simple', "", 0),
             ('COMPLETE', 'Complete', "", 1)))
 
-
     preserve_trunk = BoolProperty(
         name="Preserve Trunk", default=False,
         description="preserves the trunk growth, check and see.")
+
+    finish_trunk = BoolProperty(
+        name="generate branches after trunk",
+        default=False,
+        description='wait for the entire trunk to be generated before starting branches')
 
     trunk_split_angle = FloatProperty(
         name="Trunk Split Angle",

@@ -1393,6 +1393,7 @@ class Tree:
         self.edges = []
         self.faces = []
         self.extremities = []
+        self.late_extremities = []
         self.position = position
         self.twig_leafs = []
         self. paint_indexes = []
@@ -1408,7 +1409,8 @@ class Tree:
         self.grease_points = []
         self.static_props = []
         self.iteration_curve_props = []
-        self.branch_curve_props = []
+        self.radius_curve_props = []
+        self.height_curve_props = []
         self.last_iteration = 0
 
         if mtree_props.pruning:
@@ -1433,15 +1435,13 @@ class Tree:
         for E in self.extremities:
             indexes, radius, direction, lb, is_trunk, curr_rotation, curr_height = E
 
-            # Modifying direction....................................................................................
-            if len(self.branch_curve_props) > 0:
-                update_curve_properties(node_tree, self.branch_curve_props, radius)
-
             real_radius = (self.verts[indexes[0]] - self.verts[indexes[4]]).length
             uv_scale = 3 * branch.uv_height / real_radius
 
-            if iteration > mtree_props.preserve_end and branch_type == "Branch":
+            if iteration > mtree_props.preserve_end and branch_type == "Branch" and is_trunk:
                 is_trunk = False
+                next_extremities += self.late_extremities
+
             pos = Vector((0, 0, 0))
 
             for k in indexes:
@@ -1449,12 +1449,18 @@ class Tree:
             pos /= len(indexes)
             direction.normalize()
 
+            # updating properties...................................................
+            if len(self.radius_curve_props) > 0 or len(self.height_curve_props) > 0:
+                update_curve_properties(node_tree, self.radius_curve_props, radius)
+                update_curve_properties(node_tree, self.height_curve_props, pos.z)
+
             if is_twig and iteration > 2:
                 self.twig_leafs.append((pos, direction))
 
             world_pos = self.position + pos
             end = world_pos + direction * 10
 
+            # Modifying direction....................................................................................
             if mtree_props.roots_stay_under_ground and branch_type == "Roots":
                 dist_to_ground = max(-pos.z + mtree_props.roots_ground_height, .01)
                 if dist_to_ground < 3:
@@ -1625,8 +1631,12 @@ class Tree:
                 rot = mtree_props.branch_rotate + (random()*2-1) * mtree_props.branch_random_rotate
                 next_extremities.append(
                     (ni1, radius * rad_fact * r1, dir1, nb1, is_trunk, curr_rotation + rot, new_height))
-                next_extremities.append(
-                    (ni2, radius * rad_fact * r2, dir2, nb2, False, curr_rotation + rot, new_height))
+                if not(is_trunk and mtree_props.finish_trunk):
+                    next_extremities.append(
+                        (ni2, radius * rad_fact * r2, dir2, nb2, False, curr_rotation + rot, new_height))
+                else:
+                    self.late_extremities.append(
+                        (ni2, radius * rad_fact * r2, dir2, nb2, False, curr_rotation + rot, new_height))
             # growth..........................................................................................
             else:
                 branch_verts = [v for v in branch.verts]
@@ -1671,7 +1681,8 @@ names_table = {'Roots': {'Length': 'roots_length', 'split_proba': 'roots_split_p
 def eval_inputs(node_tree):
     static_props = []
     iteration_curve_props = []
-    branch_curve_props = []
+    radius_curve_props = []
+    height_curve_props = []
     for node in node_tree.nodes:
         for input_socket in node.inputs:
             if not input_socket.is_linked and input_socket.type != 'SHADER':
@@ -1682,9 +1693,12 @@ def eval_inputs(node_tree):
                 name = (from_node.name, node.name, input_socket.name)
                 if from_node.driver == 'ITERATION':
                     iteration_curve_props.append(name)
-                else:
-                    branch_curve_props.append(name)
-    return static_props, iteration_curve_props, branch_curve_props
+                elif from_node.driver == 'RADIUS':
+                    radius_curve_props.append(name)
+                elif from_node.driver == 'HEIGHT':
+                    height_curve_props.append(name)
+
+    return static_props, iteration_curve_props, radius_curve_props, height_curve_props
 
 
 def update_static_properties(node_tree, static_props):
@@ -1698,6 +1712,7 @@ def update_static_properties(node_tree, static_props):
 
         if node.bl_label == 'Trunk':
             mtree_props.preserve_trunk = node.preserve_trunk
+            mtree_props.finish_trunk = node.finish_trunk
             mtree_props.use_grease_pencil = node.use_grease_pencil
             mtree_props.trunk_length = node.trunk_iterations
             mtree_props.preserve_end = node.trunk_end
@@ -1751,24 +1766,25 @@ def update_curve_properties(node_tree, props, factor):
         c = get_node_group()[from_node_name]
         c.mapping.initialize()
         n = node_tree.nodes[from_node_name]
+        if n.driver != 'ITERATION':
+            factor = (factor - n.x_min) / (n.x_max - n.x_min)
         value = get_evaluate(c)(factor)
-        value *= n.max - n.min
-        value += n.min
+        value = value * (n.y_max - n.y_min) + n.y_min
         mtree_props[names_table[node_name][input_name]] = value
 
 
 def update_all(node_tree, factor = 0):
-    static_props, iteration_props, branch_props = eval_inputs(node_tree)
+    static_props, iteration_props, radius_props, height_props = eval_inputs(node_tree)
     update_static_properties(node_tree, static_props)
     update_curve_properties(node_tree, iteration_props, factor)
-    update_curve_properties(node_tree, branch_props, factor)
+    update_curve_properties(node_tree, radius_props, factor)
+    update_curve_properties(node_tree, height_props, factor)
 
 
 def invalid_node_tree(operator, node_tree, message=""):
     message = "The Node tree is incorect ! " + message
     operator.report({'ERROR'}, message)
     node_tree.done = True
-
 
 
 def eval_tree_validity(operator, node_tree):
@@ -1785,7 +1801,6 @@ def eval_tree_validity(operator, node_tree):
         for n in necessary_nodes:
             message += " " + n
         invalid_node_tree(operator,node_tree, message)
-
 
 
 def alt_create_tree(operator):
@@ -1808,7 +1823,7 @@ def alt_create_tree(operator):
             return None
 
         tree = Tree(Vector((0, 0, 0)))
-        tree.static_props, tree.iteration_curve_props, tree.branch_curve_props = eval_inputs(node_tree)
+        tree.static_props, tree.iteration_curve_props, tree.radius_curve_props, tree.height_curve_props = eval_inputs(node_tree)
         update_static_properties(node_tree, tree.static_props)
         roots(node_tree, tree)
         trunk(node_tree, tree)
@@ -1817,6 +1832,7 @@ def alt_create_tree(operator):
             late_roots(node_tree, tree)
 
         mesh, obj = tree_object_creation(tree)
+        obj["is_tree"] = True
         vgroups = tree_vertex_groups_creation(tree, mesh, obj)
         tree_vertex_paint_creation(tree, mesh)
         tree_particle_creations(operator, vgroups, obj, node_tree)
@@ -1828,7 +1844,6 @@ def alt_create_tree(operator):
 
         obj.select = True
         bpy.context.scene.objects.active = obj
-        obj["is_tree"] = True
         obj["has_armature"] = True if mtree_props.create_armature else False
 
         clock.stop("create_tree")

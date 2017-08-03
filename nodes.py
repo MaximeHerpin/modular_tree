@@ -163,6 +163,7 @@ class TrunkNode(Node, ModularTreeNodeTree):
     bl_width_default = 200
 
     preserve_trunk = bpy.props.BoolProperty(default=True)
+    finish_trunk = bpy.props.BoolProperty(default=False)
     use_grease_pencil = bpy.props.BoolProperty(default=False)
     trunk_iterations = bpy.props.IntProperty(default=6, min=0)
     trunk_end = bpy.props.IntProperty(default=35, min=0)
@@ -182,6 +183,8 @@ class TrunkNode(Node, ModularTreeNodeTree):
 
     def draw_buttons(self, context, layout):
         layout.prop(self, "preserve_trunk")
+        if self.preserve_trunk:
+            layout.prop(self, "finish_trunk")
         layout.prop(self, "use_grease_pencil")
         layout.prop(self, "trunk_iterations")
         layout.prop(self, "trunk_end")
@@ -405,14 +408,15 @@ class CurveNode(Node, ModularTreeNodeTree):
     bl_label = 'Curve_Mapping'
     bl_width_default = 200
 
-    min = bpy.props.FloatProperty(default=0)
-    max = bpy.props.FloatProperty(default=1)
-
-
+    x_min = bpy.props.FloatProperty(default=0, name='x_min', description="the left bound of the x axis")
+    x_max = bpy.props.FloatProperty(default=1, name='x_max', description="the right bound of the x axis")
+    y_min = bpy.props.FloatProperty(default=0, name='y_min', description="the lower bound of the y axis")
+    y_max = bpy.props.FloatProperty(default=1, name='y_max', description="the left bound of the x axis")
 
     drivers = [
         ("ITERATION", "Iteration", "The current iteration of the branch"),
         ("RADIUS", "Radius", "The current radius of the branch"),
+        ("HEIGHT", "height", "The height of the current branch")
     ]
     driver = bpy.props.EnumProperty(name="input", description="The X axis of the curve", items=drivers, default='ITERATION')
 
@@ -429,13 +433,16 @@ class CurveNode(Node, ModularTreeNodeTree):
     def draw_buttons(self,context, layout):
         layout.prop(self, 'driver')
         layout.template_curve_mapping(self.node, "mapping", use_negative_slope=True)
-        layout.prop(self, "min")
-        layout.prop(self, "max")
+        if self.driver != 'ITERATION':
+            col = layout.box()
+            col.prop(self, "x_min")
+            col.prop(self, "x_max")
+        col = layout.column()
+        col.prop(self, "y_min")
+        col.prop(self, "y_max")
 
     def copy(self, source_node):
         print('copying')
-
-
 
     def update(self):
         pass
