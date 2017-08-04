@@ -45,14 +45,8 @@ class MakeTreeOperator(Operator):
             return {status}
 
         scene = context.scene
-
         seed(scene.mtree_props.SeedProp)
-
-        #create_tree(scene.cursor_location)
-        node_tree = bpy.data.node_groups[context.scene.mtree_props.node_tree]
-        alt_create_tree(self)
-
-
+        alt_create_tree(self, scene.cursor_location)
 
         return {'FINISHED'}
 
@@ -73,7 +67,6 @@ class BatchTreeOperator(Operator):
 
         mtree_props = context.scene.mtree_props
         trees = []
-        save_radius = mtree_props.radius
         space = mtree_props.batch_space
         seeds = []
         if mtree_props.batch_group_name != "":
@@ -83,19 +76,18 @@ class BatchTreeOperator(Operator):
             new_seed = randint(0, 1000)
             while new_seed in seeds:
                 new_seed = randint(0, 1000)
+            seeds.append(new_seed)
             pointer = int(sqrt(mtree_props.tree_number))
             pos_x = i % pointer
             pos_y = i // pointer
             seed(new_seed)
-            mtree_props.radius = save_radius * (1 + mtree_props.batch_radius_randomness * (.5 - random()) * 2)
-            create_tree(Vector((-space * pointer / 2, -space * pointer / 2, 0)) + Vector((pos_x, pos_y, 0)) * space)
-            trees.append(bpy.context.active_object)
+            new_tree = alt_create_tree(self, Vector((-space * pointer / 2, -space * pointer / 2, 0)) + Vector((pos_x, pos_y, 0)) * space)
+            trees.append(new_tree)
             if mtree_props.batch_group_name != "":
                 bpy.ops.object.group_link(group=mtree_props.batch_group_name)
         for tree in trees:
             tree.select = True
 
-        mtree_props.radius = save_radius
         return {'FINISHED'}
 
 
@@ -287,7 +279,7 @@ class UpdateTreeOperator(Operator):
             pos = obj.location
             scale = obj.scale
             rot = obj.rotation_euler
-            alt_create_tree(self)
+            alt_create_tree(self, pos)
             ob = context.active_object  # this is the new object that has been set active by 'create_tree'
             ob.scale = scale
             ob.rotation_euler = rot

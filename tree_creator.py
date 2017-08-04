@@ -18,7 +18,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from mathutils import Vector, Matrix, Euler
-from random import random, randint
+from random import random, randint, seed
 from math import pi, radians, exp, sqrt
 
 import bpy
@@ -1672,9 +1672,12 @@ class Tree:
 names_table = {'Roots': {'Length': 'roots_length', 'split_proba': 'roots_split_proba', 'ground_height': 'roots_groung_height'},
                'Trunk': {'Trunk_length': 'trunk_space', 'split_proba': 'trunk_split_proba', 'split_angle': 'trunk_split_angle', 'randomness': 'trunk_variation', 'Radius_decrease': 'trunk_radius_dec'},
                'Branches': {'length': 'branch_length', 'variations': 'randomangle', 'split_proba': 'split_proba', 'split_angle': 'split_angle', 'break_chance': 'break_chance', 'radius_decrease': 'radius_dec', 'min_radius': 'branch_min_radius', 'branches_rotation_angle': 'branch_rotate', 'branches_random_rotation_angle': 'branch_random_rotate'},
-               'Forces': {'gravity_strength': 'gravity_strength', 'Point_force_strength':'fields_point_strength', 'wind_strength': 'fields_wind_strength', 'strength_limit': 'fields_strength_limit'},
+               'Forces': {'gravity_strength': 'gravity_strength', 'Point_force_strength': 'fields_point_strength', 'wind_strength': 'fields_wind_strength', 'strength_limit': 'fields_strength_limit'},
                'Vertex': {},
-               'Obstacle':{'avoidance_strength' : 'obstacle_strength'},
+               'Obstacle': {'avoidance_strength': 'obstacle_strength'},
+               'Particles': {},
+               'Pruning': {'intensity': 'pruning_intensity'},
+               'Amrmature': {},
                }
 
 
@@ -1705,6 +1708,10 @@ def update_static_properties(node_tree, static_props):
     scene = bpy.context.scene
     mtree_props = scene.mtree_props
 
+    mtree_props.create_leaf_vertex_group = False
+    mtree_props.particle = False
+    mtree_props.pruning = False
+    mtree_props.create_armature = False
     for node in node_tree.nodes:
         if node.bl_label == 'Roots':
             mtree_props.roots_iteration = node.iterations
@@ -1723,6 +1730,7 @@ def update_static_properties(node_tree, static_props):
         if node.bl_label == 'Tree_Output':
             mtree_props.uv = node.uv
             mtree_props.SeedProp = node.Seed
+            # seed(node.seed)
             mtree_props.mat = node.create_material
             mtree_props.bark_material = node.material
 
@@ -1740,6 +1748,22 @@ def update_static_properties(node_tree, static_props):
                 mtree_props.obstacle_kill = True
             else:
                 mtree_props.obstacle_kill = False
+
+        if node.bl_label == 'Particles':
+            mtree_props.create_leaf_vertex_group = True
+            mtree_props.particle = True
+            mtree_props.number = node.number
+            mtree_props.display = node.viewport_number
+            mtree_props.twig_particle = node.leaf_object
+            mtree_props.particle_size = node.leaf_size
+
+        if node.bl_label == 'Pruning':
+            mtree_props.pruning = True
+            mtree_props.pruning_resolution = node.voxel_size
+
+        if node.bl_label == 'Armature':
+            mtree_props.create_armature = True
+            mtree_props.bones_iterations = node.max_bones_iteration
 
     for name in static_props:
         node_name, input_name = name
@@ -1803,13 +1827,15 @@ def eval_tree_validity(operator, node_tree):
         invalid_node_tree(operator,node_tree, message)
 
 
-def alt_create_tree(operator):
+def alt_create_tree(operator, position=Vector((0,0,0))):
     scene = bpy.context.scene
     mtree_props = scene.mtree_props
 
+    clock = Clock("create_tree")
+
     if mtree_props.use_node_workflow:
-        clock = Clock("create_tree")
         node_tree = bpy.data.node_groups[mtree_props.node_tree]
+        node_tree.update()
         node_tree.done = False
         eval_tree_validity(operator, node_tree)
         try:
@@ -1821,34 +1847,41 @@ def alt_create_tree(operator):
             pass
         if node_tree.done:
             return None
+    else:
+        node_tree = None
 
-        tree = Tree(Vector((0, 0, 0)))
+    tree = Tree(position)
+
+    if mtree_props.use_node_workflow:
         tree.static_props, tree.iteration_curve_props, tree.radius_curve_props, tree.height_curve_props = eval_inputs(node_tree)
         update_static_properties(node_tree, tree.static_props)
-        roots(node_tree, tree)
-        trunk(node_tree, tree)
-        branches(node_tree, tree)
-        if tree.roots_to_create:
-            late_roots(node_tree, tree)
 
-        mesh, obj = tree_object_creation(tree)
-        obj["is_tree"] = True
-        vgroups = tree_vertex_groups_creation(tree, mesh, obj)
-        tree_vertex_paint_creation(tree, mesh)
-        tree_particle_creations(operator, vgroups, obj, node_tree)
-        tree_uv_creation(tree, mesh)
-        tree_material_creation(obj)
-        tree_armature_creation(tree, obj)
-        if node_tree.done:
-            return None
+    roots(node_tree, tree)
+    trunk(node_tree, tree)
+    branches(node_tree, tree)
+    if tree.roots_to_create:
+        late_roots(node_tree, tree)
 
-        obj.select = True
-        bpy.context.scene.objects.active = obj
-        obj["has_armature"] = True if mtree_props.create_armature else False
+    mesh, obj = tree_object_creation(tree)
+    obj["is_tree"] = True
+    vgroups = tree_vertex_groups_creation(tree, mesh, obj)
+    tree_vertex_paint_creation(tree, mesh)
+    tree_particle_creations(operator, vgroups, obj, node_tree)
+    tree_uv_creation(tree, mesh)
+    tree_material_creation(obj)
+    tree_armature_creation(tree, obj)
+    if node_tree and node_tree.done:
+        return None
 
-        clock.stop("create_tree")
-        print("\nDeveloper Info:")
-        clock.display()
+    obj.select = True
+    bpy.context.scene.objects.active = obj
+    obj["has_armature"] = True if mtree_props.create_armature else False
+
+    clock.stop("create_tree")
+    print("\nDeveloper Info:")
+    clock.display()
+
+    return obj
 
 
 # Transform the tree python object into a blender object......................................
@@ -1954,7 +1987,7 @@ def tree_particle_creations(operator, vgroups, obj, node_tree):
     scene = bpy.context.scene
     mtree_props = scene.mtree_props
     if mtree_props.particle:
-        if vgroups is None:
+        if vgroups is None and node_tree:
             invalid_node_tree(operator, node_tree, 'No vertex group is created for the particles, add a vertex group node')
             return None
         print("Configuring Particle System...")
@@ -2028,7 +2061,8 @@ def roots(node_tree, tree):
     scene = bpy.context.scene
     mtree_props = scene.mtree_props
     print("generating Roots")
-    update_curve_properties(node_tree, tree.iteration_curve_props, 0)
+    if node_tree:
+        update_curve_properties(node_tree, tree.iteration_curve_props, 0)
     tree.verts = [Vector(v) * mtree_props.radius for v in root.verts ]
     tree.faces = [f for f in root.faces]
     extr = [i for i in root.sortie[1]]
@@ -2039,7 +2073,6 @@ def roots(node_tree, tree):
     tree.extremities = [(extr, mtree_props.radius, Vector((0, 0, 1)), last_bone, mtree_props.preserve_trunk, 0, height)]
 
     if mtree_props.roots_iteration > 0:
-        # tree.vcol_rad += [mtree_props.radius] * 16
         mtree_props.create_roots = True
         tree.roots_to_create = True
 
@@ -2062,7 +2095,8 @@ def late_roots(node_tree, tree):
         tree.extremities.append((extr, rad, direction, None, False, 0, 0))
 
     for iteration in range(mtree_props.roots_iteration):
-        update_curve_properties(node_tree, tree.iteration_curve_props, iteration/tree.last_iteration)
+        if node_tree:
+            update_curve_properties(node_tree, tree.iteration_curve_props, iteration/tree.last_iteration)
         tree.add_branch_layer(iteration, 'Roots')
 
 
@@ -2072,7 +2106,8 @@ def trunk(node_tree, tree):
     print("generating trunk")
     tree.last_iteration = mtree_props.preserve_end if mtree_props.preserve_trunk else mtree_props.trunk_length
     for iteration in range(mtree_props.trunk_length):
-        update_curve_properties(node_tree, tree.iteration_curve_props, iteration / tree.last_iteration)
+        if node_tree:
+            update_curve_properties(node_tree, tree.iteration_curve_props, iteration / tree.last_iteration)
         tree.add_branch_layer(iteration)
 
 
@@ -2082,7 +2117,8 @@ def branches(node_tree, tree):
     print("generating branches")
     tree.last_iteration = mtree_props.iteration
     for iteration in range(mtree_props.trunk_length, mtree_props.iteration + mtree_props.trunk_length):
-        update_curve_properties(node_tree, tree.iteration_curve_props, iteration / tree.last_iteration)
+        if node_tree:
+            update_curve_properties(node_tree, tree.iteration_curve_props, iteration / tree.last_iteration)
         tree.add_branch_layer(iteration)
 
 

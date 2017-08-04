@@ -254,7 +254,6 @@ class TreeOutput(Node, ModularTreeNodeTree):
     bl_label = 'Tree_Output'
     bl_width_default = 170
 
-
     Seed = bpy.props.IntProperty(default=42)
     uv = bpy.props.BoolProperty(default=True)
     create_material = bpy.props.BoolProperty(default=False)
@@ -280,7 +279,7 @@ class TreeOutput(Node, ModularTreeNodeTree):
             layout.prop_search(self, "material", bpy.data, "materials", text="", icon="MATERIAL_DATA")
 
     def update(self):
-        pass
+        bpy.context.scene.mtree_props.SeedProp = self.Seed
 
 
 class ForcesNode(Node, ModularTreeNodeTree):
@@ -347,8 +346,8 @@ class VertexNode(Node, ModularTreeNodeTree):
         pass
 
 
-class obstacle_node(Node, ModularTreeNodeTree):
-    ''' Vertex group/color configuration Node '''
+class ObstacleNode(Node, ModularTreeNodeTree):
+    ''' obstacle configuration Node '''
     bl_idname = 'ObstacleNode'
     bl_label = 'Obstacle'
     bl_width_default = 190
@@ -385,6 +384,69 @@ class obstacle_node(Node, ModularTreeNodeTree):
                 self.inputs["avoidance_strength"].hide = True
         except: pass
 
+
+class ParticleNode(Node, ModularTreeNodeTree):
+    ''' particles configuration Node '''
+    bl_idname = 'ParticleNode'
+    bl_label = 'Particles'
+    bl_width_default = 190
+
+    number = bpy.props.IntProperty(default=1000)
+    viewport_number = bpy.props.IntProperty(default=500)
+    leaf_object = bpy.props.StringProperty(default="")
+    leaf_size = bpy.props.FloatProperty(default=1.0)
+
+    def init(self, context):
+        self.inputs.new('NodeSocketShader', "Tree")
+        self.outputs.new('NodeSocketShader', "Tree")
+
+    def draw_buttons(self, context, layout):
+        layout.prop_search(self, "leaf_object", bpy.data, "objects", text="", icon="OBJECT_DATA")
+        layout.prop(self, 'number')
+        layout.prop(self, 'viewport_number')
+        layout.prop(self, 'leaf_size')
+
+    def update(self):
+        pass
+
+
+class PruningNode(Node, ModularTreeNodeTree):
+    ''' pruning configuration Node '''
+    bl_idname = 'PruningNode'
+    bl_label = 'Pruning'
+    bl_width_default = 190
+
+    voxel_size = bpy.props.IntProperty(default = 1)
+
+    def init(self, context):
+        self.inputs.new('NodeSocketShader', "Tree")
+        self.inputs.new('FreeFloatSocket', "intensity")
+        self.outputs.new('NodeSocketShader', "Tree")
+
+    def draw_buttons(self, context, layout):
+        layout.prop(self, 'voxel_size')
+
+    def update(self):
+        pass
+
+
+class ArmatureNode(Node, ModularTreeNodeTree):
+    ''' armature configuration Node '''
+    bl_idname = 'ArmatureNode'
+    bl_label = 'Armature'
+    bl_width_default = 120
+
+    max_bones_iteration = bpy.props.IntProperty(default=5)
+
+    def init(self, context):
+        self.inputs.new('NodeSocketShader', "Tree")
+        self.outputs.new('NodeSocketShader', "Tree")
+
+    def draw_buttons(self, context, layout):
+        layout.prop(self, 'max_bones_iteration')
+
+    def update(self):
+        pass
 
 
 def get_node_group():
@@ -465,7 +527,9 @@ class CurveNode(Node, ModularTreeNodeTree):
         return node
 
 
-nodes_to_register = [ModularTreeNodeTree,RootNode, TrunkNode, BranchNode, TreeOutput, CurveNode, FloatSocket, FreeFloatSocket, ForcesNode, VertexNode, AngleFloatSocket, obstacle_node]
+nodes_to_register = [ModularTreeNodeTree, RootNode, TrunkNode, BranchNode, TreeOutput, CurveNode, FloatSocket,
+                     FreeFloatSocket, ForcesNode, VertexNode, AngleFloatSocket, ObstacleNode, ParticleNode,
+                     PruningNode, ArmatureNode]
 
 
 
@@ -482,6 +546,7 @@ node_categories = [
     ModularTreeNodeCategory("Input", "Input",
                             items=[NodeItem("CurveNode")]),
     ModularTreeNodeCategory("Modifiers", "Modifiers",
-                            items=[NodeItem("ForcesNode"), NodeItem("VertexNode"), NodeItem("ObstacleNode")]),
+                            items=[NodeItem("ForcesNode"), NodeItem("VertexNode"), NodeItem("ObstacleNode"),
+                                   NodeItem("ParticleNode"), NodeItem("PruningNode"), NodeItem("ArmatureNode")]),
 ]
 
