@@ -23,7 +23,7 @@ import bpy
 from bpy.props import StringProperty, BoolProperty, FloatProperty, IntProperty, EnumProperty, PointerProperty
 from bpy.types import Operator, Panel, Scene, Menu, AddonPreferences, PropertyGroup
 
-from .generator_operators import MakeTreeOperator, BatchTreeOperator, MakeTwigOperator, UpdateTreeOperator, UpdateTwigOperator
+from .generator_operators import MakeTreeOperator, BatchTreeOperator, MakeTwigOperator, UpdateTreeOperator, UpdateTwigOperator, SetupNodeTreeOperator
 from .presets import TreePresetLoadMenu, TreePresetRemoveMenu, SaveTreePresetOperator, InstallTreePresetOperator, RemoveTreePresetOperator, LoadTreePresetOperator
 from .logo import display_logo
 from .wind_setup_utils import WindOperator, MakeControllerOperator, MakeTerrainOperator
@@ -157,6 +157,15 @@ class MakeTreePanel(Panel):
         box.prop(mtree_props, 'use_node_workflow')
         if mtree_props.use_node_workflow:
             box.prop_search(mtree_props, "node_tree",bpy.data, "node_groups")
+            if mtree_props.node_tree != "":
+                if bpy.data.node_groups[mtree_props.node_tree]:
+                    node_tree = bpy.data.node_groups[mtree_props.node_tree]
+                    if not [i for i in node_tree.nodes]:
+                        print('can setup')
+                        row = box.row()
+                        row.operator("mod_tree.setup_node_tree")
+
+
 
         if not mtree_props.use_node_workflow:
             sbox = box.box()
@@ -246,9 +255,6 @@ class RootsAndTrunksPanel(Panel):
                 box.prop(mtree_props, 'preserve_trunk')
 
 
-
-
-
 class TreeBranchesPanel(Panel):
     bl_label = "Branches"
     bl_idname = "3D_VIEW_PT_layout_MakeTreeBranches"
@@ -311,7 +317,6 @@ class TreeBranchesPanel(Panel):
                 if bpy.data.objects.get(mtree_props.obstacle) is not None:
                     sbox.prop(mtree_props, 'obstacle_strength')
                     sbox.prop(mtree_props, 'obstacle_kill')
-
 
 
 class AdvancedSettingsPanel(Panel):
@@ -840,8 +845,6 @@ class ModularTreePropertyGroup(PropertyGroup):
         name='create vertex paint layer',
         default=True)
 
-    is_tree_selected = BoolProperty(
-        default=False)
 
 
     clear_mods = BoolProperty(name="Clear Modifiers", default=True)
@@ -852,7 +855,7 @@ class ModularTreePropertyGroup(PropertyGroup):
 # classes to register (panels will be in the UI in the order they are listed here)
 classes = [MakeTreeOperator, BatchTreeOperator, MakeTwigOperator, UpdateTreeOperator, UpdateTwigOperator,
            SaveTreePresetOperator, RemoveTreePresetOperator, LoadTreePresetOperator, WindOperator,
-           MakeControllerOperator, MakeTerrainOperator,
+           MakeControllerOperator, MakeTerrainOperator, SetupNodeTreeOperator,
            MakeTreePanel, BatchTreePanel, RootsAndTrunksPanel, TreeBranchesPanel, AdvancedSettingsPanel,
            MakeTwigPanel, TreePresetLoadMenu, TreePresetRemoveMenu, WindAnimationPanel, MakeTreePresetsPanel,
            InstallTreePresetOperator, TreeAddonPrefs, ModularTreePropertyGroup]

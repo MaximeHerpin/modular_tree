@@ -1,6 +1,7 @@
 import bpy
 from bpy.types import NodeTree, Node, NodeSocket
 from bpy.props import *
+from mathutils import Vector
 import time
 import nodeitems_utils
 from .icons import register_icons, unregister_icons, get_icon
@@ -94,17 +95,19 @@ class ModularTreeNodeTree(NodeTree):
 
 def update_all_trees(scene):
     sel_obj = bpy.context.selected_objects
-    test = False
-    try:
-        test = len(sel_obj) == 1 and sel_obj[0].get('is_tree')
-    except:
-        test = False
-    bpy.context.scene.mtree_props.is_tree_selected = test
+    if bpy.context.scene.mtree_props.use_node_workflow:
+        try:
+            test = len(sel_obj) == 1 and sel_obj[0].get('is_tree')
+        except:
+            test = False
+        if test is None:
+            test = False
+        bpy.context.scene.mtree_props.is_tree_selected = test
 
-    trees = [n for n in bpy.data.node_groups if n.bl_idname == 'ModularTreeNodeType']
-    for t in trees:
-        if time.time() - t.time_lap > 1:
-            t.update()
+        trees = [n for n in bpy.data.node_groups if n.bl_idname == 'ModularTreeNodeType']
+        for t in trees:
+            if time.time() - t.time_lap > 1:
+                t.update()
 
 
 class ModularTreeNode:
@@ -148,6 +151,10 @@ class RootNode(Node, ModularTreeNodeTree):
                 for s in self.inputs:
                     s.hide = False
         except: pass
+        scene = bpy.context.scene
+        mtree_props = scene.mtree_props
+        mtree_props.roots_iteration = self.iterations
+        mtree_props.roots_stay_under_ground = self.stay_under_ground
 
 
     def draw_buttons(self, context, layout):
@@ -165,6 +172,7 @@ class TrunkNode(Node, ModularTreeNodeTree):
     preserve_trunk = bpy.props.BoolProperty(default=True)
     finish_trunk = bpy.props.BoolProperty(default=False)
     use_grease_pencil = bpy.props.BoolProperty(default=False)
+    radius = bpy.props.FloatProperty(default=1)
     trunk_iterations = bpy.props.IntProperty(default=6, min=0)
     trunk_end = bpy.props.IntProperty(default=35, min=0)
 
@@ -186,6 +194,7 @@ class TrunkNode(Node, ModularTreeNodeTree):
         if self.preserve_trunk:
             layout.prop(self, "finish_trunk")
         layout.prop(self, "use_grease_pencil")
+        layout.prop(self, "radius")
         layout.prop(self, "trunk_iterations")
         layout.prop(self, "trunk_end")
 
@@ -200,6 +209,14 @@ class TrunkNode(Node, ModularTreeNodeTree):
                 self.inputs["split_proba"].hide = True
                 self.inputs["split_angle"].hide = True
         except: pass
+        scene = bpy.context.scene
+        mtree_props = scene.mtree_props
+        mtree_props.preserve_trunk = self.preserve_trunk
+        mtree_props.finish_trunk = self.finish_trunk
+        mtree_props.use_grease_pencil = self.use_grease_pencil
+        mtree_props.trunk_length = self.trunk_iterations
+        mtree_props.preserve_end = self.trunk_end
+        mtree_props.radius = self.radius
 
 
 class BranchNode(Node, ModularTreeNodeTree):
@@ -245,7 +262,9 @@ class BranchNode(Node, ModularTreeNodeTree):
         # layout.prop(self, "radius_decrease")
 
     def update(self):
-        pass
+        scene = bpy.context.scene
+        mtree_props = scene.mtree_props
+        mtree_props.iteration = self.iterations
 
 
 class TreeOutput(Node, ModularTreeNodeTree):
@@ -268,9 +287,12 @@ class TreeOutput(Node, ModularTreeNodeTree):
     def draw_buttons(self, context, layout):
         row = layout.row()
         row.scale_y = 1.5
-        if bpy.context.scene.mtree_props.is_tree_selected:
-            row.operator("mod_tree.update_tree", icon_value=get_icon("TREE_UPDATE"))
-        else:
+        try:
+            if bpy.context.selected_objects[-1].get("is_tree"):
+                row.operator("mod_tree.update_tree", icon_value=get_icon("TREE_UPDATE"))
+            else:
+                row.operator("mod_tree.add_tree", icon_value=get_icon("TREE"))
+        except:
             row.operator("mod_tree.add_tree", icon_value=get_icon("TREE"))
         layout.prop(self, "Seed")
         layout.prop(self, "uv")
@@ -279,7 +301,64 @@ class TreeOutput(Node, ModularTreeNodeTree):
             layout.prop_search(self, "material", bpy.data, "materials", text="", icon="MATERIAL_DATA")
 
     def update(self):
-        bpy.context.scene.mtree_props.SeedProp = self.Seed
+        scene = bpy.context.scene
+        mtree_props = scene.mtree_props
+        mtree_props.uv = self.uv
+        mtree_props.SeedProp = self.Seed
+        mtree_props.mat = self.create_material
+        mtree_props.bark_material = self.material
+
+
+class TwigNode(Node, ModularTreeNodeTree):
+    ''' Twig configuration Node '''
+    bl_idname = 'TwigNode'
+    bl_label = 'Twig'
+    bl_width_default = 170
+
+    Seed = bpy.props.IntProperty(default=42)
+    leaf_size = bpy.props.FloatProperty(default=1)
+    leaf_object = bpy.props.StringProperty(default='')
+    leaf_proba = bpy.props.FloatProperty(default=.5)
+    leaf_weight = bpy.props.FloatProperty(default=.2)
+    iterations = bpy.props.IntProperty(default=9)
+    material = bpy.props.StringProperty(default="")
+
+    def init(self, context):
+
+        self.use_custom_color = True
+        self.color = (0.0236563, 0.0913065, 0.173356)
+
+    def draw_buttons(self, context, layout):
+        row = layout.row()
+        row.scale_y = 1.5
+        try:
+            if bpy.context.selected_objects[-1].get("is_tree"):
+                row.operator("mod_tree.update_twig", icon="FILE_REFRESH")
+            else:
+                row.operator("mod_tree.add_twig", icon_value=get_icon("TWIG"))
+        except:
+            row.operator("mod_tree.add_twig", icon_value=get_icon("TWIG"))
+
+        layout.prop(self, "Seed")
+        layout.prop(self, "leaf_size")
+        layout.prop_search(self, "leaf_object", bpy.data, "objects", text="", icon="OBJECT_DATA")
+        layout.prop(self, "leaf_proba")
+        layout.prop(self, "leaf_weight")
+        layout.prop(self, "iterations")
+        layout.prop_search(self, "material", bpy.data, "materials", text="", icon="MATERIAL_DATA")
+
+    def update(self):
+        scene = bpy.context.scene
+        mtree_props = scene.mtree_props
+        bpy.context.scene.mtree_props.TwigSeedProp = self.Seed
+        bpy.context.scene.mtree_props.leaf_object = self.leaf_object
+        mtree_props.leaf_size = self.leaf_size
+        mtree_props.TwigSeedProp = self.Seed
+        mtree_props.leaf_object = self.leaf_object
+        mtree_props.leaf_weight = self.leaf_weight
+        mtree_props.leaf_chance = self.leaf_proba
+        mtree_props.twig_iteration = self.iterations
+        mtree_props.twig_bark_material = self.material
 
 
 class ForcesNode(Node, ModularTreeNodeTree):
@@ -343,7 +422,11 @@ class VertexNode(Node, ModularTreeNodeTree):
             layout.prop(self, "group_expansion")
 
     def update(self):
-        pass
+        scene = bpy.context.scene
+        mtree_props = scene.mtree_props
+        mtree_props.create_leaf_vertex_group = self.create_leaf_vertex_group
+        mtree_props.create_vertex_paint = self.create_radius_vertex_paint
+        mtree_props.leafs_iteration_length = self.group_expansion
 
 
 class ObstacleNode(Node, ModularTreeNodeTree):
@@ -407,7 +490,12 @@ class ParticleNode(Node, ModularTreeNodeTree):
         layout.prop(self, 'leaf_size')
 
     def update(self):
-        pass
+        scene = bpy.context.scene
+        mtree_props = scene.mtree_props
+        mtree_props.number = self.number
+        mtree_props.display = self.viewport_number
+        mtree_props.twig_particle = self.leaf_object
+        mtree_props.particle_size = self.leaf_size
 
 
 class PruningNode(Node, ModularTreeNodeTree):
@@ -529,7 +617,7 @@ class CurveNode(Node, ModularTreeNodeTree):
 
 nodes_to_register = [ModularTreeNodeTree, RootNode, TrunkNode, BranchNode, TreeOutput, CurveNode, FloatSocket,
                      FreeFloatSocket, ForcesNode, VertexNode, AngleFloatSocket, ObstacleNode, ParticleNode,
-                     PruningNode, ArmatureNode]
+                     PruningNode, ArmatureNode, TwigNode]
 
 
 
@@ -541,12 +629,28 @@ bpy.app.handlers.scene_update_post.append(update_all_trees)
 node_categories = [
     # identifier, label, items list
     ModularTreeNodeCategory("Tree", "Tree Nodes",
-                            items=[NodeItem("RootNode"), NodeItem("TrunkNode"), NodeItem("BranchNode"),
-                                   NodeItem("TreeOutput")]),
+                            items=[NodeItem("RootNode"), NodeItem("TrunkNode"), NodeItem("BranchNode")]),
     ModularTreeNodeCategory("Input", "Input",
                             items=[NodeItem("CurveNode")]),
+    ModularTreeNodeCategory("Output", "Output",
+                            items=[NodeItem("TreeOutput"), NodeItem("TwigNode")]),
     ModularTreeNodeCategory("Modifiers", "Modifiers",
                             items=[NodeItem("ForcesNode"), NodeItem("VertexNode"), NodeItem("ObstacleNode"),
                                    NodeItem("ParticleNode"), NodeItem("PruningNode"), NodeItem("ArmatureNode")]),
 ]
+
+
+def setup_node_tree(node_tree):
+    names = ['RootNode', 'TrunkNode', 'BranchNode', 'TreeOutput']
+    nodes = node_tree.nodes
+    last_node = None
+    for i, name in enumerate(names):
+        new_node = nodes.new(name)
+        new_node.location = Vector((i*260, 0))
+        if i == 0:
+            last_node = new_node
+        else:
+            node_tree.links.new(last_node.outputs[0], new_node.inputs[0])
+            last_node = new_node
+
 
