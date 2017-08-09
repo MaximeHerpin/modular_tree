@@ -1297,7 +1297,21 @@ def sign(a):
     return 1 if a > 0 else -1 if a < 0 else 0
 
 
-def add_leaf(position, direction, scale, leaf, leaf_weight):
+def get_orthogonal_vect(v):
+
+    if v.x == 0:
+        return Vector((1, 0, 0))
+    if v.y == 0:
+        return Vector((0, 1, 0))
+    if v.z == 0:
+        return Vector((0, 0, 1))
+
+    new_vect = Vector((1, 1, -1.0 * (v.x + v.y) / v.z))
+    new_vect.normalize()
+    return new_vect
+
+
+def add_twig_leaf(position, direction, scale, leaf, leaf_weight):
     scene = bpy.context.scene
     direction = Vector((0, 1, 0)) * leaf_weight + (1-leaf_weight) * direction
     direction.normalize()
@@ -1313,6 +1327,23 @@ def add_leaf(position, direction, scale, leaf, leaf_weight):
     new_leaf.scale = Vector((scale, scale, scale))
     new_leaf.rotation_euler = (pi/2 - min(leaf_weight/3 + direction.y/3, pi/2), atan(direction.x / max(.01,abs(direction.z))), 0)
     return new_leaf
+
+
+def add_leaf(pos, direction, verts, faces):
+    angle = pi/3 * (random() - 1) * 2
+    rotation = Matrix.Rotation(angle, 4, 'Z')
+    direction = direction * rotation
+    direction.normalize()
+    direction = Vector((direction.x, direction.y, direction.z/(2 + direction.z**2)))
+    direction.normalize()
+
+    v1 = get_orthogonal_vect(direction)
+    v2 = direction.cross(v1)
+    new_verts = [pos + v1/10, pos + v2/10, pos - v1/10, pos - v2/10]
+    n = len(verts)
+    for vertex in new_verts:
+        verts.append(vertex)
+    faces.append([n-4, n-3, n-2, n-1])
 
 
 def rehash_set(s, p_dist):
@@ -1381,6 +1412,7 @@ class Tree:
         self.late_extremities = []
         self.position = position
         self.twig_leafs = []
+        self.leafs = []
         self.paint_indexes = []
         self.leafs_weight_indexes = []
         self.bones = []
@@ -1501,16 +1533,17 @@ class Tree:
 
             # if a branch follows a grease pencil stroke, change it's direction and length
             if stroke_index >= 0:
-                print(stroke_index)
                 stroke = self.grease_strokes[stroke_index]
                 if len(stroke) <= 1:
                     stroke_index = -1
                 else:
                     direction = stroke[1] - stroke[0]
                     pencil_branch_length = direction.length
-                    print("gp: " + str(pencil_branch_length))
                     direction.normalize()
                     stroke.pop(0)
+
+            if real_radius < mtree_props.radius / 4 and branch_type == "Branch" and mtree_props.create_particle_emitter:
+                self.leafs.append((pos, direction))
             # .......................................................................................................
 
             if is_twig and iteration > 4:
@@ -1541,7 +1574,6 @@ class Tree:
                 ni, direction = join_branch(self.verts, self.faces, indexes, radius, length, branch_verts,
                                             direction,
                                             mtree_props.trunk_variation, self.uv_list, curr_height, real_radius)
-                print(length)
                 sortie = pos + direction * length
                 new_height = length
 
@@ -1574,7 +1606,7 @@ class Tree:
                 self.faces += [add_tuple(f, n) for f in end_faces]
                 self.uv_list += [u for u in end_cap.uv]
                 self.vcol_rad += [real_radius] * len(end_verts)
-                if real_radius < mtree_props.radius / 4 and branch_type == "Branch":
+                if real_radius < mtree_props.radius / 4 and branch_type == "Branch" and not mtree_props.create_particle_emitter:
                     self.leafs_weight_indexes.append(len(self.verts) - 1)
             # split.........................................................................................
             elif iteration < mtree_props.iteration + mtree_props.trunk_length - 1 \
@@ -1648,8 +1680,6 @@ class Tree:
 
                 variation = mtree_props.trunk_variation if is_trunk else mtree_props.randomangle
                 length = pencil_branch_length if stroke_index > -1 else mtree_props.trunk_space if is_trunk else mtree_props.branch_length
-                if stroke_index > -1:
-                    print(length)
                 if branch_type == "Roots":
                     length = mtree_props.roots_length * sqrt(real_radius)
                 ni, direction = join_branch(self.verts, self.faces, indexes, radius, length, branch_verts, direction,
@@ -1925,7 +1955,11 @@ def alt_create_tree(operator, position=Vector((0,0,0))):
     obj["is_tree"] = True
     vgroups = tree_vertex_groups_creation(tree, mesh, obj)
     tree_vertex_paint_creation(tree, mesh)
-    tree_particle_creations(operator, vgroups, obj, node_tree)
+    if not mtree_props.create_particle_emitter:
+        tree_particle_creations(operator, vgroups, obj, node_tree)
+    elif not(not tree.leafs):
+        create_leafs_emitter(tree.position, tree.leafs, obj)
+        obj["has_emitter"] = True
     tree_uv_creation(tree, mesh)
     tree_material_creation(obj)
     tree_armature_creation(tree, obj)
@@ -1964,8 +1998,7 @@ def create_twig(position=Vector((0, 0, 0))):
             mtree_props.leaf_chance = node.leaf_proba
             mtree_props.iteration = node.iterations
             mtree_props.twig_bark_material = node.material
-            for i in mtree_props.items():
-                print(i)
+
         except: node_tree = None
 
     else:
@@ -1996,7 +2029,7 @@ def create_twig(position=Vector((0, 0, 0))):
         for (position, direction) in twig_leafs:
             if random() < mtree_props.leaf_chance:
                 if random() < mtree_props.leaf_chance:
-                    new_leaf = add_leaf(position, direction, mtree_props.leaf_size, mtree_props.leaf_object, mtree_props.leaf_weight)
+                    new_leaf = add_twig_leaf(position, direction, mtree_props.leaf_size, mtree_props.leaf_object, mtree_props.leaf_weight)
                     leafs.append(new_leaf)
                     if not bpy.context.active_object.data.materials.items():
                         mat = bpy.data.materials.get("leaf_mat")
@@ -2259,485 +2292,39 @@ def branches(node_tree, tree, is_twig=False):
             update_curve_properties(node_tree, tree.iteration_curve_props, iteration / tree.last_iteration)
         tree.add_branch_layer(iteration, branch_type="Branch", is_twig=is_twig)
 
-#
-# def create_tree(position, is_twig=False):
-#     """Creates a tree
-#
-#     Details:
-#         There is a list of vertices, a list of faces and a list of seams.
-#         There is a list of all current end of the tree. At each iteration all those ends can evolve in three different ways:
-#             -The end can continue to grow as a branch, with a new end
-#             -The end can be spliced in two branches, with a new end each
-#             -The end can break
-#         Depending on this choice, vertices and faces of a Module, Split or end cap will be added to the vertices and faces list.
-#         This process is executed for both roots and branches generation.
-#         After this, the tree object itself is created, the vertices, faces and seams are applied.
-#         Once the object is created, it can be unwrapped, a material is assigned or created, and an armature is created.
-#
-#
-#     Args:
-#         position - (Vector) Position to generate tree at
-#         is_twig - (Bool) Is the tree a twig
-#     """
-#     scene = bpy.context.scene
-#     mtree_props = scene.mtree_props
-#
-#     clock = Clock("create_tree")
-#
-#     twig_leafs = []
-#     paint_indexes = []
-#
-#     leafs_weight_indexes = []
-#
-#     # deselecting all objects
-#     for select_ob in bpy.context.selected_objects:
-#         select_ob.select = False
-#
-#     if bpy.data.objects.get(mtree_props.obstacle) is not None:
-#         obs = scene.objects[mtree_props.obstacle]
-#         obs.select = True
-#         scene.objects.active = obs
-#         bpy.ops.object.duplicate()
-#         obs = scene.objects.active
-#         bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-#         if mtree_props.obstacle_flip_normals:
-#             bpy.ops.object.mode_set(mode='EDIT')
-#             bpy.ops.mesh.flip_normals()
-#             bpy.ops.object.mode_set(mode='OBJECT')
-#
-#         obs.select = False
-#         # obs = scene.objects[mtree_props.obstacle]
-#         scene.update()
-#
-#
-#     # the list of bones is a list of...
-#     # [(string : parent name, string : bone name, Vector : tail position, Vector : head position), ...]
-#     bones = []
-#     big_j = S1
-#
-#
-#     entree = [i for i in big_j.entree]
-#
-#     last_bone = (1, Vector((0, 0, 1)))
-#
-#     verts = [Vector(v) * mtree_props.radius for v in root.verts]
-#     faces = [f for f in root.faces]
-#     extr = [i for i in root.sortie[1]]
-#     uv_list = [u for u in root.uv]
-#
-#     if mtree_props.pruning:
-#         pruning_tree = SearchTree(resolution(position), mtree_props.radius)
-#
-#     height = root.uv_height
-#     extremites = [(extr, mtree_props.radius, Vector((0, 0, 1)), last_bone, mtree_props.preserve_trunk, 0, height)]
-#     curr_grease_point = 0
-#     using_grease = False
-#     vcol_rad = [mtree_props.radius]*len(verts)
-#     gp = bpy.context.scene.grease_pencil
-#     grease_points = []
-#     save_trunk_length = mtree_props.trunk_length
-#     save_trunk_space = mtree_props.trunk_space
-#     if mtree_props.use_grease_pencil and gp is not None and gp.layers.active is not None and gp.layers.active.active_frame is not None and len(gp.layers.active.active_frame.strokes) > 0 and len(gp.layers.active.active_frame.strokes[0].points) > 2:
-#         grease_points = rehash_set([i.co for i in gp.layers.active.active_frame.strokes[0].points], mtree_props.stroke_step_size)
-#         grease_points = smooth_stroke(5, mtree_props.smooth_stroke, grease_points)
-#         mtree_props.trunk_length = len(grease_points) - 2
-#         print(len(grease_points))
-#         print(grease_points)
-#         using_grease = True
-#
-#     def add_branch_layer(extremities, iteration, branch_type="Branch",  faces=faces, verts=verts, uv_list=uv_list, paint_indexes=paint_indexes, vcol_rad=vcol_rad):
-#         nextremites = []
-#         nonlocal curr_grease_point
-#
-#         for E in extremities:
-#             indexes, radius, direction, lb, is_trunk, curr_rotation, curr_height = E
-#             real_radius = (verts[indexes[0]] - verts[indexes[4]]).length
-#             uv_scale = 3 * branch.uv_height / real_radius
-#             new_rotation = (curr_rotation + mtree_props.branch_rotate + 2 *
-#                             (0.5 - random()) * mtree_props.branch_random_rotate) % 360 \
-#                 if branch_type == "Branch" else (random()-.5)*20
-#
-#             if iteration > mtree_props.preserve_end and branch_type == "Branch":
-#                 is_trunk = False
-#             pos = Vector((0, 0, 0))
-#
-#             for k in indexes:
-#                 pos += verts[k]
-#             pos /= len(indexes)
-#             direction.normalize()
-#
-#             if is_twig and iteration > 2:
-#                 twig_leafs.append((pos, direction))
-#
-#             world_pos = position + pos
-#             end = world_pos + direction * 10
-#
-#             if mtree_props.roots_stay_under_ground and branch_type == "Roots":
-#                 dist_to_ground = max(-pos.z + mtree_props.roots_ground_height, .01)
-#                 if dist_to_ground < 3:
-#                     direction += Vector((0, 0, -1))*.1/sqrt(dist_to_ground)
-#
-#                     direction.normalize()
-#
-#
-#             if mtree_props.use_force_field and branch_type == "Branch":
-#                 point_forces = [ob for ob in bpy.data.objects if ob.type == 'EMPTY' and ob.field.type == 'FORCE']
-#                 wind_forces = [ob for ob in bpy.data.objects if ob.type == 'EMPTY' and ob.field.type == 'WIND']
-#                 factor = mtree_props.fields_radius_factor
-#                 point_net_force = Vector((0, 0, 0))
-#                 for ob in point_forces:
-#                     force_power = max(1, ob.field.falloff_power)
-#                     sgn = 1 if ob.field.strength == 0 else ob.field.strength / abs(ob.field.strength)
-#                     force_direction = pos - ob.location
-#                     dist = force_direction.length
-#                     force_direction.normalize()
-#
-#                     # please comment
-#                     point_net_force += min(
-#                         (exp(-3 * real_radius) * factor + (1 - factor)) * abs(ob.field.strength) / (dist ** force_power),
-#                         mtree_props.fields_strength_limit
-#                     ) * sgn * force_direction
-#
-#                 wind_net_force = Vector((0, 0, 0))
-#                 for ob in wind_forces:
-#                     force_direction = Vector((0, 0, 1))
-#                     force_direction.rotate(ob.rotation_euler)
-#                     wind_net_force += min(ob.field.strength * (exp(-3 * real_radius) * factor + (1 - factor)),
-#                                           mtree_props.fields_strength_limit) * force_direction
-#
-#                 # this desperately needs a good comment or two explaining :-)
-#                 direction += mtree_props.fields_point_strength / 10 * point_net_force + mtree_props.fields_wind_strength / 30 * wind_net_force
-#             break_chance = mtree_props.break_chance
-#             if bpy.data.objects.get(mtree_props.obstacle) is not None and branch_type == "Branch":
-#                 scene.update()
-#                 result, hit_pos, face_normal, face_index = obs.ray_cast(world_pos, end)
-#                 if result:
-#                     if mtree_props.obstacle_kill:
-#                         break_chance += 1.5 / (hit_pos - world_pos).length ** 2
-#                     else:
-#                         force = abs(min(direction.dot(face_normal), 0)) * mtree_props.obstacle_strength / (
-#                         (hit_pos - world_pos).length + 1) * 2
-#                         direction += face_normal * force
-#
-#             if mtree_props.pruning:
-#                 pruning_tree.add(resolution(pos), (2 + real_radius) / 3)
-#
-#             split_probability = mtree_props.trunk_split_proba if is_trunk else mtree_props.split_proba
-#             if branch_type == "Roots":
-#                 split_probability = mtree_props.roots_split_proba
-#             if mtree_props.pruning and iteration > mtree_props.trunk_length and not is_trunk and branch_type == "Branch":
-#                 split_probability /= max(1,
-#                                          mtree_props.pruning_intensity / mtree_props.pruning_resolution * pruning_tree.get_value(
-#                                              resolution(pos)))
-#                 break_chance += mtree_props.pruning_intensity / mtree_props.pruning_resolution * pruning_tree.get_value(
-#                     resolution(pos)) / 100
-#
-#             if is_trunk and mtree_props.dont_break_trunk:
-#                 break_chance = 0
-#
-#             if iteration <= mtree_props.trunk_length and branch_type == "Branch":
-#                 branch_verts = [v for v in branch.verts]
-#                 vcol_rad += [real_radius]*8
-#                 if not using_grease or curr_grease_point >= len(grease_points) - 2:
-#                     ni, direction = join_branch(verts, faces, indexes, radius, mtree_props.trunk_space, branch_verts,
-#                                                 direction,
-#                                                 mtree_props.trunk_variation, uv_list, curr_height, real_radius)
-#                     sortie = pos + direction * mtree_props.trunk_space
-#                     new_height = mtree_props.trunk_space
-#
-#                 else:
-#                     gp1 = grease_points[curr_grease_point + 1]
-#                     gp2 = grease_points[curr_grease_point]
-#                     grease_dir = gp1 - gp2
-#                     grease_length = grease_dir.length
-#                     grease_dir.normalize()
-#                     ni, direction = join_branch(verts, faces, indexes, radius, grease_length,
-#                                                 branch_verts,
-#                                                 grease_dir,
-#                                                 0, uv_list, curr_height, real_radius)
-#                     sortie = pos + grease_dir * grease_length
-#
-#                     new_height = grease_length
-#                     curr_grease_point += 1
-#
-#                 if iteration <= mtree_props.bones_iterations:
-#                     bones.append((lb[0], len(bones) + 2, lb[1], sortie))
-#
-#                 nb = (len(bones) + 1, sortie)
-#                 new_height = new_height * uv_scale
-#                 nextremites.append((ni, radius * 0.98, direction, nb, is_trunk, curr_rotation, curr_height + new_height))
-#
-#             elif (iteration == mtree_props.iteration + mtree_props.trunk_length - 1 and branch_type == "Branch") \
-#                     or random() < break_chance * exp(-real_radius) \
-#                     or real_radius < mtree_props.branch_min_radius\
-#                     or (iteration == mtree_props.roots_iteration - 1 and branch_type == "Roots"):
-#
-#                 end_verts = [Vector(v) for v in end_cap.verts]
-#                 end_faces = [f for f in end_cap.faces]
-#                 length = mtree_props.trunk_space if is_trunk else mtree_props.branch_length
-#                 if branch_type == "Roots":
-#                     length = mtree_props.roots_length * sqrt(real_radius)
-#
-#                 n = len(verts)
-#
-#                 join_branch(verts, faces, indexes, radius, length, end_verts, direction,
-#                             mtree_props.trunk_variation, uv_list, 0, real_radius)
-#
-#                 faces += [add_tuple(f, n) for f in end_faces]
-#                 uv_list += [u for u in end_cap.uv]
-#                 vcol_rad += [real_radius]*len(end_verts)
-#                 if real_radius < mtree_props.radius / 4 and branch_type == "Branch":
-#                     leafs_weight_indexes.append(len(verts) - 1)
-#
-#             elif iteration < mtree_props.iteration + mtree_props.trunk_length - 1 \
-#                     and iteration == mtree_props.trunk_length + 1 \
-#                     and branch_type == "Branch"\
-#                     or random() < split_probability:
-#
-#                 variation = mtree_props.trunk_variation if is_trunk else mtree_props.randomangle
-#
-#
-#                 rand_j = randint(1, 5)
-#                 rand_t = randint(0, 4)
-#                 big_j = Joncts[rand_j] if (not is_trunk) else Trunks[rand_t]
-#                 i1 = [iteration for iteration in big_j.sortie[0]]
-#                 i2 = [iteration for iteration in big_j.sortie[1]]
-#                 jonct_uv = [u for u in big_j.uv]
-#
-#                 inter_fact = mtree_props.trunk_split_angle if is_trunk else mtree_props.split_angle
-#                 jonct_verts = interpolate(big_j.verts1, big_j.verts2, inter_fact)
-#                 length = mtree_props.trunk_space if is_trunk else mtree_props.branch_length
-#                 if branch_type == "Roots":
-#                     length = mtree_props.roots_length*sqrt(real_radius)
-#                     variation = .25
-#                 ni1, ni2, dir1, dir2, r1, r2, to_be_painted = join(verts, faces, indexes, jonct_verts, big_j.faces,
-#                                                                    radius * (1 + mtree_props.radius_dec) / 2, i1, i2,
-#                                                                    entree,
-#                                                                    direction, length, uv_list, jonct_uv,
-#                                                                    variation, new_rotation, curr_height, real_radius)
-#                 sortie1 = (verts[ni1[0]] + verts[ni1[4]]) / 2
-#                 sortie2 = (verts[ni2[0]] + verts[ni2[4]]) / 2
-#                 paint_indexes += to_be_painted
-#                 nb = len(bones)
-#                 vcol_rad += [real_radius]*len(jonct_verts)
-#                 if iteration <= mtree_props.bones_iterations and branch_type == "Branch":
-#                     bones.append((lb[0], nb + 2, lb[1], sortie1))
-#                     bones.append((lb[0], nb + 3, lb[1], sortie2))
-#
-#                 nb1 = (nb + 2, sortie1)
-#                 nb2 = (nb + 3, sortie2)
-#                 if mtree_props.gravity_start <= iteration <= mtree_props.gravity_end and branch_type == "Branch":
-#                     dir1 = gravity(dir1, mtree_props.gravity_strength)
-#                     dir2 = gravity(dir2, mtree_props.gravity_strength)
-#
-#                 new_height = curr_height + length * uv_scale + big_j.uv_height
-#
-#                 nextremites.append(
-#                     (ni1, radius * mtree_props.radius_dec * r1, dir1, nb1, is_trunk, new_rotation, new_height))
-#                 nextremites.append((ni2, radius * mtree_props.radius_dec * r2, dir2, nb2, False, new_rotation, new_height))
-#
-#             else:
-#                 branch_verts = [v for v in branch.verts]
-#
-#                 variation = mtree_props.trunk_variation if is_trunk else mtree_props.randomangle
-#                 length = mtree_props.trunk_space if is_trunk else mtree_props.branch_length
-#                 if branch_type == "Roots":
-#                     length = mtree_props.roots_length * sqrt(real_radius)
-#                 ni, direction = join_branch(verts, faces, indexes, radius, length, branch_verts, direction,
-#                                             variation, uv_list, curr_height, real_radius)
-#
-#                 sortie = pos + direction * mtree_props.branch_length
-#                 vcol_rad += [real_radius]*8
-#
-#                 if iteration <= mtree_props.bones_iterations and branch_type == "Branch":
-#                     bones.append((lb[0], len(bones) + 2, lb[1], sortie))
-#
-#                 nb = (len(bones) + 1, sortie)
-#                 if mtree_props.gravity_start <= iteration <= mtree_props.gravity_end and branch_type == "Branch":
-#                     direction = gravity(direction, mtree_props.gravity_strength)
-#                 new_height = length * uv_scale
-#                 nextremites.append(
-#                     (ni, radius * mtree_props.radius_dec, direction, nb, is_trunk, curr_rotation, curr_height + new_height))
-#         return nextremites
-#
-#     # branches generation
-#     print("Generating Branches...")
-#     for i in range(mtree_props.iteration + mtree_props.trunk_length):
-#         extremites = add_branch_layer(extremites, i)
-#
-#     #Roots generation
-#     if mtree_props.create_roots:
-#         print("generating Roots")
-#         n = len(verts)
-#         verts += [Vector(v) * mtree_props.radius for v in R1.verts]
-#         faces += [add_tuple(f, n) for f in R1.faces]
-#         uv_list += R1.uv
-#         extremites = []
-#         for r in R1.roots:
-#             extr = [n+i for i in r[1]]
-#             rad = (verts[extr[0]] - verts[extr[4]]).length / 2
-#             direction = Vector(r[0])
-#             extremites.append((extr, rad, direction, None, False, 0, 0))
-#
-#         for i in range(mtree_props.roots_iteration):
-#             extremites = add_branch_layer(extremites, i, "Roots")
-#
-#     # mesh and object creation
-#     mtree_props.trunk_length = save_trunk_length
-#     mtree_props.trunk_space = save_trunk_space
-#     print("Building Object...")
-#
-#     mesh = bpy.data.meshes.new("tree")
-#     bm = bmesh.new()
-#     bm.from_mesh(mesh)
-#     for v in verts:
-#         bm.verts.new(v)
-#     bm.verts.ensure_lookup_table()
-#     for f in faces:
-#         bm.faces.new([bm.verts[i] for i in f])
-#
-#
-#     bm.to_mesh(mesh)
-#     bm.free()
-#     obj = bpy.data.objects.new("tree", mesh)
-#     obj.location = position if not using_grease else grease_points[0] - Vector((0, 0, 1))
-#     scene.objects.link(obj)
-#     scene.objects.active = obj
-#     obj.select = True
-#     bpy.ops.object.shade_smooth()
-#     bpy.ops.object.mode_set(mode='EDIT')
-#
-#     obj.select = False
-#
-#     if bpy.data.objects.get(mtree_props.obstacle) is not None:
-#         scene.objects.unlink(obs)
-#         bpy.data.objects.remove(obs)
-#
-#     vgroups = obj.vertex_groups
-#
-#     # add vertex group for the leaves particle system
-#     obj.vertex_groups.new("leaf")
-#     vgroups.active_index = vgroups["leaf"].index
-#     bpy.ops.object.mode_set(mode='EDIT')
-#     bpy.ops.mesh.select_all(action='DESELECT')
-#     bpy.ops.object.mode_set(mode='OBJECT')
-#     for i in leafs_weight_indexes:
-#         mesh.vertices[i].select = True
-#
-#     bpy.ops.object.mode_set(mode='EDIT')
-#     for i in range(mtree_props.leafs_iteration_length+5):
-#         bpy.ops.mesh.select_more()
-#
-#     bpy.ops.object.vertex_group_assign()
-#     bpy.ops.mesh.select_all(action='SELECT')
-#     bpy.ops.object.mode_set(mode='WEIGHT_PAINT')
-#     bpy.context.object.data.use_paint_mask_vertex = True
-#     bpy.ops.object.vertex_group_smooth(factor=1, repeat=3)
-#     bpy.ops.object.mode_set(mode='EDIT')
-#     bpy.ops.mesh.remove_doubles()
-#     bpy.ops.mesh.select_all(action='TOGGLE')
-#     bpy.ops.object.mode_set(mode='OBJECT')
-#
-#
-#     # add vertex group for the wind animations
-#     obj.vertex_groups.new("wind_anim")
-#
-#     # fix normals, then make sure they are fixed :)
-#     print("Setting Normals...")
-#     fix_normals(inside=False)
-#     if obj.data.polygons[0].normal.x < 0:
-#         fix_normals(inside=True)
-#
-#     # vertex paint
-#     paint = [False]*len(verts)
-#     for i in paint_indexes:
-#         paint[i] = True
-#     clock.add_sub_job("vertex_paint")
-#     bpy.ops.object.mode_set(mode='OBJECT')
-#     color = (0,0,0)
-#     vcol_layer = mesh.vertex_colors.new()
-#     vcol_rad_layer = mesh.vertex_colors.new()
-#     vcol_layer.name = "seams"
-#     vcol_rad_layer.name = "radius"
-#
-#     for loop_index, loop in enumerate(mesh.loops):
-#         loop_vert_index = loop.vertex_index
-#         if paint[loop_vert_index]:
-#             vcol_layer.data[loop_index].color = color
-#         value = vcol_rad[loop_vert_index]/mtree_props.radius
-#         vcol_rad_layer.data[loop_index].color = Vector((value,value,value))
-#
-#
-#
-#     clock.stop("vertex_paint")
-#
-#
-#     # particle setup
-#     if mtree_props.particle:
-#         print("Configuring Particle System...")
-#         create_system(obj, mtree_props.number, mtree_props.display, vgroups["leaf"], mtree_props.twig_particle, mtree_props.particle_size)
-#
-#     # uv unwrapping
-#     if mtree_props.uv:
-#         print("Unwrapping...")
-#         clock.add_sub_job("uv")
-#         bm = bmesh.new()  # create an empty BMesh
-#         bm.from_mesh(mesh)
-#         bm.loops.layers.uv.new()
-#         uv_layer = bm.loops.layers.uv.active
-#         for face in bm.faces:
-#             it = 0
-#             for loop in face.loops:
-#                 loop[uv_layer].uv = uv_list[face.index][it]
-#                 it += 1
-#         bm.to_mesh(mesh)
-#         bm.free()
-#         clock.stop("uv")
-#
-#     # material creation
-#     print("Setting Materials...")
-#     if mtree_props.mat:
-#         obj.active_material = build_bark_material("bark")
-#
-#     elif bpy.data.materials.get(mtree_props.bark_material) is not None:
-#         obj.active_material = bpy.data.materials.get(mtree_props.bark_material)
-#
-#     # armature creation
-#     if mtree_props.create_armature:
-#         print("Building Armature...")
-#         clock.add_sub_job("armature")
-#         bpy.ops.object.add(type='ARMATURE', enter_editmode=True, location=Vector((0, 0, 0)))
-#         arm = bpy.context.object
-#         arm.show_x_ray = True
-#         amt = arm.data
-#         arm.data.draw_type = 'STICK'
-#         bone = amt.edit_bones.new('1')
-#         bone.head = Vector((0, 0, 0))
-#         bone.tail = Vector((0, 0, 1))
-#
-#         for (pname, name, h, t) in bones:
-#             bone = amt.edit_bones.new(str(name))
-#             bone.parent = arm.data.edit_bones[str(pname)]
-#             bone.use_connect = True
-#             bone.head = h
-#             bone.tail = t
-#
-#         bpy.ops.object.editmode_toggle()
-#         bpy.ops.object.select_all(action='DESELECT')
-#         obj.select = True
-#         arm.select = True
-#         scene.objects.active = arm
-#         bpy.ops.object.parent_set(type='ARMATURE_AUTO')
-#         bpy.ops.object.select_all(action='DESELECT')
-#         clock.stop("armature")
-#
-#     obj.select = True
-#     scene.objects.active = obj
-#     obj["is_tree"] = True
-#     obj["has_armature"] = True if mtree_props.create_armature else False
-#
-#     clock.stop("create_tree")
-#     print("\nDeveloper Info:")
-#     clock.display()
-#     if is_twig:
-#         return twig_leafs
+
+def create_leafs_emitter(pos, leafs, parent):
+    scene = bpy.context.scene
+    mtree_props = scene.mtree_props
+    if mtree_props.particle:
+        verts = []
+        faces = []
+        for (position, direction) in leafs:
+            add_leaf(position, direction, verts, faces)
+
+        print("Building leafs emitter...")
+
+        mesh = bpy.data.meshes.new("leafs_emitter")
+        bm = bmesh.new()
+        bm.from_mesh(mesh)
+        for v in verts:
+            bm.verts.new(v)
+        bm.verts.ensure_lookup_table()
+        for f in faces:
+            bm.faces.new([bm.verts[i] for i in f])
+
+        bm.to_mesh(mesh)
+        bm.free()
+        obj = bpy.data.objects.new("leafs_emitter", mesh)
+        obj.location = pos
+        bpy.context.scene.objects.link(obj)
+        obj["emitter"] = True
+        obj.parent = parent
+
+        print("Configuring Particle System...")
+        create_system(obj, mtree_props.number, mtree_props.display, None, mtree_props.twig_particle,
+                      mtree_props.particle_size, emitter=True, max_number=len(faces))
+
+
+
+

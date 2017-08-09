@@ -480,12 +480,14 @@ class ParticleNode(Node, ModularTreeNodeTree):
     viewport_number = bpy.props.IntProperty(default=500)
     leaf_object = bpy.props.StringProperty(default="")
     leaf_size = bpy.props.FloatProperty(default=1.0)
+    emitter = bpy.props.BoolProperty(default=True, name='create particle emitter')
 
     def init(self, context):
         self.inputs.new('NodeSocketShader', "Tree")
         self.outputs.new('NodeSocketShader', "Tree")
 
     def draw_buttons(self, context, layout):
+        layout.prop(self, 'emitter')
         layout.prop_search(self, "leaf_object", bpy.data, "objects", text="", icon="OBJECT_DATA")
         layout.prop(self, 'number')
         layout.prop(self, 'viewport_number')

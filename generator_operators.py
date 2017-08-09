@@ -137,6 +137,7 @@ class UpdateTreeOperator(Operator):
         try:
             is_tree_prop = obj.get('is_tree')
             has_arm_prop = obj.get('has_armature')
+            has_emitter_prop = obj.get('has_emitter')
         except AttributeError:
             self.report({'ERROR'}, "No active tree object!")
             return {'CANCELLED'}
@@ -168,6 +169,11 @@ class UpdateTreeOperator(Operator):
                     ob.location = arm_pos
                     ob.scale = arm_scale
                     ob.rotation_euler = arm_rot
+
+            if has_emitter_prop:
+                children = obj.children
+                emitter = [i for i in children if i.get("emitter")][0]
+                emitter.select = True
 
             bpy.ops.object.delete(use_global=False)
             ob.select = True

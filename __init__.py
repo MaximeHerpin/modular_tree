@@ -346,6 +346,7 @@ class AdvancedSettingsPanel(Panel):
                 box.prop(mtree_props, 'leafs_iteration_length')
                 box.prop(mtree_props, 'particle')
                 if mtree_props.particle:
+                    box.prop(mtree_props, 'create_particle_emitter')
                     box.prop(mtree_props, 'number')
                     box.prop(mtree_props, 'display')
                     box.prop_search(mtree_props, "twig_particle", scene, "objects")
@@ -671,6 +672,10 @@ class ModularTreePropertyGroup(PropertyGroup):
     particle = BoolProperty(
         name="Configure Particle System",
         default=False)
+
+    create_particle_emitter = BoolProperty(
+        name='create particle emitter',
+        default=True)
 
     number = IntProperty(
         name="Number of Leaves",
