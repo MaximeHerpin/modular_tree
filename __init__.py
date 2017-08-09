@@ -54,19 +54,19 @@ class TreeAddonPrefs(AddonPreferences):
 
     always_save_prior = BoolProperty(
         name="Save .blend File",
-        default=False,
+        default=True,
         description="Always save .blend file before executing " +
                     "time-consuming operations")
 
     save_all_images = BoolProperty(
         name="Save Images",
-        default=False,
+        default=True,
         description="Always save images before executing " +
                     "time-consuming operations")
 
     save_all_texts = BoolProperty(
         name="Save Texts",
-        default=False,
+        default=True,
         description="Always save texts before executing " +
                     "time-consuming operations")
 
@@ -79,7 +79,7 @@ class TreeAddonPrefs(AddonPreferences):
     auto_check_update = bpy.props.BoolProperty(
         name="Auto-check for Update",
         description="If enabled, auto-check for updates using an interval",
-        default=False,
+        default=True,
     )
 
     updater_intrval_months = bpy.props.IntProperty(
@@ -223,7 +223,7 @@ class RootsAndTrunksPanel(Panel):
                 box = layout.box()
                 box.label("Roots")
                 sbox = box.box()
-                sbox.prop(mtree_props, 'create_roots')
+                # sbox.prop(mtree_props, 'create_roots')
                 if mtree_props.create_roots:
                     sbox.prop(mtree_props, 'roots_iteration')
                     sbox.prop(mtree_props, 'roots_split_proba')
@@ -547,7 +547,7 @@ class ModularTreePropertyGroup(PropertyGroup):
 
     trunk_radius_dec = FloatProperty(
         name='Trunk_radius_decrease',
-        default=.95,
+        default=.975,
         min=0.00001)
 
     branch_length = FloatProperty(
@@ -646,7 +646,7 @@ class ModularTreePropertyGroup(PropertyGroup):
 
     create_roots = BoolProperty(
         name="Create Roots",
-        default=False)
+        default=True)
 
     branch_rotate = FloatProperty(
         name="Branches Rotation Angle",
@@ -751,7 +751,7 @@ class ModularTreePropertyGroup(PropertyGroup):
     batch_space = FloatProperty(
         name="Grid Size",
         min=0,
-        default=10,
+        default=15,
         description="The distance between the trees")
 
     wind_controller = StringProperty(

@@ -1311,7 +1311,7 @@ def add_leaf(position, direction, scale, leaf, leaf_weight):
     bpy.context.scene.objects.link(new_leaf)
     new_leaf.location = position
     new_leaf.scale = Vector((scale, scale, scale))
-    new_leaf.rotation_euler = (pi/2 - min(leaf_weight/3 + direction.y, pi/2), atan(direction.x / max(.01,abs(direction.z))), 0)
+    new_leaf.rotation_euler = (pi/2 - min(leaf_weight/3 + direction.y/3, pi/2), atan(direction.x / max(.01,abs(direction.z))), 0)
     return new_leaf
 
 
@@ -1513,8 +1513,8 @@ class Tree:
                     stroke.pop(0)
             # .......................................................................................................
 
-            if is_twig and iteration > mtree_props.trunk_length + mtree_props.iteration - 4:
-                self.twig_leafs.append((pos, direction))
+            if is_twig and iteration > 4:
+                self.twig_leafs.append((pos + direction * mtree_props.branch_length, direction))
 
             if mtree_props.pruning:
                 self.pruning_tree.add(resolution(pos), (2 + real_radius) / 3)
@@ -1833,8 +1833,8 @@ def update_twig_properties():
     mtree_props.trunk_variation = .1
     mtree_props.radius = .25
     mtree_props.radius_dec = .90
-    mtree_props.preserve_end = 7
-    mtree_props.trunk_length = 1
+    mtree_props.preserve_end = 6
+    mtree_props.trunk_length = 0
     mtree_props.trunk_split_proba = .75
     mtree_props.trunk_space = .6
     mtree_props.split_proba = .3
@@ -1858,7 +1858,7 @@ def update_twig_properties():
     mtree_props.particle = False
     mtree_props.number = 0
     mtree_props.display = 0
-    mtree_props.break_chance = 0.05
+    mtree_props.break_chance = 0.0
     mtree_props.use_grease_pencil = False
 
 
@@ -1943,7 +1943,7 @@ def alt_create_tree(operator, position=Vector((0,0,0))):
     return obj
 
 
-def create_twig(position=Vector((0,0,0))):
+def create_twig(position=Vector((0, 0, 0))):
     scene = bpy.context.scene
     mtree_props = scene.mtree_props
 
@@ -1964,7 +1964,9 @@ def create_twig(position=Vector((0,0,0))):
             mtree_props.leaf_chance = node.leaf_proba
             mtree_props.iteration = node.iterations
             mtree_props.twig_bark_material = node.material
-        except: pass
+            for i in mtree_props.items():
+                print(i)
+        except: node_tree = None
 
     else:
         node_tree = None
@@ -1990,9 +1992,9 @@ def create_twig(position=Vector((0,0,0))):
 
     leafs = []
     twig_leafs = tree.twig_leafs
-    for (position, direction) in twig_leafs:
-        if random() < mtree_props.leaf_chance:
-            for i in range(randint(1, 3)):
+    if bpy.context.scene.objects.get(mtree_props.leaf_object) is not None:
+        for (position, direction) in twig_leafs:
+            if random() < mtree_props.leaf_chance:
                 if random() < mtree_props.leaf_chance:
                     new_leaf = add_leaf(position, direction, mtree_props.leaf_size, mtree_props.leaf_object, mtree_props.leaf_weight)
                     leafs.append(new_leaf)
@@ -2003,10 +2005,10 @@ def create_twig(position=Vector((0,0,0))):
                         new_leaf.active_material = mat
                     obj.select = True
                     scene.objects.active = obj
-    for i in leafs:
-        i.select = True
-    if not (not leafs):
-        bpy.ops.object.join()
+        for i in leafs:
+            i.select = True
+        if not (not leafs):
+            bpy.ops.object.join()
 
     obj.rotation_euler = (- pi/2, 0, 0)
     obj.scale = Vector((0.25, 0.25, 0.25))

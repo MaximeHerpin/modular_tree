@@ -3,6 +3,7 @@ from bpy.types import NodeTree, Node, NodeSocket
 from bpy.props import *
 from mathutils import Vector
 import time
+from random import seed
 import nodeitems_utils
 from .icons import register_icons, unregister_icons, get_icon
 from nodeitems_utils import NodeCategory, NodeItem
@@ -174,7 +175,7 @@ class TrunkNode(Node, ModularTreeNodeTree):
     use_grease_pencil = bpy.props.BoolProperty(default=False)
     radius = bpy.props.FloatProperty(default=1)
     trunk_iterations = bpy.props.IntProperty(default=6, min=0)
-    trunk_end = bpy.props.IntProperty(default=35, min=0)
+    trunk_end = bpy.props.IntProperty(default=20, min=0)
 
     def init(self, context):
         scene = bpy.context.scene
@@ -305,6 +306,7 @@ class TreeOutput(Node, ModularTreeNodeTree):
         mtree_props = scene.mtree_props
         mtree_props.uv = self.uv
         mtree_props.SeedProp = self.Seed
+        seed(self.Seed)
         mtree_props.mat = self.create_material
         mtree_props.bark_material = self.material
 
@@ -350,7 +352,7 @@ class TwigNode(Node, ModularTreeNodeTree):
     def update(self):
         scene = bpy.context.scene
         mtree_props = scene.mtree_props
-        bpy.context.scene.mtree_props.TwigSeedProp = self.Seed
+        bpy.context.scene.mtree_props.SeedProp = self.Seed
         bpy.context.scene.mtree_props.leaf_object = self.leaf_object
         mtree_props.leaf_size = self.leaf_size
         mtree_props.TwigSeedProp = self.Seed
