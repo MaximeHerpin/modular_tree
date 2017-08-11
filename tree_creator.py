@@ -1398,6 +1398,7 @@ def configure_obstacle():
             bpy.ops.object.mode_set(mode='OBJECT')
         obs.select = False
         return obs
+    return None
 
 
 class Tree:
@@ -1476,7 +1477,7 @@ class Tree:
                 update_curve_properties(node_tree, self.height_curve_props, pos.z)
 
             world_pos = self.position + pos
-            end = world_pos + direction * 10
+
 
             # Modifying direction....................................................................................
             if mtree_props.roots_stay_under_ground and branch_type == "Roots":
@@ -1519,17 +1520,22 @@ class Tree:
                 direction = gravity(direction, mtree_props.gravity_strength*5)
                 direction.normalize()
 
+            end = world_pos + direction * 10
+
             break_chance = mtree_props.break_chance
-            if bpy.data.objects.get(mtree_props.obstacle) is not None and branch_type == "Branch":
-                bpy.context.scene.update()
+            if self.obs is not None:
+                print("obstacle")
+                # bpy.context.scene.update()
                 result, hit_pos, face_normal, face_index = self.obs.ray_cast(world_pos, end)
                 if result:
                     if mtree_props.obstacle_kill:
-                        break_chance += 1.5 / (hit_pos - world_pos).length ** 2
+                        if (hit_pos - world_pos).length < max(mtree_props.trunk_space*3,mtree_props.branch_length*3) + real_radius*3 :
+                            break_chance = 1
                     else:
                         force = abs(min(direction.dot(face_normal), 0)) * mtree_props.obstacle_strength / (
                             (hit_pos - world_pos).length + 1) * 2
                         direction += face_normal * force
+
 
             # if a branch follows a grease pencil stroke, change it's direction and length
             if stroke_index >= 0:
@@ -1563,7 +1569,7 @@ class Tree:
                 break_chance += mtree_props.pruning_intensity / mtree_props.pruning_resolution * self.pruning_tree.get_value(
                     resolution(pos)) / 100
 
-            if is_trunk and mtree_props.dont_break_trunk:
+            if is_trunk and mtree_props.dont_break_trunk and self.obs is None:
                 break_chance = 0
             # Trunk................................................................................
 
@@ -1748,6 +1754,7 @@ def update_static_properties(node_tree, static_props):
     mtree_props.particle = False
     mtree_props.pruning = False
     mtree_props.create_armature = False
+    mtree_props.use_force_field = False
     for node in node_tree.nodes:
         if node.bl_label == 'Roots':
             mtree_props.roots_iteration = node.iterations
@@ -1957,7 +1964,7 @@ def alt_create_tree(operator, position=Vector((0,0,0))):
     tree_vertex_paint_creation(tree, mesh)
     if not mtree_props.create_particle_emitter:
         tree_particle_creations(operator, vgroups, obj, node_tree)
-    elif not(not tree.leafs):
+    elif mtree_props.particle and not(not tree.leafs):
         create_leafs_emitter(tree.position, tree.leafs, obj)
         obj["has_emitter"] = True
     tree_uv_creation(tree, mesh)

@@ -4,6 +4,7 @@ from bpy.props import *
 from mathutils import Vector
 import time
 from random import seed
+from bpy.app.handlers import persistent
 import nodeitems_utils
 from .icons import register_icons, unregister_icons, get_icon
 from nodeitems_utils import NodeCategory, NodeItem
@@ -90,10 +91,12 @@ class ModularTreeNodeTree(NodeTree):
     time_lap = 0
 
     def update(self):
-        for node in self.nodes:
-            node.update()
+        if bpy.context.scene.mtree_props.use_node_workflow:
+            for node in self.nodes:
+                node.update()
 
 
+@persistent
 def update_all_trees(scene):
     sel_obj = bpy.context.selected_objects
     if bpy.context.scene.mtree_props.use_node_workflow:
@@ -105,7 +108,7 @@ def update_all_trees(scene):
             test = False
         bpy.context.scene.mtree_props.is_tree_selected = test
 
-        trees = [n for n in bpy.data.node_groups if n.bl_idname == 'ModularTreeNodeType']
+        trees = [n for n in bpy.data.node_groups if n.bl_idname == 'ModularTreeNodeType' and n.name == bpy.context.scene.mtree_props.node_tree]
         for t in trees:
             if time.time() - t.time_lap > 1:
                 t.update()
@@ -400,6 +403,9 @@ class ForcesNode(Node, ModularTreeNodeTree):
         layout.prop(self, "use_force_field")
 
 
+
+
+
 class VertexNode(Node, ModularTreeNodeTree):
     ''' Vertex group/color configuration Node '''
     bl_idname = 'VertexNode'
@@ -438,7 +444,7 @@ class ObstacleNode(Node, ModularTreeNodeTree):
     bl_width_default = 190
 
     obstacle = bpy.props.StringProperty(default="")
-    flip_normals = bpy.props.BoolProperty(default = False)
+    flip_normals = bpy.props.BoolProperty(default=False)
 
     modes = [
         ("AVOID", "avoid", "The branches avoid the boundaries of the obstacle"),
@@ -451,7 +457,7 @@ class ObstacleNode(Node, ModularTreeNodeTree):
         scene = bpy.context.scene
 
         self.inputs.new('NodeSocketShader', "Tree")
-        self.inputs.new('FloatSocket', 'avoidance_strength')
+        self.inputs.new('FloatSocket', 'avoidance_strength').default_value = 1
         self.outputs.new('NodeSocketShader', "Tree")
 
     def draw_buttons(self, context, layout):
@@ -468,6 +474,10 @@ class ObstacleNode(Node, ModularTreeNodeTree):
             elif len([i for i in self.inputs if i.hide]) == 0:
                 self.inputs["avoidance_strength"].hide = True
         except: pass
+        bpy.context.scene.mtree_props.obstacle = self.obstacle
+
+    def free(self, context):
+        bpy.context.scene.mtree_props.obstacle = ""
 
 
 class ParticleNode(Node, ModularTreeNodeTree):
@@ -595,14 +605,8 @@ class CurveNode(Node, ModularTreeNodeTree):
         col.prop(self, "y_min")
         col.prop(self, "y_max")
 
-    def copy(self, source_node):
-        print('copying')
-
     def update(self):
         pass
-
-    def duplicate(self, sourceNode):
-        print('duplicating')
 
     @property
     def curve(self):
@@ -622,9 +626,6 @@ class CurveNode(Node, ModularTreeNodeTree):
 nodes_to_register = [ModularTreeNodeTree, RootNode, TrunkNode, BranchNode, TreeOutput, CurveNode, FloatSocket,
                      FreeFloatSocket, ForcesNode, VertexNode, AngleFloatSocket, ObstacleNode, ParticleNode,
                      PruningNode, ArmatureNode, TwigNode]
-
-
-
 
 
 bpy.app.handlers.scene_update_post.append(update_all_trees)
