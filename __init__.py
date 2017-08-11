@@ -834,6 +834,7 @@ class ModularTreePropertyGroup(PropertyGroup):
         min=1,
         default=2)
 
+
     use_node_workflow = BoolProperty(
         name="use node workflow",
         default=True)

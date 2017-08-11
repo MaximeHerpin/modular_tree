@@ -1432,6 +1432,7 @@ class Tree:
         self.last_iteration = 0
 
         if mtree_props.pruning:
+            print("pruning")
             self.pruning_tree = SearchTree(resolution(self.position), mtree_props.radius)
 
         gp = bpy.context.scene.grease_pencil
@@ -1478,7 +1479,6 @@ class Tree:
 
             world_pos = self.position + pos
 
-
             # Modifying direction....................................................................................
             if mtree_props.roots_stay_under_ground and branch_type == "Roots":
                 dist_to_ground = max(-pos.z + mtree_props.roots_ground_height, .01)
@@ -1524,8 +1524,6 @@ class Tree:
 
             break_chance = mtree_props.break_chance
             if self.obs is not None:
-                print("obstacle")
-                # bpy.context.scene.update()
                 result, hit_pos, face_normal, face_index = self.obs.ray_cast(world_pos, end)
                 if result:
                     if mtree_props.obstacle_kill:
@@ -1535,7 +1533,6 @@ class Tree:
                         force = abs(min(direction.dot(face_normal), 0)) * mtree_props.obstacle_strength / (
                             (hit_pos - world_pos).length + 1) * 2
                         direction += face_normal * force
-
 
             # if a branch follows a grease pencil stroke, change it's direction and length
             if stroke_index >= 0:
@@ -1755,6 +1752,7 @@ def update_static_properties(node_tree, static_props):
     mtree_props.pruning = False
     mtree_props.create_armature = False
     mtree_props.use_force_field = False
+
     for node in node_tree.nodes:
         if node.bl_label == 'Roots':
             mtree_props.roots_iteration = node.iterations

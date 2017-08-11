@@ -403,9 +403,6 @@ class ForcesNode(Node, ModularTreeNodeTree):
         layout.prop(self, "use_force_field")
 
 
-
-
-
 class VertexNode(Node, ModularTreeNodeTree):
     ''' Vertex group/color configuration Node '''
     bl_idname = 'VertexNode'
@@ -476,9 +473,6 @@ class ObstacleNode(Node, ModularTreeNodeTree):
         except: pass
         bpy.context.scene.mtree_props.obstacle = self.obstacle
 
-    def free(self, context):
-        bpy.context.scene.mtree_props.obstacle = ""
-
 
 class ParticleNode(Node, ModularTreeNodeTree):
     ''' particles configuration Node '''
@@ -529,7 +523,8 @@ class PruningNode(Node, ModularTreeNodeTree):
         layout.prop(self, 'voxel_size')
 
     def update(self):
-        pass
+        bpy.context.scene.mtree_props.pruning = True
+
 
 
 class ArmatureNode(Node, ModularTreeNodeTree):
