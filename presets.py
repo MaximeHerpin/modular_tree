@@ -71,8 +71,10 @@ class SaveTreePresetOperator(Operator):
 
     def execute(self, context):
         mtree_props = context.scene.mtree_props
+
         # doing it all by hand is tedious, with this we have something like "[(name1,value1), (name2,value2), ...]"
         props = mtree_props.items()
+
 
         # write to file
         prsets_directory = os.path.join(os.path.dirname(__file__), "mod_tree_presets")
@@ -151,11 +153,13 @@ class LoadTreePresetOperator(Operator):
 
         prsets_directory = os.path.join(os.path.dirname(__file__), "mod_tree_presets")
         prset = os.path.join(prsets_directory, self.filename)  # mtp stands for modular tree preset
+
         "M"  # mtp stands for modular tree preset
         with open(prset, 'rb') as p:
             presets = pickle.load(p)
 
         for (name, value) in presets:
             mtree_props[name] = value
+
 
         return {'FINISHED'}
