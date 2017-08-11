@@ -20,7 +20,7 @@
 import bpy
 
 
-def create_system(ob, number, display, vertex_group, object_name, size):
+def create_system(ob, number, display, vertex_group, object_name, size, emitter=False, max_number=0):
     """ Creates a particle system
 
     Args:
@@ -29,33 +29,47 @@ def create_system(ob, number, display, vertex_group, object_name, size):
         display - (int) The number of particles displayed on the viewport
         vertex_group - (vertex group) The vertex group controlling the density of particles
     """
-    # get the vertex group
-    g = vertex_group
-
-    # customize the particle system
     leaf = ob.modifiers.new("leafs", 'PARTICLE_SYSTEM')
     part = ob.particle_systems[0]
-    part.vertex_group_density = g.name
+
     settings = leaf.particle_system.settings
     settings.name = "leaf"
     settings.type = "HAIR"
     settings.use_advanced_hair = True
     settings.draw_percentage = 100 * display / number
-    settings.count = number
-    settings.distribution = "RAND"
+
     settings.use_rotation_dupli = True
-    bpy.data.particles["leaf"].rotation_mode = 'OB_Z'
-    bpy.data.particles["leaf"].phase_factor_random = 2
-    bpy.data.particles["leaf"].rotation_factor_random = 0.12
-    settings.normal_factor = 0.250
-    settings.factor_random = 0.7
-    settings.use_render_emitter = False
     settings.use_rotations = True
-    settings.phase_factor = 1
-    settings.phase_factor_random = 1
     settings.particle_size = 0.1 * size
     settings.size_random = 0.25
     settings.brownian_factor = 1
     settings.render_type = "OBJECT"
     if bpy.data.objects.get(object_name) is not None:
         settings.dupli_object = bpy.context.scene.objects[object_name]
+
+    if not emitter:
+        g = vertex_group
+        settings.count = number
+        part.vertex_group_density = g.name
+        settings.distribution = "RAND"
+        bpy.data.particles["leaf"].rotation_mode = 'OB_Z'
+        bpy.data.particles["leaf"].phase_factor_random = 2
+        bpy.data.particles["leaf"].rotation_factor_random = 0.12
+        settings.normal_factor = 0.250
+        settings.factor_random = 0.7
+        settings.use_render_emitter = False
+        settings.phase_factor = 1
+        settings.phase_factor_random = 1
+
+    else:
+        settings.count = min(number, max_number)
+        settings.emit_from = 'FACE'
+        settings.userjit = 1
+        settings.rotation_mode = 'NOR'
+        bpy.data.particles["leaf"].phase_factor = -.1
+        settings.phase_factor_random = 0.2
+        settings.phase_factor_random = 0.30303
+        settings.factor_random = 0.2
+
+
+

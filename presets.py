@@ -23,6 +23,8 @@ import bpy
 from bpy.props import StringProperty, BoolProperty, FloatProperty, IntProperty, EnumProperty
 from bpy.types import Operator, Panel, Scene, Menu, AddonPreferences
 
+import pickle
+
 from .addon_name import get_addon_name
 
 
@@ -70,102 +72,17 @@ class SaveTreePresetOperator(Operator):
     def execute(self, context):
         mtree_props = context.scene.mtree_props
 
-        preset = ("preserve_trunk:{}\n"
-                  "trunk_split_angle:{}\n"
-                  "randomangle:{}\n"
-                  "trunk_variation:{}\n"
-                  "radius:{}\n"
-                  "radius_dec:{}\n"
-                  "iteration:{}\n"
-                  "preserve_end:{}\n"
-                  "trunk_length:{}\n"
-                  "trunk_split_proba:{}\n"
-                  "split_proba:{}\n"
-                  "trunk_space:{}\n"
-                  "branch_length:{}\n"
-                  "split_angle:{}\n"
-                  "gravity_strength:{}\n"
-                  "gravity_start:{}\n"
-                  "gravity_end:{}\n"
-                  "obstacle:{}\n"
-                  "obstacle_strength:{}\n"
-                  "SeedProp:{}\n"
-                  "create_armature:{}\n"
-                  "bones_iterations:{}\n"
-                  "leafs_iteration_length:{}\n"
-                  "uv:{}\n"
-                  "mat:{}\n"
-                  "roots_iteration:{}\n"
-                  "create_roots:{}\n"
-                  "branch_rotate:{}\n"
-                  "branch_random_rotate:{}\n"
-                  "particle:{}\n"
-                  "number:{}\n"
-                  "display:{}\n"
-                  "break_chance:{}\n"
-                  "bark_material:{}\n"
-                  "leaf_size:{}\n"
-                  "leaf_chance:{}\n"
-                  "twig_bark_material:{}\n"
-                  "TwigSeedProp:{}\n"
-                  "twig_iteration:{}\n"
-                  "tree_number:{}\n"
-                  "batch_radius_randomness:{}\n"
-                  "batch_group_name:{}\n"
-                  "batch_space:{}\n".format(
-                    # bools can't be stored as "True" or "False" b/c bool(x) will evaluate to
-                    # True if x = "True" or if x = "False"...the fix is to do an int() conversion
-                    int(mtree_props.preserve_trunk),
-                    mtree_props.trunk_split_angle,
-                    mtree_props.randomangle,
-                    mtree_props.trunk_variation,
-                    mtree_props.radius,
-                    mtree_props.radius_dec,
-                    mtree_props.iteration,
-                    mtree_props.preserve_end,
-                    mtree_props.trunk_length,
-                    mtree_props.trunk_split_proba,
-                    mtree_props.split_proba,
-                    mtree_props.trunk_space,
-                    mtree_props.branch_length,
-                    mtree_props.split_angle,
-                    mtree_props.gravity_strength,
-                    mtree_props.gravity_start,
-                    mtree_props.gravity_end,
-                    mtree_props.obstacle,
-                    mtree_props.obstacle_strength,
-                    mtree_props.SeedProp,
-                    int(mtree_props.create_armature),
-                    mtree_props.bones_iterations,
-                    mtree_props.leafs_iteration_length,
-                    int(mtree_props.uv),
-                    int(mtree_props.mat),
-                    mtree_props.roots_iteration,
-                    int(mtree_props.create_roots),
-                    mtree_props.branch_rotate,
-                    mtree_props.branch_random_rotate,
-                    int(mtree_props.particle),
-                    mtree_props.number,
-                    mtree_props.display,
-                    mtree_props.break_chance,
-                    mtree_props.bark_material,
-                    mtree_props.leaf_size,
-                    mtree_props.leaf_chance,
-                    mtree_props.twig_bark_material,
-                    mtree_props.TwigSeedProp,
-                    mtree_props.twig_iteration,
-                    mtree_props.tree_number,
-                    mtree_props.batch_radius_randomness,
-                    mtree_props.batch_group_name,
-                    mtree_props.batch_space))
+        # doing it all by hand is tedious, with this we have something like "[(name1,value1), (name2,value2), ...]"
+        props = mtree_props.items()
+
 
         # write to file
         prsets_directory = os.path.join(os.path.dirname(__file__), "mod_tree_presets")
         prset = os.path.join(prsets_directory, mtree_props.preset_name + ".mtp")  # mtp stands for modular tree preset
 
         os.makedirs(os.path.dirname(prset), exist_ok=True)
-        with open(prset, 'w') as p:
-            print(preset, file=p, flush=True)
+        with open(prset, 'wb') as p:
+            pickle.dump(props, p)
 
         return {'FINISHED'}
 
@@ -236,99 +153,13 @@ class LoadTreePresetOperator(Operator):
 
         prsets_directory = os.path.join(os.path.dirname(__file__), "mod_tree_presets")
         prset = os.path.join(prsets_directory, self.filename)  # mtp stands for modular tree preset
-        with open(prset, 'r') as p:
-            preset = p.readlines()  # readlines will make a list ie. "a\nb\nc\nd\n" is ["a", "b", "c", "d"]
 
-        # each line should be a preset
-        for line in preset:
-            # verify that a colon is in the line to avoid an error with line.split(":")
-            if ":" in line:
-                setting, value = line.split(":")
-                if setting == "preserve_trunk":
-                    mtree_props.preserve_trunk = bool(int(value))  # bools have to be converted to int first (stored as 0/1)
-                elif setting == "trunk_split_angle":
-                    mtree_props.trunk_split_angle = float(value)
-                elif setting == "randomangle":
-                    mtree_props.randomangle = float(value)
-                elif setting == "trunk_variation":
-                    mtree_props.trunk_variation = float(value)
-                elif setting == "radius":
-                    mtree_props.radius = float(value)
-                elif setting == "radius_dec":
-                    mtree_props.radius_dec = float(value)
-                elif setting == "iteration":
-                    mtree_props.iteration = int(value)
-                elif setting == "preserve_end":
-                    mtree_props.preserve_end = int(value)
-                elif setting == "trunk_length":
-                    mtree_props.trunk_length = int(value)
-                elif setting == "trunk_split_proba":
-                    mtree_props.trunk_split_proba = float(value)
-                elif setting == "split_proba":
-                    mtree_props.split_proba = float(value)
-                elif setting == "trunk_space":
-                    mtree_props.trunk_space = float(value)
-                elif setting == "branch_length":
-                    mtree_props.branch_length = float(value)
-                elif setting == "split_angle":
-                    mtree_props.split_angle = float(value)
-                elif setting == "gravity_strength":
-                    mtree_props.gravity_strength = float(value)
-                elif setting == "gravity_start":
-                    mtree_props.gravity_start = int(value)
-                elif setting == "gravity_end":
-                    mtree_props.gravity_end = int(value)
-                elif setting == "obstacle":
-                    mtree_props.obstacle = value.replace("\n", "")
-                elif setting == "obstacle_strength":
-                    mtree_props.obstacle_strength = float(value)
-                elif setting == "SeedProp":
-                    mtree_props.SeedProp = int(value)
-                elif setting == "create_armature":
-                    mtree_props.create_armature = bool(int(value))
-                elif setting == "bones_iterations":
-                    mtree_props.bones_iterations = int(value)
-                elif setting == "leafs_iteration_length":
-                    mtree_props.leafs_iteration_length = int(value)
-                elif setting == "uv":
-                    mtree_props.uv = bool(int(value))
-                elif setting == "mat":
-                    mtree_props.mat = bool(int(value))
-                elif setting == "roots_iteration":
-                    mtree_props.roots_iteration = int(value)
-                elif setting == "create_roots":
-                    mtree_props.create_roots = bool(int(value))
-                elif setting == "branch_rotate":
-                    mtree_props.branch_rotate = float(value)
-                elif setting == "branch_random_rotate":
-                    mtree_props.branch_random_rotate = float(value)
-                elif setting == "particle":
-                    mtree_props.particle = bool(int(value))
-                elif setting == "number":
-                    mtree_props.number = int(value)
-                elif setting == "display":
-                    mtree_props.display = int(value)
-                elif setting == "break_chance":
-                    mtree_props.break_chance = float(value)
-                elif setting == "bark_material":
-                    mtree_props.bark_material = value.replace("\n", "")
-                elif setting == "leaf_size":
-                    mtree_props.leaf_size = float(value)
-                elif setting == "leaf_chance":
-                    mtree_props.leaf_chance = float(value)
-                elif setting == "twig_bark_material":
-                    mtree_props.twig_bark_material = value.replace("\n", "")
-                elif setting == "TwigSeedProp":
-                    mtree_props.TwigSeedProp = int(value)
-                elif setting == "twig_iteration":
-                    mtree_props.twig_iteration = int(value)
-                elif setting == "tree_number":
-                    mtree_props.tree_number = int(value)
-                elif setting == "batch_radius_randomness":
-                    mtree_props.batch_radius_randomness = float(value)
-                elif setting == "batch_group_name":
-                    mtree_props.batch_group_name = value.replace("\n", "")
-                elif setting == "batch_space":
-                    mtree_props.batch_space = float(value)
+        "M"  # mtp stands for modular tree preset
+        with open(prset, 'rb') as p:
+            presets = pickle.load(p)
+
+        for (name, value) in presets:
+            mtree_props[name] = value
+
 
         return {'FINISHED'}

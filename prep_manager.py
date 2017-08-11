@@ -60,7 +60,8 @@ def always_save():
             bpy.ops.wm.save_mainfile()
             print("Blend file saved...")
         else:
-            return "BLEND_ERROR", None
+            bpy.ops.wm.save_as_mainfile(filepath=bpy.context.user_preferences.filepaths.temporary_directory + '\modular_tree', copy=True)
+
 
     # save all images
     if addon_prefs.save_all_images:
@@ -91,21 +92,16 @@ def save_everything(twig=False):
     scene = bpy.context.scene
     mtree_props = scene.mtree_props
 
-    if twig:
-        # do illegal settings checks here
-        if mtree_props.leaf_object not in scene.objects:
-            messages += ["Requires a valid leaf object! Add one with the object selector in the twig UI."]
-            message_lvls += ['ERROR']
-            return messages, message_lvls, 'CANCELLED'
+    # if twig:
+    #     # do illegal settings checks here
+    #     if mtree_props.leaf_object not in scene.objects:
+    #         messages += ["Requires a valid leaf object! Add one with the object selector in the twig UI."]
+    #         message_lvls += ['ERROR']
+    #         return messages, message_lvls, 'CANCELLED'
 
     # save files
     save_return, bad_file = always_save()
-    if save_return == "BLEND_ERROR":
-        messages += ["Save file or disable always save " + "in user prefs."]
-        message_lvls += ['ERROR']
-        return messages, message_lvls, 'CANCELLED'
-
-    elif save_return == "IMAGE_ERROR":
+    if save_return == "IMAGE_ERROR":
         messages += [
             "Image '" + bad_file.name + "' does not have a valid file path (for saving). Assign " + "a valid path, pack image, or disable save images in " + "user prefs"]
         message_lvls += ['ERROR']
