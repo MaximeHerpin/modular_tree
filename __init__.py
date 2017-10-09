@@ -197,6 +197,7 @@ class BatchTreePanel(Panel):
         row.scale_y = 1.5
 
         if not mtree_props.use_grease_pencil:
+            box = layout.box()
             row.operator("mod_tree.batch_tree", icon_value=get_icon("BATCH_TREE"))
             box.prop(mtree_props, 'tree_number')
      
