@@ -32,6 +32,9 @@ from .addon_name import save_addon_name
 from .icons import register_icons, unregister_icons, get_icon
 from .nodes import nodes_to_register, node_categories
 import nodeitems_utils
+
+from .grease_pencil import ConnectStrokes
+
 import copy
 
 
@@ -199,8 +202,7 @@ class BatchTreePanel(Panel):
         if not mtree_props.use_grease_pencil:
             row.operator("mod_tree.batch_tree", icon_value=get_icon("BATCH_TREE"))
             box.prop(mtree_props, 'tree_number')
-     
-            
+
 
 class RootsAndTrunksPanel(Panel):
     bl_label = "Roots and Trunk"
@@ -856,7 +858,7 @@ class ModularTreePropertyGroup(PropertyGroup):
 
 
 # classes to register (panels will be in the UI in the order they are listed here)
-classes = [MakeTreeOperator, BatchTreeOperator, MakeTwigOperator, UpdateTreeOperator, UpdateTwigOperator,
+classes = [ConnectStrokes, MakeTreeOperator, BatchTreeOperator, MakeTwigOperator, UpdateTreeOperator, UpdateTwigOperator,
            SaveTreePresetOperator, RemoveTreePresetOperator, LoadTreePresetOperator, WindOperator,
            MakeControllerOperator, MakeTerrainOperator, SetupNodeTreeOperator,
            MakeTreePanel, BatchTreePanel, RootsAndTrunksPanel, TreeBranchesPanel, AdvancedSettingsPanel,

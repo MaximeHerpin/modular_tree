@@ -10,6 +10,13 @@ def square(size):
     return [Vector(i) * size for i in ((-1, -1, 0), (1, -1, 0), (1, 1, 0), (-1, 1, 0))]
 
 
+def directions_to_spin(direction, secondary_direction):
+    direction_rotation = Vector((0,0,1)).rotation_difference(direction).to_matrix()
+    secondary_direction = secondary_direction * direction_rotation
+    spin = - secondary_direction.xy.angle_signed(Vector((-1, 0)))
+    return spin
+
+
 def average_vector(vectors):
     """returns the average vector of a list of vectors"""
     v = sum(vectors, Vector())
@@ -17,7 +24,7 @@ def average_vector(vectors):
     return v
 
 
-def catmull_clark_subdivision(verts, faces, resolution, faces_shift=0):
+def catmull_clark_subdivision(verts, faces, resolution, faces_shift=0, junctions = []):
     """subdivides the vertices and faces with th catmull clark algorithm"""
 
     for k in range(resolution):
@@ -106,6 +113,52 @@ def catmull_clark_subdivision(verts, faces, resolution, faces_shift=0):
     return verts, faces
 
 
+def draw_module_rec(root):
+    root.build()
+    verts = root.verts
+    faces = []
+    extremities = [root]
+    while len(extremities) > 0:
+        new_extremities = []
+        for module in extremities:
+            print('module')
+            if module.head_module_1 is not None:
+                for head in range(module.head_number):
+                    verts_number = len(verts)
+                    new_module = module.head_module_1 if head == 0 else module.head_module_2
+                    module.link(new_module, head, verts_number)
+                    verts.extend(new_module.verts)
+                    faces.extend(new_module.faces)
+                    new_extremities.append(new_module)
+        extremities = new_extremities
+
+    mesh = bpy.data.meshes.new("tree")
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+
+    for v in verts:
+        bm.verts.new(v)
+    bm.verts.ensure_lookup_table()
+
+    for f in faces:
+        try:
+            bm.faces.new([bm.verts[j] for j in f])
+        except:
+            print('something happened')
+
+    bm.to_mesh(mesh)
+    bm.free()
+    obj = bpy.data.objects.new("tree", mesh)
+    obj.location = Vector((0, 0, 0))
+    bpy.context.scene.objects.link(obj)
+    bpy.context.scene.objects.active = obj
+    obj.select = True
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.normals_make_consistent(inside=False)
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+
 def roll_indexes(indexes, angle_diff):
     """ shift a list according to an angle between two squares so that the indexes are aligned"""
     shift = int(4*angle_diff/pi)%8
@@ -131,7 +184,6 @@ class Module:
         self.spin = spin
         self.starting_index = starting_index
         self.base_pos = []
-
         self.head_module_1 = None
         self.head_module_2 = None
 
@@ -172,7 +224,7 @@ class Split(Module):
         Module.__init__(self,position, direction, radius, resolution, starting_index, spin)
         self.type = 'split'
         self.head_1_radius = .8 * self.base_radius
-        self.head_2_radius = .3 * self.base_radius
+        self.head_2_radius = .6 * self.base_radius
         self.primary_angle = pi/18
         self.secondary_angle = (self.head_1_radius + self.head_2_radius)
         self.head_number = 2
@@ -184,12 +236,13 @@ class Split(Module):
         # self.build()
         # self.draw()
 
-    def update_props(self):
-        self.head_1_radius = .8 * self.base_radius
-        self.head_2_radius = .3 * self.base_radius
+    def get_head_indexes(self, head):
+        if head == 1:
+            return [self.starting_index + i for i in range(4)]
+        else:
+            return [self.starting_index + 4 + i for i in range(4)]
 
     def build(self, base_indexes=range(4)):
-        self.update_props()
         v2 = square(self.head_1_radius)
         v3 = square(self.head_2_radius)
         primary_rotation = Matrix.Rotation(self.primary_angle, 4, 'Y')
@@ -210,19 +263,18 @@ class Split(Module):
 
     def link(self, module, head, verts_number):
         if head ==0:
-            module.position = (self.verts[0] + self.verts[2])/2
+            # module.position = (self.verts[0] + self.verts[2])/2
             module.base_radius = self.head_1_radius
             head_indexes = list(range(self.starting_index, self.starting_index + 4))
-            module.direction = self.head_1_direction
-            self.head_module_1 = module
-
+            # module.direction = self.head_1_direction
+            # self.head_module_1 = module
 
         else:
-            module.position = (self.verts[4] + self.verts[6])/2
+            # module.position = (self.verts[4] + self.verts[6])/2
             module.base_radius = self.head_2_radius
             head_indexes = list(range(self.starting_index + 4, self.starting_index + 8))
-            module.direction = self.head_2_direction
-            self.head_module_2 = module
+            # module.direction = self.head_2_direction
+            # self.head_module_2 = module
 
         module.starting_index = verts_number
         spin_diff = module.spin - self.spin
@@ -233,23 +285,23 @@ class Split(Module):
 
 
 class Branch(Module):
-    def __init__(self, position=Vector(), direction=Vector, radius=1, length=1, head_radius=1, resolution=0,
+    def __init__(self, position=Vector(), direction=Vector, radius=1, length=1, head_radius=.95, resolution=0,
                  starting_index=0, spin=0):
         Module.__init__(self, position, direction, radius, resolution, starting_index, spin)
         self.type = "branch"
         self.length = length
-        self.head_1_radius = head_radius
+        self.head_1_radius = head_radius * self.base_radius
         self.verts_number = [4 * 2**i for i in range(7)]
         self.head_number = 1
 
         # self.build()
         # self.draw()
 
-    def update_props(self):
-        self.head_1_radius *= self.base_radius
+    def get_head_indexes(self, head):
+        if head == 1:
+            return [self.starting_index + i for i in range(4)]
 
     def build(self, base_indexes=range(4)):
-        self.head_1_radius *= self.base_radius
         v2 = [v + Vector((0,0, self.length)) for v in square(self.head_1_radius)]
         self.verts = v2
         i0, i1, i2, i3 = base_indexes
@@ -261,11 +313,11 @@ class Branch(Module):
         self.base_pos = [(v * spin_rotation) * direction_rotation + self.position for v in square(self.base_radius)]
 
     def link(self, module, head, verts_number):
-        module.position = (self.verts[0] + self.verts[2])/2
-        module.base_radius = self.head_1_radius
-        module.direction = self.direction
+        # module.position = (self.verts[0] + self.verts[2])/2
+        # module.base_radius = self.head_1_radius
+        # module.direction = self.direction
         module.starting_index = verts_number
-        self.head_module_1 = module
+        # self.head_module_1 = module
         n = len(self.verts)
         head_indexes = list(range(self.starting_index, self.starting_index + 4))
         spin_diff = module.spin - self.spin
@@ -288,10 +340,7 @@ class Root(Module):
         self.verts = [(v * spin_rotation) * direction_rotation + self.position for v in square(self.base_radius)]
 
     def link(self, module, head, verts_number):
-        module.position = self.position
-        module.direction = self.direction
         module.starting_index = verts_number
-        self.head_module_1 = module
         spin_diff = module.spin - self.spin
         head_indexes = list(range(4))
         module.build(roll_indexes(head_indexes, spin_diff))
@@ -335,12 +384,11 @@ class Transition(Module):
         module.build(roll_indexes(head_indexes, spin_diff))
 
 
-
-
 class Tree:
     def __init__(self):
         print('new_tree')
         self.position = Vector()
+        # list of the radius factors at which the resolution change
         self.resolutions = [.5, .25, 0]
         self.verts = [[] for i in self.resolutions]
         self.faces = [[] for i in self.resolutions]
@@ -352,6 +400,9 @@ class Tree:
         self.verts[0] = root.verts
         self.faces[0] = root.faces
         self.extremities = [root]
+        # list of vertices that are not connected because of a change of resolution
+        self. junctions = [[] for i in range(len(self.resolutions))]
+        self.junctions_table = {}
 
         self.grow()
         print(self.tree)
@@ -386,6 +437,12 @@ class Tree:
                         else:
                             new_module = Branch(spin=module.spin, resolution=res)
                     module.link(new_module, head, verts_number)
+
+                    if new_module.type == "transition":
+                        junction_index = len(self.junctions)
+                        for i in module.get_head_indexes(head)+[j+verts_number for j in range(4)]:
+                            self.junctions_table[i] = junction_index
+                        self.junctions[res].append(((module.get_head_indexes(head)), [i+verts_number for i in range(4)]))
                     self.verts[res].extend(new_module.verts)
                     self.faces[res].extend(new_module.faces)
                     new_extremities.append(new_module)
@@ -399,7 +456,8 @@ class Tree:
         for i in range(len(self.resolutions)):
             if len(self.verts[i]) > 0 and self.faces is not None:
                 res = len(self.resolutions) - 1 - i
-                self.verts[i], self.faces[i] = catmull_clark_subdivision(self.verts[i], self.faces[i], res, faces_shift)
+                self.verts[i], self.faces[i] = catmull_clark_subdivision(self.verts[i], self.faces[i], res, faces_shift,
+                                                                         self.junctions)
 
             faces_shift += len(self.verts[i])
 
@@ -424,9 +482,3 @@ class Tree:
         bpy.ops.mesh.select_all(action='SELECT')
         bpy.ops.mesh.normals_make_consistent(inside=False)
         bpy.ops.object.mode_set(mode='OBJECT')
-
-
-# split = Split(position=Vector(), direction=Vector((1, 1, 1)))
-# branch = Branch(resolution=2)
-bpy.ops.object.delete(use_global=False)
-Tree()
