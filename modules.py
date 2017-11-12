@@ -17,6 +17,14 @@ def directions_to_spin(direction, secondary_direction):
     return spin
 
 
+def get_direction(primary_direction, angle, spin):
+    rot_1 = Matrix.Rotation(angle, 4, 'Y')
+    rot_2 = primary_direction.rotation_difference(Vector((0,0,1))).to_matrix()
+    rot_3 = Matrix.Rotation(spin, 4, 'Z')
+    direction = ((rot_1 * Vector((0, 0, 1))) * rot_3) * rot_2
+    return direction
+
+
 def average_vector(vectors):
     """returns the average vector of a list of vectors"""
     v = sum(vectors, Vector())
@@ -121,11 +129,10 @@ def draw_module_rec(root):
     while len(extremities) > 0:
         new_extremities = []
         for module in extremities:
-            print('module')
-            if module.head_module_1 is not None:
-                for head in range(module.head_number):
-                    verts_number = len(verts)
-                    new_module = module.head_module_1 if head == 0 else module.head_module_2
+            for head in range(module.head_number):
+                verts_number = len(verts)
+                new_module = module.head_module_1 if head == 0 else module.head_module_2
+                if new_module is not None:
                     module.link(new_module, head, verts_number)
                     verts.extend(new_module.verts)
                     faces.extend(new_module.faces)
@@ -177,6 +184,7 @@ class Module:
         self.verts = []
         self.faces = []
         self.type = 'module'
+        self.creator = "default"
         self.position = position
         self.direction = direction
         self.base_radius = radius
@@ -209,8 +217,20 @@ class Module:
     def get_faces(self, starting_index=0):
         return [tuple([i + starting_index for i in f]) for f in self.faces]
 
-    def update_props(self):
-        pass
+    def get_head_direction(self, head):
+        return self.direction
+
+    def get_extremities_rec(self, curr_extremities, selection):
+        is_selected = selection == [] or self.creator in selection
+        if self.head_module_1 is None and is_selected:
+            curr_extremities.append((self, 0))
+        else:
+            self.head_module_1.get_extremities_rec(curr_extremities)
+        if self.head_module_2 is None:
+            if self.type == 'split' and is_selected:
+                curr_extremities.append((self, 1))
+        else:
+            self.head_module_2.get_extremities_rec(curr_extremities)
 
     def __repr__(self):
         if self.type == 'split':
@@ -220,13 +240,14 @@ class Module:
 
 
 class Split(Module):
-    def __init__(self,position=Vector(), direction=Vector(), radius=1, resolution=0, starting_index=0, spin=0):
+    def __init__(self, position=Vector(), direction=Vector(), radius=1, resolution=0, starting_index=0, spin=0, head_2_length=1):
         Module.__init__(self,position, direction, radius, resolution, starting_index, spin)
         self.type = 'split'
-        self.head_1_radius = .8 * self.base_radius
+        self.head_1_radius = .9 * self.base_radius
         self.head_2_radius = .6 * self.base_radius
         self.primary_angle = pi/18
-        self.secondary_angle = (self.head_1_radius + self.head_2_radius)
+        self.secondary_angle = pi/4
+        self.head_2_length = head_2_length
         self.head_number = 2
         self.head_1_direction = Vector()
         self.head_2_direction = Vector()
@@ -242,13 +263,25 @@ class Split(Module):
         else:
             return [self.starting_index + 4 + i for i in range(4)]
 
+    def get_head_pos(self, head):
+        if head==0:
+            return self.position + self.head_1_direction * self.base_radius
+        elif head==1:
+            return self.position + self.head_2_direction * self.head_2_length
+
+    def get_head_direction(self, head):
+        if head == 0:
+            return get_direction(self.direction, self.primary_angle, self.spin)
+        else:
+            return get_direction(self.direction, self.primary_angle - self.secondary_angle, self.spin)
+
     def build(self, base_indexes=range(4)):
         v2 = square(self.head_1_radius)
         v3 = square(self.head_2_radius)
         primary_rotation = Matrix.Rotation(self.primary_angle, 4, 'Y')
         secondary_rotation = Matrix.Rotation(self.primary_angle - self.secondary_angle, 4, 'Y')
         v2 = [primary_rotation * (v + Vector((0, 0, self.base_radius))) for v in v2]
-        v3 = [secondary_rotation * (v + Vector((0, 0, sqrt(self.head_1_radius**2 + self.base_radius**2)))) for v in v3]
+        v3 = [secondary_rotation * (v + Vector((0, 0, self.head_2_length))) for v in v3]
         self.verts = v2 + v3
         si = self.starting_index
         i0, i1, i2, i3 = base_indexes
@@ -264,14 +297,14 @@ class Split(Module):
     def link(self, module, head, verts_number):
         if head ==0:
             # module.position = (self.verts[0] + self.verts[2])/2
-            module.base_radius = self.head_1_radius
+            # module.base_radius = self.head_1_radius
             head_indexes = list(range(self.starting_index, self.starting_index + 4))
             # module.direction = self.head_1_direction
             # self.head_module_1 = module
 
         else:
             # module.position = (self.verts[4] + self.verts[6])/2
-            module.base_radius = self.head_2_radius
+            # module.base_radius = self.head_2_radius
             head_indexes = list(range(self.starting_index + 4, self.starting_index + 8))
             # module.direction = self.head_2_direction
             # self.head_module_2 = module
@@ -281,7 +314,7 @@ class Split(Module):
         module.build(roll_indexes(head_indexes, spin_diff))
         # base_verts = roll_indexes(module.base_pos, spin_diff)
         # for i in range(4):
-        #     self.verts[i] = (self.verts[4*head + i] + base_verts[i]) / 2
+        #     self.verts[i] = self.verts[4*head + i] * .7 + base_verts[i] * .3
 
 
 class Branch(Module):
@@ -300,6 +333,9 @@ class Branch(Module):
     def get_head_indexes(self, head):
         if head == 1:
             return [self.starting_index + i for i in range(4)]
+
+    def get_head_pos(self, head):
+        return self.position + self.direction * self.length
 
     def build(self, base_indexes=range(4)):
         v2 = [v + Vector((0,0, self.length)) for v in square(self.head_1_radius)]
@@ -324,7 +360,7 @@ class Branch(Module):
         module.build(roll_indexes(head_indexes, spin_diff))
         # base_verts = roll_indexes(module.base_pos, spin_diff)
         # for i in range(4):
-        #     self.verts[i] = (self.verts[i] + base_verts[i])/2
+        #     self.verts[i] = self.verts[i]*.7 + base_verts[i]*.3
 
 
 class Root(Module):
@@ -338,6 +374,9 @@ class Root(Module):
         spin_rotation = Matrix.Rotation(self.spin, 4, 'Z')
         direction_rotation = self.direction.rotation_difference(Vector((0, 0, 1))).to_matrix()
         self.verts = [(v * spin_rotation) * direction_rotation + self.position for v in square(self.base_radius)]
+
+    def get_head_pos(self, head):
+        return self.position
 
     def link(self, module, head, verts_number):
         module.starting_index = verts_number
