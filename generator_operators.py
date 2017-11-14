@@ -43,6 +43,8 @@ class MakeTreeFromNodes(Operator):
         node = bpy.data.node_groups.get("NodeTree.002").nodes.get("BuildTree")
         node.execute()
 
+        bpy.ops.object.subdivision_set(level=1)
+
         return {'FINISHED'}
 
 #

@@ -2,7 +2,7 @@ from collections import  deque
 
 import bpy
 from bpy.types import Operator
-from bpy.props import IntProperty, BoolProperty
+from bpy.props import IntProperty, BoolProperty, FloatProperty
 
 from .modules import Root, Split, Branch, draw_module_rec, directions_to_spin
 
@@ -20,6 +20,7 @@ def distribute_evenly_along_curve(s, p_dist):
             new_set.append(new_set[-1] + p_dist / n_dist * (s[i] - new_set[-1]))
         else:
             i += 1
+    new_set.append(s[-1])
     return new_set
 
 
@@ -34,15 +35,20 @@ def smooth_stroke(iterations, smooth, points):
     return points
 
 
-def smooth_distribute_gp_layer(gp_layer, dist):
+def smooth_distribute_gp_layer(gp_layer, dist, smooth_iterations):
     strokes = [[i.co for i in j.points] for j in gp_layer.strokes]
     for i, stroke in enumerate(strokes):
-        new_locations = smooth_stroke(5, .3, distribute_evenly_along_curve(stroke, dist))
+        new_locations = smooth_stroke(smooth_iterations, .3, distribute_evenly_along_curve(stroke, dist))
         points = gp_layer.strokes[i].points
-        for k in range(len(points)):
+        for k in range(len(new_locations), len(stroke)):
             points.pop()
-        print(len(points))
-        points.add(len(new_locations))
+
+        for k in range(len(stroke), len(new_locations)):
+            points.add()
+        # for k in range(len(points)):
+        #     points.pop()
+        # print(len(points))
+        # points.add(len(new_locations))
         for j, point in enumerate(gp_layer.strokes[i].points):
             point.co = new_locations[j]
 
@@ -80,6 +86,8 @@ class ConnectStrokes(Operator):
     bl_label = "connect strokes"
     bl_options = {"REGISTER", "UNDO"}
 
+    point_dist = FloatProperty(min=0.001, default=.4)
+    smooth_iterations = IntProperty(min=0, default=1)
     automatic = BoolProperty(default=True)
     connect_all = BoolProperty(default=True)
     child_stroke_index = IntProperty(
@@ -92,7 +100,7 @@ class ConnectStrokes(Operator):
         if gp is not None and gp.layers.active is not None and gp.layers.active.active_frame is not None and len(
                  gp.layers.active.active_frame.strokes) > 0 and len(gp.layers.active.active_frame.strokes[0].points) > 1:
 
-            smooth_distribute_gp_layer(gp.layers.active.active_frame, .4)
+            smooth_distribute_gp_layer(gp.layers.active.active_frame, self.point_dist, self.smooth_iterations)
 
             if self.connect_all:
                 moving_range = list(range(1, len(gp.layers.active.active_frame.strokes)))
@@ -122,15 +130,15 @@ class ConnectStrokes(Operator):
         return {'FINISHED'}
 
 
-def build_tree_from_strokes(strokes):
+def build_tree_from_strokes(strokes, radius, radius_dec):
     modules_splits = [None for i in strokes]
     splits = find_splits(strokes)
     tree_pos = strokes[0][0]
     tree_dir = (strokes[0][1] - tree_pos).normalized()
-    root = Root(position=tree_pos, direction=tree_dir, radius=.5, resolution=0)
-    root.creator = "gp_0"
+    root = Root(position=tree_pos, direction=tree_dir, radius=radius, resolution=0)
+    root.creator = "gp_trunk"
     stroke = deque(strokes[0])
-    build_tree_from_strokes_rec(stroke, root, 0, 0, 0, splits, strokes)
+    build_tree_from_strokes_rec(stroke, root, 0, 0, 0, splits, strokes, radius_dec)
 
     # curr_branch = root
     # for j in range(1, len(stroke)-1):
@@ -144,7 +152,7 @@ def build_tree_from_strokes(strokes):
     return root
 
 
-def build_tree_from_strokes_rec(points, module, head, curr_index, curr_stroke, splits, strokes):
+def build_tree_from_strokes_rec(points, module, head, curr_index, curr_stroke, splits, strokes, radius_dec):
     if len(points)>1:
         pos = points.popleft()
         direction = points[0]-pos
@@ -152,6 +160,7 @@ def build_tree_from_strokes_rec(points, module, head, curr_index, curr_stroke, s
         for parent_stroke, point_index, child_stroke in splits:
             if curr_stroke == parent_stroke and point_index == curr_index:
                 child_points = deque(strokes[child_stroke])
+                child_points.popleft()
                 child_points.popleft()
                 child_direction = (child_points[0] - pos)
                 child_length = child_direction.length
@@ -161,14 +170,11 @@ def build_tree_from_strokes_rec(points, module, head, curr_index, curr_stroke, s
                 break
         radius = module.head_1_radius if head == 0 else module.head_2_radius
         if choice == 'branch':
-            if random() < 0 and curr_stroke > 0:
-                new_module = Split(pos, direction.normalized(), radius, resolution=0, spin=random()*2*pi,
-                                   head_2_length=radius*2)
-            else:
-                new_module = Branch(pos, direction.normalized(), radius, direction.length, head_radius=.95,
-                                    resolution=0, spin=module.spin)
+            new_module = Branch(pos, direction.normalized(), radius, direction.length, head_radius=radius_dec,
+                                resolution=0, spin=module.spin)
         elif choice == 'split':
             new_module = Split(pos, direction.normalized(), radius, 0, 0, spin, head_2_length=child_length)
+            new_module.head_1_length = direction.length
             new_module.head_2_direction = child_direction
             new_module.secondary_angle = direction.angle(child_direction)
 
@@ -176,10 +182,10 @@ def build_tree_from_strokes_rec(points, module, head, curr_index, curr_stroke, s
             module.head_module_1 = new_module
         else:
             module.head_module_2 = new_module
-        new_module.creator = "gp_" + str(curr_stroke)
-        build_tree_from_strokes_rec(points, new_module, 0, curr_index+1, curr_stroke, splits, strokes)
+        new_module.creator = "gp_trunk" if curr_stroke == 0 else "gp_branch"
+        build_tree_from_strokes_rec(points, new_module, 0, curr_index+1, curr_stroke, splits, strokes, radius_dec)
         if choice == 'split':
-            build_tree_from_strokes_rec(child_points, new_module, 1, 1, child_stroke, splits, strokes)
+            build_tree_from_strokes_rec(child_points, new_module, 1, 2, child_stroke, splits, strokes, radius_dec)
 
 #
 # def register():

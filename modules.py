@@ -169,7 +169,7 @@ def draw_module_rec(root):
 def roll_indexes(indexes, angle_diff):
     """ shift a list according to an angle between two squares so that the indexes are aligned"""
     shift = int(4*angle_diff/pi)%8
-    shifts = [0,-1,-1,-2,-2,-3,-3,0,0,1]
+    shifts = [0, -1, -1, -2, -2, -3, -3, 0, 0, 0]
     shift = shifts[shift]
     return indexes[shift:] + indexes[:shift]
 
@@ -222,15 +222,16 @@ class Module:
 
     def get_extremities_rec(self, curr_extremities, selection):
         is_selected = selection == [] or self.creator in selection
-        if self.head_module_1 is None and is_selected:
-            curr_extremities.append((self, 0))
+        if self.head_module_1 is None:
+            if is_selected:
+                curr_extremities.append((self, 0))
         else:
-            self.head_module_1.get_extremities_rec(curr_extremities)
+            self.head_module_1.get_extremities_rec(curr_extremities, selection)
         if self.head_module_2 is None:
             if self.type == 'split' and is_selected:
                 curr_extremities.append((self, 1))
         else:
-            self.head_module_2.get_extremities_rec(curr_extremities)
+            self.head_module_2.get_extremities_rec(curr_extremities, selection)
 
     def __repr__(self):
         if self.type == 'split':
@@ -240,13 +241,14 @@ class Module:
 
 
 class Split(Module):
-    def __init__(self, position=Vector(), direction=Vector(), radius=1, resolution=0, starting_index=0, spin=0, head_2_length=1):
+    def __init__(self, position=Vector(), direction=Vector(), radius=1, resolution=0, starting_index=0, spin=0, head_2_length=1, head_2_radius=.6):
         Module.__init__(self,position, direction, radius, resolution, starting_index, spin)
         self.type = 'split'
-        self.head_1_radius = .9 * self.base_radius
-        self.head_2_radius = .6 * self.base_radius
+        self.head_1_radius = .99 * self.base_radius
+        self.head_2_radius = head_2_radius * self.base_radius
         self.primary_angle = pi/18
         self.secondary_angle = pi/4
+        self.head_1_length = self.base_radius * 3
         self.head_2_length = head_2_length
         self.head_number = 2
         self.head_1_direction = Vector()
@@ -265,9 +267,11 @@ class Split(Module):
 
     def get_head_pos(self, head):
         if head==0:
-            return self.position + self.head_1_direction * self.base_radius
+            direction = self.get_head_direction(0)
+            return self.position + direction * self.head_1_length
         elif head==1:
-            return self.position + self.head_2_direction * self.head_2_length
+            direction = self.get_head_direction(1)
+            return self.position + direction * self.head_2_length
 
     def get_head_direction(self, head):
         if head == 0:
@@ -280,7 +284,7 @@ class Split(Module):
         v3 = square(self.head_2_radius)
         primary_rotation = Matrix.Rotation(self.primary_angle, 4, 'Y')
         secondary_rotation = Matrix.Rotation(self.primary_angle - self.secondary_angle, 4, 'Y')
-        v2 = [primary_rotation * (v + Vector((0, 0, self.base_radius))) for v in v2]
+        v2 = [primary_rotation * (v + Vector((0, 0, self.head_1_length))) for v in v2]
         v3 = [secondary_rotation * (v + Vector((0, 0, self.head_2_length))) for v in v3]
         self.verts = v2 + v3
         si = self.starting_index
