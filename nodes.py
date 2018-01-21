@@ -1,12 +1,38 @@
 import bpy
 import nodeitems_utils
+import time
+
+import bpy
+from bpy.app.handlers import persistent
 
 from bpy.types import NodeTree, Node, NodeSocket
-from bpy.props import IntProperty, FloatProperty, EnumProperty, BoolProperty
+from bpy.props import IntProperty, FloatProperty, EnumProperty, BoolProperty, StringProperty
 from nodeitems_utils import NodeCategory, NodeItem
+import random
 
 from .grease_pencil import build_tree_from_strokes
 from .tree_functions import draw_module_rec, add_splits, grow
+from .modules import visualize_with_curves
+
+
+def get_tree_parameters_rec(state_list, node):
+    if node.bl_idname != "BuildTreeNode":
+        state_list += str(node.items())
+
+    if node.bl_idname == "GreasePencilNode":
+        return state_list
+
+
+    try:
+        from_node = node.inputs['Tree'].links[0].from_node
+    except:
+        return state_list
+
+    if from_node is not None:
+        return get_tree_parameters_rec(state_list, from_node)
+
+
+
 
 
 class ModularTree(NodeTree):
@@ -63,17 +89,39 @@ class BuildTreeNode(Node, ModularTreeNode):
     bl_idname = "BuildTreeNode"
     bl_label = "BuildTree"
 
+    mesh_type = bpy.props.EnumProperty(
+        items=[('final', 'Final', ''), ('preview', 'Preview', '')],
+        name="visualisation",
+        default="preview")
+    auto_update = BoolProperty(default=False)
+    memory = StringProperty(default="")
+    seed = IntProperty(default=42)
+
     def init(self, context):
+        self.memory = get_tree_parameters_rec([], self)
         self.inputs.new("TreeSocketType", "Tree")
 
     def draw_buttons(self, context, layout):
+        layout.prop(self, "mesh_type")
+        layout.prop(self, "seed")
         row = layout.row()
-        row.operator("mod_tree.tree_from_nodes", text='create tree').node_name = self.name
+        row.prop(self, "auto_update")
+        if not self.auto_update:
+            row.operator("mod_tree.tree_from_nodes", text='create tree').node_name = self.name
 
     def execute(self):
+        random.seed(self.seed)
         from_node = self.inputs['Tree'].links[0].from_node
+        t0 = time.time()
         tree = from_node.execute()
-        draw_module_rec(tree)
+        t1 = time.time()
+        if self.mesh_type == "final":
+            draw_module_rec(tree)
+        else:
+            visualize_with_curves(tree)
+        t2 = time.time()
+        print("creating tree", t1-t0)
+        print("building object", t2-t1)
 
 
 class GreasePencilNode(Node, ModularTreeNode):
@@ -84,6 +132,8 @@ class GreasePencilNode(Node, ModularTreeNode):
     radius = FloatProperty(min=0, default=.7)
     branch_length = FloatProperty(min=.001, default=.6)
     radius_decrease = FloatProperty(min=0, max=.999, default=.97)
+    grease_pencil_memory = StringProperty(default="")
+
 
 
     def init(self, context):
@@ -100,11 +150,18 @@ class GreasePencilNode(Node, ModularTreeNode):
             layout.prop(self, i)
 
     def execute(self):
-        bpy.ops.mod_tree.connect_strokes(point_dist=self.branch_length, automatic=True, connect_all=True,
-                                         child_stroke_index=1, parent_stroke_index=0)
+
         gp = bpy.context.scene.grease_pencil
         if gp is not None and gp.layers.active is not None and gp.layers.active.active_frame is not None and len(
                 gp.layers.active.active_frame.strokes) > 0 and len(gp.layers.active.active_frame.strokes[0].points) > 1:
+
+            new_memory = str([[i.co for i in j.points] for j in gp.layers.active.active_frame.strokes]) + str(self.smooth_iterations)
+            if self.grease_pencil_memory != new_memory:
+                print("updating strokes")
+                bpy.ops.mod_tree.connect_strokes(point_dist=self.branch_length, automatic=True, connect_all=True,
+                                             child_stroke_index=1, parent_stroke_index=0, smooth_iterations=self.smooth_iterations)
+                self.grease_pencil_memory = str([[i.co for i in j.points] for j in gp.layers.active.active_frame.strokes]) + str(self.smooth_iterations)
+
             strokes = [[i.co for i in j.points] for j in gp.layers.active.active_frame.strokes]
             root = build_tree_from_strokes(strokes, self.radius, self.radius_decrease)
             return root
@@ -211,6 +268,24 @@ node_categories = [ModularTreeNodeCategory("inputs", "inputs", items=[NodeItem(i
 
 node_classes_to_register = [ModularTree, TreeSocket, BuildTreeNode, GreasePencilNode, SplitNode, GrowNode]
 
+
+@persistent
+def has_nodes_changed(dummy):
+    node = bpy.context.active_node.id_data.nodes.get("BuildTree")
+    new_memory = get_tree_parameters_rec("", node)
+    # new_memory = "coucou"
+    # condition = True
+    if node.auto_update and new_memory != node.memory:
+        bpy.ops.object.delete(use_global=False)
+        node.execute()
+        # bpy.ops.mod_tree.tree_from_nodes()
+
+        node.memory = new_memory
+        print("updating")
+        # node.execute()
+
+
+bpy.app.handlers.frame_change_pre.append(has_nodes_changed)
 
 
 

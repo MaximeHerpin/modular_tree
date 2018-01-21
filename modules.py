@@ -1,5 +1,13 @@
+# The objective is to build a tree object whose all branches are connected. In other words, the tree is manifold.
+# To do so, the tree is generated as a succession of modules that can represent splits, stems and so on.
+# The modules are objects from the class Module.
+# Each module has a resolution, except the modules that make the junction between two different levels of subdivision
+
+
+
 from collections import defaultdict
 import bpy, bmesh
+import numpy as np
 from mathutils import Vector, Matrix
 from math import pi, sqrt
 from random import random
@@ -7,7 +15,7 @@ from random import random
 
 def square(size):
     """Returns a list of 4 vectors arranged in a square of specified size"""
-    return [Vector(i) * size for i in ((-1, -1, 0), (1, -1, 0), (1, 1, 0), (-1, 1, 0))]
+    return [Vector((-1, -1, 0))*size, Vector((1, -1, 0))*size, Vector((1, 1, 0))*size, Vector((-1, 1, 0))*size]
 
 
 def directions_to_spin(direction, secondary_direction):
@@ -121,21 +129,55 @@ def catmull_clark_subdivision(verts, faces, resolution, faces_shift=0, junctions
     return verts, faces
 
 
+def find_verts_number_rec(module):
+    if module is None:
+        return 0
+    if module.type == 'root' or module.type == 'branch':
+        return 4 + find_verts_number_rec(module.head_module_1)
+    if module.type == 'split':
+        return 8 + find_verts_number_rec(module.head_module_1) + find_verts_number_rec(module.head_module_2)
+
+
+def find_faces_number_rec(module):
+    if module is None:
+        return 0
+    if module.type == 'root':
+        return find_faces_number_rec(module.head_module_1)
+    if module.type == 'branch':
+        return 4 + find_faces_number_rec(module.head_module_1)
+    if module.type == 'split':
+        return 7 + find_faces_number_rec(module.head_module_1) + find_faces_number_rec(module.head_module_2)
+
+
 def draw_module_rec(root):
+    verts_number = find_verts_number_rec(root)
+    faces_number = find_faces_number_rec(root)
+    print(verts_number, faces_number)
+
+    verts = np.zeros((verts_number, 3))
+    faces = np.zeros((faces_number, 4), dtype=np.int)
+    uvs = np.zeros((faces_number, 4, 2))
+
     root.build()
-    verts = root.verts
-    faces = []
+    verts[:4, :] = root.verts
+
+    curr_verts_number = 4
+    curr_faces_number = 0
+
     extremities = [root]
     while len(extremities) > 0:
         new_extremities = []
         for module in extremities:
             for head in range(module.head_number):
-                verts_number = len(verts)
+
                 new_module = module.head_module_1 if head == 0 else module.head_module_2
                 if new_module is not None:
-                    module.link(new_module, head, verts_number)
-                    verts.extend(new_module.verts)
-                    faces.extend(new_module.faces)
+                    module.link(new_module, head, curr_verts_number)
+                    verts[curr_verts_number:curr_verts_number+len(new_module.verts), :] = new_module.verts
+                    curr_verts_number += len(new_module.verts)
+                    faces[curr_faces_number:curr_faces_number + len(new_module.faces), :] = new_module.faces
+                    uvs[curr_faces_number:curr_faces_number+len(new_module.faces), :] = new_module.uvs
+                    curr_faces_number += len(new_module.faces)
                     new_extremities.append(new_module)
         extremities = new_extremities
 
@@ -151,38 +193,137 @@ def draw_module_rec(root):
         try:
             bm.faces.new([bm.verts[j] for j in f])
         except:
-            print('something happened')
+            print(f)
+
+    bm.faces.ensure_lookup_table()
+
+    bm.loops.layers.uv.new()
+    uv_layer = bm.loops.layers.uv.active
+    for index, face in enumerate(bm.faces):
+        for i, loop in enumerate(face.loops):
+            loop[uv_layer].uv = uvs[index][i]
 
     bm.to_mesh(mesh)
     bm.free()
+
+
+
     obj = bpy.data.objects.new("tree", mesh)
     obj.location = Vector((0, 0, 0))
     bpy.context.scene.objects.link(obj)
     bpy.context.scene.objects.active = obj
+    obj["is_tree"] = True
     obj.select = True
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.mesh.normals_make_consistent(inside=False)
     bpy.ops.object.mode_set(mode='OBJECT')
 
+    # root.build()
+    # verts = root.verts
+    # faces = []
+    # uvs = []
+    # extremities = [root]
+    # while len(extremities) > 0:
+    #     new_extremities = []
+    #     for module in extremities:
+    #         for head in range(module.head_number):
+    #             verts_number = len(verts)
+    #             new_module = module.head_module_1 if head == 0 else module.head_module_2
+    #             if new_module is not None:
+    #                 module.link(new_module, head, verts_number)
+    #                 verts.extend(new_module.verts)
+    #                 faces.extend(new_module.faces)
+    #                 uvs.extend(new_module.uvs)
+    #                 new_extremities.append(new_module)
+    #     extremities = new_extremities
+    #
+    # mesh = bpy.data.meshes.new("tree")
+    # bm = bmesh.new()
+    # bm.from_mesh(mesh)
+    #
+    # for v in verts:
+    #     bm.verts.new(v)
+    # bm.verts.ensure_lookup_table()
+    #
+    # for f in faces:
+    #     try:
+    #         bm.faces.new([bm.verts[j] for j in f])
+    #     except:
+    #         print('something happened')
+    #
+    # bm.faces.ensure_lookup_table()
+    #
+    # bm.loops.layers.uv.new()
+    # uv_layer = bm.loops.layers.uv.active
+    # for index, face in enumerate(bm.faces):
+    #     print("coucou", index)
+    #     for i, loop in enumerate(face.loops):
+    #         loop[uv_layer].uv = uvs[index][i]
+    #
+    # bm.to_mesh(mesh)
+    # bm.free()
+    # obj = bpy.data.objects.new("tree", mesh)
+    # obj.location = Vector((0, 0, 0))
+    # bpy.context.scene.objects.link(obj)
+    # bpy.context.scene.objects.active = obj
+    # obj.select = True
+    # bpy.ops.object.mode_set(mode='EDIT')
+    # bpy.ops.mesh.select_all(action='SELECT')
+    # bpy.ops.mesh.normals_make_consistent(inside=False)
+    # bpy.ops.object.mode_set(mode='OBJECT')
+
+
+def visualize_with_curves(root):
+    curve_data = bpy.data.curves.new('Tree', type='CURVE')
+    curve_data.dimensions = '3D'
+    polyline = curve_data.splines.new('POLY')
+    x, y, z = root.position
+    polyline.points[0].co = (x, y, z, 1)
+    polyline.points[0].radius = root.base_radius
+    draw_curve_rec(root, polyline, curve_data)
+
+    curveOB = bpy.data.objects.new('Tree', curve_data)
+    curve_data.bevel_depth = 1
+    curve_data.bevel_resolution = 0
+    curve_data.fill_mode = 'FULL'
+
+    scene = bpy.context.scene
+    scene.objects.link(curveOB)
+    scene.objects.active = curveOB
+    curveOB["is_tree"] = True
+    curveOB.select = True
+
+
+def draw_curve_rec(module, polyline, curve_data):
+    if module is not None:
+        polyline.points.add(1)
+        x,y,z = module.position
+        polyline.points[-1].co = (x, y, z, 1)
+        polyline.points[-1].radius = module.base_radius
+        draw_curve_rec(module.head_module_1, polyline, curve_data)
+        if module.type == 'split' and module.head_module_2 is not None:
+            new_polyline = curve_data.splines.new('POLY')
+            # new_polyline.points.add(1)
+            new_polyline.points[0].co = (x, y, z, 1)
+            new_polyline.points[0].radius = module.base_radius
+            draw_curve_rec(module.head_module_2, new_polyline, curve_data)
+
 
 def roll_indexes(indexes, angle_diff):
     """ shift a list according to an angle between two squares so that the indexes are aligned"""
     shift = int(4*angle_diff/pi)%8
-    shifts = [0, -1, -1, -2, -2, -3, -3, 0, 0, 0]
+    shifts = np.array([0, -1, -1, -2, -2, -3, -3, 0, 0, 0])
     shift = shifts[shift]
-    return indexes[shift:] + indexes[:shift]
-
-# The objective is to build a tree object whose all branches are connected. In other words, the tree is manifold.
-# To do so, the tree is generated as a succession of modules that can represent splits, stems and so on.
-# The modules are objects from the class Module.
-# Each module has a resolution, except the modules that make the junction between two different levels of subdivision
+    return np.roll(indexes, -shift)
 
 
 class Module:
     def __init__(self, position, direction, radius, resolution, starting_index, spin):
-        self.verts = []
-        self.faces = []
+        self.verts = np.array([])
+        self.faces = np.array([])
+        self.uvs = np.array([])
+        self.uv_height = 0
         self.type = 'module'
         self.creator = "default"
         self.position = position
@@ -254,7 +395,6 @@ class Split(Module):
         self.head_1_direction = Vector()
         self.head_2_direction = Vector()
 
-        self.verts_number = [12, 39, 135, 495, 1887, 7359, 29055]
 
         # self.build()
         # self.draw()
@@ -280,6 +420,7 @@ class Split(Module):
             return get_direction(self.direction, self.primary_angle - self.secondary_angle, self.spin)
 
     def build(self, base_indexes=range(4)):
+        uv_height = self.uv_height
         v2 = square(self.head_1_radius)
         v3 = square(self.head_2_radius)
         primary_rotation = Matrix.Rotation(self.primary_angle, 4, 'Y')
@@ -289,36 +430,28 @@ class Split(Module):
         self.verts = v2 + v3
         si = self.starting_index
         i0, i1, i2, i3 = base_indexes
-        self.faces = [(i0, si, si + 1, i1), (i1, si + 1, si + 2, i2), (i2, si + 2, si + 3, i3), (i3, si+3, si+6, si+7),
-                      (si+4, si+5, si, i0), (si+6, si+3, si, si+5), (i3, si+7, si+4, i0)]
+        self.faces = np.asarray([(i0, si, si + 1, i1), (i1, si + 1, si + 2, i2), (i2, si + 2, si + 3, i3), (i3, si+3, si+6, si+7),
+                      (si+4, si+5, si, i0), (si+6, si+3, si, si+5), (i3, si+7, si+4, i0)])
         spin_rotation = Matrix.Rotation(self.spin, 4, 'Z')
         direction_rotation = self.direction.rotation_difference(Vector((0,0,1))).to_matrix()
         self.verts = [((v * spin_rotation) * direction_rotation) + self.position for v in self.verts]
         self.head_1_direction = (self.verts[-5] + self.verts[-7])/2 - self.position
         self.head_2_direction = (self.verts[-1] + self.verts[-3])/2 - self.position
+        self.verts = np.asarray([i.to_tuple() for i in self.verts])
         self.base_pos = [(v * spin_rotation) * direction_rotation + self.position for v in square(self.base_radius)]
+        uvs = [[(i / 4, uv_height), (i / 4, uv_height + .1*self.head_1_length / self.head_1_radius), ((i + 1) / 4,uv_height + .1*self.head_1_length / self.head_1_radius), ((i + 1) / 4, uv_height)] for i in range(3)]
+        uvs.extend([[(i / 4, uv_height), (i / 4, uv_height + .1*self.head_2_length / self.head_2_radius), ((i + 1) / 4, uv_height + .1*self.head_2_length / self.head_2_radius), ((i + 1) / 4, uv_height)] for i in range(4)])
+        self.uvs = np.asarray(uvs)
 
     def link(self, module, head, verts_number):
         if head ==0:
-            # module.position = (self.verts[0] + self.verts[2])/2
-            # module.base_radius = self.head_1_radius
-            head_indexes = list(range(self.starting_index, self.starting_index + 4))
-            # module.direction = self.head_1_direction
-            # self.head_module_1 = module
-
+            head_indexes = np.arange(self.starting_index, self.starting_index + 4)
         else:
-            # module.position = (self.verts[4] + self.verts[6])/2
-            # module.base_radius = self.head_2_radius
-            head_indexes = list(range(self.starting_index + 4, self.starting_index + 8))
-            # module.direction = self.head_2_direction
-            # self.head_module_2 = module
+            head_indexes = np.arange(self.starting_index+4, self.starting_index + 8)
 
         module.starting_index = verts_number
-        spin_diff = module.spin - self.spin
+        spin_diff = (module.spin - self.spin) % (2*pi)
         module.build(roll_indexes(head_indexes, spin_diff))
-        # base_verts = roll_indexes(module.base_pos, spin_diff)
-        # for i in range(4):
-        #     self.verts[i] = self.verts[4*head + i] * .7 + base_verts[i] * .3
 
 
 class Branch(Module):
@@ -328,7 +461,6 @@ class Branch(Module):
         self.type = "branch"
         self.length = length
         self.head_1_radius = head_radius * self.base_radius
-        self.verts_number = [4 * 2**i for i in range(7)]
         self.head_number = 1
 
         # self.build()
@@ -336,21 +468,24 @@ class Branch(Module):
 
     def get_head_indexes(self, head):
         if head == 1:
-            return [self.starting_index + i for i in range(4)]
+            return np.arange(4) + self.starting_index
 
     def get_head_pos(self, head):
         return self.position + self.direction * self.length
 
-    def build(self, base_indexes=range(4)):
+    def build(self, base_indexes=np.arange(4)):
+        uv_height = self.uv_height
         v2 = [v + Vector((0,0, self.length)) for v in square(self.head_1_radius)]
         self.verts = v2
         i0, i1, i2, i3 = base_indexes
         si = self.starting_index
-        self.faces = [(i0, si, si+1, i1), (i1, si+1, si+2, i2), (i2, si+2, si+3, i3), (i3, si+3, si, i0)]
+        self.faces = np.asarray([(i0, si, si+1, i1), (i1, si+1, si+2, i2), (i2, si+2, si+3, i3), (i3, si+3, si, i0)])
         spin_rotation = Matrix.Rotation(self.spin, 4, 'Z')
         direction_rotation = self.direction.rotation_difference(Vector((0, 0, 1))).to_matrix()
-        self.verts = [(v * spin_rotation) * direction_rotation + self.position for v in self.verts]
+        self.verts = np.asarray([((v * spin_rotation) * direction_rotation + self.position).to_tuple() for v in self.verts])
         self.base_pos = [(v * spin_rotation) * direction_rotation + self.position for v in square(self.base_radius)]
+        m = min(base_indexes)
+        self.uvs = np.asarray([[(i/4, uv_height), (i/4, uv_height + .1*self.length/self.base_radius), ((i+1)/4, uv_height + .1*self.length/self.base_radius), ((i+1)/4, uv_height)] for i in range(4)])
 
     def link(self, module, head, verts_number):
         # module.position = (self.verts[0] + self.verts[2])/2
@@ -359,8 +494,9 @@ class Branch(Module):
         module.starting_index = verts_number
         # self.head_module_1 = module
         n = len(self.verts)
-        head_indexes = list(range(self.starting_index, self.starting_index + 4))
+        head_indexes = np.arange(4) + self.starting_index
         spin_diff = module.spin - self.spin
+        module.uv_height = self.uv_height + .1*self.length/self.base_radius
         module.build(roll_indexes(head_indexes, spin_diff))
         # base_verts = roll_indexes(module.base_pos, spin_diff)
         # for i in range(4):
@@ -377,7 +513,7 @@ class Root(Module):
     def build(self):
         spin_rotation = Matrix.Rotation(self.spin, 4, 'Z')
         direction_rotation = self.direction.rotation_difference(Vector((0, 0, 1))).to_matrix()
-        self.verts = [(v * spin_rotation) * direction_rotation + self.position for v in square(self.base_radius)]
+        self.verts = np.asarray([((v * spin_rotation) * direction_rotation + self.position).to_tuple() for v in square(self.base_radius)])
 
     def get_head_pos(self, head):
         return self.position
@@ -385,7 +521,8 @@ class Root(Module):
     def link(self, module, head, verts_number):
         module.starting_index = verts_number
         spin_diff = module.spin - self.spin
-        head_indexes = list(range(4))
+        head_indexes = np.arange(4)
+        module.uv_height = 0
         module.build(roll_indexes(head_indexes, spin_diff))
 
 
@@ -448,7 +585,6 @@ class Tree:
         self.junctions_table = {}
 
         self.grow()
-        print(self.tree)
         self.draw()
 
     def lod(self, radius):
@@ -471,7 +607,6 @@ class Tree:
                     if res != module.resolution:
                         new_module = Transition(spin=module.spin, resolution=res)
                         override_choice = True
-                    print(res)
                     verts_number = len(self.verts[res])
                     if not override_choice:
                         choice = random()

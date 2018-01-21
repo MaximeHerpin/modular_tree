@@ -40,12 +40,38 @@ class MakeTreeFromNodes(Operator):
         print("tree")
         print(self.node_name)
         print(self.node_group_name)
+        # node = bpy.data.node_groups.get("NodeTree.002").nodes.get("BuildTree")
+        node = context.active_node.id_data.nodes.get("BuildTree")
+        node.execute()
+
+        # bpy.ops.object.subdivision_set(level=1)
+
+        return {'FINISHED'}
+
+class visualize_with_curves(Operator):
+    """makes a tree from a node group"""
+    bl_idname = "mod_tree.visualize"
+    bl_label = " visualize Tree"
+    bl_options = {"REGISTER", "UNDO"}
+
+    node_group_name = StringProperty()
+    node_name = StringProperty()
+
+    def draw(self, context):
+        pass
+
+    def execute(self, context):
+        bpy.ops.object.delete(use_global=False)
+        print("tree")
+        print(self.node_name)
+        print(self.node_group_name)
         node = bpy.data.node_groups.get("NodeTree.002").nodes.get("BuildTree")
         node.execute()
 
-        bpy.ops.object.subdivision_set(level=1)
+        # bpy.ops.object.subdivision_set(level=1)
 
         return {'FINISHED'}
+
 
 #
 # class MakeTreeOperator(Operator):

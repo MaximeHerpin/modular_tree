@@ -947,12 +947,20 @@
 #     dm = (prefix, documentation_mapping)
 #     return dm
 import bpy
-from bpy.types import Operator
+from bpy.types import Operator, PropertyGroup
+from bpy.props import StringProperty, BoolProperty, FloatProperty, IntProperty, EnumProperty, PointerProperty
 import nodeitems_utils
 
 from .nodes import node_classes_to_register, node_categories
 from .generator_operators import MakeTreeFromNodes
 # from .grease_pencil import ConnectStrokes
+
+# class ModularTreePropertyGroup(PropertyGroup):
+
+    # preserve_trunk = BoolProperty(
+    #     #         name="Preserve Trunk", default=False,
+    #     #         description="preserves the trunk growth, check and see.")
+
 
 classes_to_register = [MakeTreeFromNodes]
 classes_to_register += node_classes_to_register
