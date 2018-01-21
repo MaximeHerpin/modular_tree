@@ -17,7 +17,7 @@
 # along with Modular Tree.  If not, see <http://www.gnu.org/licenses/>.
 # ##### END GPL LICENSE BLOCK #####
 
-import bpy
+import bpy, os
 
 from .addon_name import get_addon_name
 
@@ -60,7 +60,7 @@ def always_save():
             bpy.ops.wm.save_mainfile()
             print("Blend file saved...")
         else:
-            bpy.ops.wm.save_as_mainfile(filepath=bpy.context.user_preferences.filepaths.temporary_directory + '\modular_tree', copy=True)
+            bpy.ops.wm.save_as_mainfile(filepath=os.path.join( bpy.context.user_preferences.filepaths.temporary_d irectory,'modular_tree'), copy=True)
 
 
     # save all images
