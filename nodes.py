@@ -99,7 +99,7 @@ class BuildTreeNode(Node, ModularTreeNode):
 
     def init(self, context):
         self.inputs.new("TreeSocketType", "Tree")
-        self.memory = get_tree_parameters_rec([], self)
+        self.memory = get_tree_parameters_rec("", self)
 
 
     def draw_buttons(self, context, layout):
