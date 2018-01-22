@@ -1,3 +1,15 @@
+bl_info = {
+    "name": "Modular trees",
+    "author": "Herpin Maxime",
+    "version": (3, 0, 0),
+    "blender": (2, 79, 0),
+    "location": "View3D > Tools > Tree > Make Tree",
+    "description": "Generates an organic tree with correctly modeled branching.",
+    "warning": "May take a long time to generate! Save your file before generating!",
+    "wiki_url": "https://github.com/MaximeHerpin/modular_tree/wiki",
+    "tracker_url": "https://github.com/MaximeHerpin/modular_tree/issues/new",
+    "category": "Add Mesh"}
+
 # Copyright 2016 Maxime Herpin, Jake Dube
 #
 # ##### BEGIN GPL LICENSE BLOCK ######
@@ -960,6 +972,9 @@ from .generator_operators import MakeTreeFromNodes
     # preserve_trunk = BoolProperty(
     #     #         name="Preserve Trunk", default=False,
     #     #         description="preserves the trunk growth, check and see.")
+
+
+
 
 
 classes_to_register = [MakeTreeFromNodes]
