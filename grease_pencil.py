@@ -69,7 +69,7 @@ def find_splits(strokes):
                         dist_index = k
             if dist < .001:
                 splits.append((j, dist_index, i))
-    print(splits)
+    # print(splits)
     return splits
 
 
@@ -120,7 +120,7 @@ class ConnectStrokes(Operator):
                             if dist < min_dist:
                                 min_index = index
                                 min_dist = dist
-                    print(min_index)
+                    # print(min_index)
                     self.parent_stroke_index = min_index
                 parent_stroke = [i.co for i in gp.layers.active.active_frame.strokes[self.parent_stroke_index].points]
                 new_locations = connect_strokes(moving_stroke, parent_stroke)
@@ -148,7 +148,7 @@ def build_tree_from_strokes(strokes, radius, radius_dec):
     #     curr_branch.head_module_1 = module
     #     curr_branch = module
 
-    print(root)
+    # print(root)
     return root
 
 

@@ -18,16 +18,16 @@ def grow(root, iterations, min_radius, limit_method, branch_length, split_proba,
     if limit_method == "iterations":
         condition = iteration < iterations
     elif limit_method == "radius":
-        print('radius')
+        # print('radius')
         condition = root.base_radius < min_radius
-        print(root.base_radius)
+        # print(root.base_radius)
         condition = True
     else:
         condition = False
 
     while condition:
         iteration += 1
-        print(iteration, iterations)
+        # print(iteration, iterations)
 
         new_extremities = []
         for module, head in extremities:

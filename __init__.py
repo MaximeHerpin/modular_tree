@@ -5,7 +5,7 @@ bl_info = {
     "blender": (2, 79, 0),
     "location": "View3D > Tools > Tree > Make Tree",
     "description": "Generates an organic tree with correctly modeled branching.",
-    "warning": "May take a long time to generate! Save your file before generating!",
+    "warning": "Unstable branch, use at your own risk !",
     "wiki_url": "https://github.com/MaximeHerpin/modular_tree/wiki",
     "tracker_url": "https://github.com/MaximeHerpin/modular_tree/issues/new",
     "category": "Add Mesh"}

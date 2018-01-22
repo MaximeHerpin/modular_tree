@@ -152,7 +152,7 @@ def find_faces_number_rec(module):
 def draw_module_rec(root):
     verts_number = find_verts_number_rec(root)
     faces_number = find_faces_number_rec(root)
-    print(verts_number, faces_number)
+    # print(verts_number, faces_number)
 
     verts = np.zeros((verts_number, 3))
     faces = np.zeros((faces_number, 4), dtype=np.int)
@@ -532,7 +532,7 @@ class Transition(Module):
         self.type = "transition"
         self.head_1_radius = 1
         self.head_number = 1
-        print('transition')
+        # print('transition')
 
     def build(self, base_indexes=None, create_base=False):
         verts = [Vector(i) * self.base_radius for i in [(-0.37, 0.9, 0.0), (-0.9, 0.37, 0.0), (-0.9, -0.37, 0.0),

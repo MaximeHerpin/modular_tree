@@ -98,8 +98,9 @@ class BuildTreeNode(Node, ModularTreeNode):
     seed = IntProperty(default=42)
 
     def init(self, context):
-        self.memory = get_tree_parameters_rec([], self)
         self.inputs.new("TreeSocketType", "Tree")
+        self.memory = get_tree_parameters_rec([], self)
+
 
     def draw_buttons(self, context, layout):
         layout.prop(self, "mesh_type")
@@ -279,7 +280,6 @@ def has_nodes_changed(dummy):
         # bpy.ops.mod_tree.tree_from_nodes()
 
         node.memory = new_memory
-        print("updating")
         # node.execute()
 
 
