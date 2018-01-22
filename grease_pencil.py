@@ -86,7 +86,7 @@ class ConnectStrokes(Operator):
     bl_label = "connect strokes"
     bl_options = {"REGISTER", "UNDO"}
 
-    point_dist = FloatProperty(min=0.001, default=.4)
+    point_dist = FloatProperty(min=0.001, default=.8)
     smooth_iterations = IntProperty(min=0, default=1)
     automatic = BoolProperty(default=True)
     connect_all = BoolProperty(default=True)
@@ -157,6 +157,8 @@ def build_tree_from_strokes_rec(points, module, head, curr_index, curr_stroke, s
         pos = points.popleft()
         direction = points[0]-pos
         choice = 'branch'
+        radius = module.head_1_radius if head == 0 else module.head_2_radius
+
         for parent_stroke, point_index, child_stroke in splits:
             if curr_stroke == parent_stroke and point_index == curr_index:
                 child_points = deque(strokes[child_stroke])
@@ -164,16 +166,27 @@ def build_tree_from_strokes_rec(points, module, head, curr_index, curr_stroke, s
                 child_points.popleft()
                 child_direction = (child_points[0] - pos)
                 child_length = child_direction.length
+                if child_length < radius:
+                    for i in range(int(2*radius/child_length)):
+                        if len(child_points)>1:
+                            child_points.popleft()
+                child_direction = (child_points[0] - pos)
+                child_length = child_direction.length
                 child_direction.normalize()
                 spin = directions_to_spin(direction, child_direction)
                 choice = 'split'
                 break
-        radius = module.head_1_radius if head == 0 else module.head_2_radius
         if choice == 'branch':
             new_module = Branch(pos, direction.normalized(), radius, direction.length, head_radius=radius_dec,
                                 resolution=0, spin=module.spin)
         elif choice == 'split':
             new_module = Split(pos, direction.normalized(), radius, 0, 0, spin, head_2_length=child_length)
+            if direction.length < radius*.6:
+                number_to_pop = int(radius*.6/direction.length)
+                for i in range(number_to_pop):
+                    if len(points)>1:
+                        points.popleft()
+                direction = points[0] - pos
             new_module.head_1_length = direction.length
             new_module.head_2_direction = child_direction
             new_module.secondary_angle = direction.angle(child_direction)

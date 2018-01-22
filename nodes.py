@@ -9,6 +9,7 @@ from bpy.types import NodeTree, Node, NodeSocket
 from bpy.props import IntProperty, FloatProperty, EnumProperty, BoolProperty, StringProperty
 from nodeitems_utils import NodeCategory, NodeItem
 import random
+from math import pi
 
 from .grease_pencil import build_tree_from_strokes
 from .tree_functions import draw_module_rec, add_splits, grow
@@ -19,9 +20,11 @@ def get_tree_parameters_rec(state_list, node):
     if node.bl_idname != "BuildTreeNode":
         state_list += str(node.items())
 
+    else:
+        state_list += str(node.seed) + str(node.mesh_type)
+
     if node.bl_idname == "GreasePencilNode":
         return state_list
-
 
     try:
         from_node = node.inputs['Tree'].links[0].from_node
@@ -30,9 +33,6 @@ def get_tree_parameters_rec(state_list, node):
 
     if from_node is not None:
         return get_tree_parameters_rec(state_list, from_node)
-
-
-
 
 
 class ModularTree(NodeTree):
@@ -120,8 +120,8 @@ class BuildTreeNode(Node, ModularTreeNode):
         else:
             visualize_with_curves(tree)
         t2 = time.time()
-        print("creating tree", t1-t0)
-        print("building object", t2-t1)
+        print("creating tree", t1 - t0)
+        print("building object", t2 - t1)
 
 
 class GreasePencilNode(Node, ModularTreeNode):
@@ -133,8 +133,6 @@ class GreasePencilNode(Node, ModularTreeNode):
     branch_length = FloatProperty(min=.001, default=.6)
     radius_decrease = FloatProperty(min=0, max=.999, default=.97)
     grease_pencil_memory = StringProperty(default="")
-
-
 
     def init(self, context):
         self.outputs.new("TreeSocketType", "Tree")
@@ -155,12 +153,12 @@ class GreasePencilNode(Node, ModularTreeNode):
         if gp is not None and gp.layers.active is not None and gp.layers.active.active_frame is not None and len(
                 gp.layers.active.active_frame.strokes) > 0 and len(gp.layers.active.active_frame.strokes[0].points) > 1:
 
-            new_memory = str([[i.co for i in j.points] for j in gp.layers.active.active_frame.strokes]) + str(self.smooth_iterations)
+            new_memory = str([[i.co for i in j.points] for j in gp.layers.active.active_frame.strokes]) + str(self.smooth_iterations) + str(self.branch_length)
             if self.grease_pencil_memory != new_memory:
                 print("updating strokes")
                 bpy.ops.mod_tree.connect_strokes(point_dist=self.branch_length, automatic=True, connect_all=True,
-                                             child_stroke_index=1, parent_stroke_index=0, smooth_iterations=self.smooth_iterations)
-                self.grease_pencil_memory = str([[i.co for i in j.points] for j in gp.layers.active.active_frame.strokes]) + str(self.smooth_iterations)
+                                                 child_stroke_index=1, parent_stroke_index=0, smooth_iterations=self.smooth_iterations)
+                self.grease_pencil_memory = str([[i.co for i in j.points] for j in gp.layers.active.active_frame.strokes]) + str(self.smooth_iterations) + str(self.branch_length)
 
             strokes = [[i.co for i in j.points] for j in gp.layers.active.active_frame.strokes]
             root = build_tree_from_strokes(strokes, self.radius, self.radius_decrease)
@@ -173,8 +171,9 @@ class SplitNode(Node, ModularTreeNode):
 
     proba = FloatProperty(min=0, max=1, default=.3)
     split_angle = FloatProperty(min=0, max=180, default=45)
-    spin = FloatProperty(min=0, max=7, default=1.57)
+    spin = FloatProperty(min=0, max=360, default=45)
     head_size = FloatProperty(min=0.001, max=.999, default=.6)
+    offset = IntProperty(min=0, default=0)
 
     def init(self, context):
         self.inputs.new("TreeSocketType", "Tree")
@@ -187,7 +186,7 @@ class SplitNode(Node, ModularTreeNode):
         return [self.name]
 
     def draw_buttons(self, context, layout):
-        properties = ['proba', "split_angle", "spin", "head_size"]
+        properties = ['proba', "split_angle", "spin", "head_size", "offset"]
         row = col = layout.column()
         for i in properties:
             col.prop(self, i)
@@ -196,7 +195,7 @@ class SplitNode(Node, ModularTreeNode):
         from_node = self.inputs['Tree'].links[0].from_node
         tree = from_node.execute()
         selection = self.inputs["Selection"].get_selection()
-        add_splits(tree, self.proba, selection, self.selection[0], self.split_angle, self.spin, self.head_size)
+        add_splits(tree, self.proba, selection, self.selection[0], self.split_angle, self.spin/180*pi, self.head_size, self.offset)
         return tree
 
 
@@ -210,15 +209,15 @@ class GrowNode(Node, ModularTreeNode):
         default="radius")
 
     iterations = IntProperty(min=0, default=5)
-    radius = FloatProperty(min=.000001, default=.02)
-    branch_length = FloatProperty(min=.001, default=.5)
+    radius = FloatProperty(min=.0005, default=.2)
+    branch_length = FloatProperty(min=.001, default=.9)
     split_proba = FloatProperty(min=0, max=1, default=.3)
     split_angle = FloatProperty(min=0, max=180, default=45)
     split_deviation = FloatProperty(min=0, max=7, default=.25)
     split_radius = FloatProperty(min=.01, max=.999, default=.6)
     radius_decrease = FloatProperty(min=0.01, max=.999, default=.97)
     randomness = FloatProperty(default=.1)
-    spin = FloatProperty(default=45)
+    spin = FloatProperty(default=135)
     spin_randomness = FloatProperty(min=0, max=7, default=.1)
     gravity_strength = FloatProperty(default=.1)
 
@@ -265,7 +264,6 @@ node_categories = [ModularTreeNodeCategory("inputs", "inputs", items=[NodeItem(i
                    ModularTreeNodeCategory("tree_functions", "tree functions", items=[NodeItem(i.bl_idname) for i in tree_functions]),
                    ModularTreeNodeCategory("outputs", "outputs", items=[NodeItem(i.bl_idname) for i in outputs])]
 
-
 node_classes_to_register = [ModularTree, TreeSocket, BuildTreeNode, GreasePencilNode, SplitNode, GrowNode]
 
 
@@ -286,6 +284,3 @@ def has_nodes_changed(dummy):
 
 
 bpy.app.handlers.frame_change_pre.append(has_nodes_changed)
-
-
-

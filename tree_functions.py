@@ -84,13 +84,13 @@ def create_tree(iterations):
         draw_module_rec(root)
 
 
-def add_splits(root, proba, selection, creator, split_angle, spin, head_size):
-    add_splits_rec(root.head_module_1, root, 0, proba, selection, creator, split_angle, spin, root.spin, head_size)
+def add_splits(root, proba, selection, creator, split_angle, spin, head_size, offset):
+    add_splits_rec(root.head_module_1, root, 0, proba, selection, creator, split_angle, spin, root.spin, head_size, offset)
 
 
-def add_splits_rec(module, parent_module, head, proba, selection, creator, split_angle, spin, curr_spin, head_size):
+def add_splits_rec(module, parent_module, head, proba, selection, creator, split_angle, spin, curr_spin, head_size, offset):
     if module is not None:
-        is_selected = selection == [] or module.creator in selection
+        is_selected = offset <= 0 and (selection == [] or module.creator in selection)
         if module.type == 'branch' and parent_module.head_module_1 is not None and random() < proba and is_selected:
             curr_spin += spin
             split = Split(module.position, module.direction, module.base_radius, module.resolution,
@@ -105,9 +105,7 @@ def add_splits_rec(module, parent_module, head, proba, selection, creator, split
                 parent_module.head_module_1 = split
             else:
                 parent_module.head_module_2 = split
-            module = split
-        add_splits_rec(module.head_module_1, module, 0, proba, selection, creator, split_angle, spin, curr_spin, head_size)
+        add_splits_rec(module.head_module_1, module, 0, proba, selection, creator, split_angle, spin, curr_spin, head_size, max(0, offset-1))
         if module.type == 'split':
-            pass
-            add_splits_rec(module.head_module_2, module, 1, proba, selection, creator, split_angle, spin, curr_spin, head_size)
+            add_splits_rec(module.head_module_2, module, 1, proba, selection, creator, split_angle, spin, curr_spin, head_size, max(0, offset-1))
 
