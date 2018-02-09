@@ -12,8 +12,9 @@ import random
 from math import pi
 
 from .grease_pencil import build_tree_from_strokes
-from .tree_functions import draw_module_rec, add_splits, grow
+from .tree_functions import draw_module, add_splits, grow, add_armature
 from .modules import visualize_with_curves
+from .wind import wind
 
 
 def get_tree_parameters_rec(state_list, node):
@@ -96,6 +97,9 @@ class BuildTreeNode(Node, ModularTreeNode):
     auto_update = BoolProperty(default=False)
     memory = StringProperty(default="")
     seed = IntProperty(default=42)
+    armature = BoolProperty(default=False)
+    animation = BoolProperty(default=False)
+    min_armature_radius = FloatProperty(min=0, default=.3)
 
     def init(self, context):
         self.inputs.new("TreeSocketType", "Tree")
@@ -110,6 +114,12 @@ class BuildTreeNode(Node, ModularTreeNode):
         if not self.auto_update:
             row.operator("mod_tree.tree_from_nodes", text='create tree').node_name = self.name
 
+        box = layout.box()
+        box.prop(self, "armature")
+        if self.armature:
+            box.prop(self, "min_armature_radius")
+            box.prop(self, "animation")
+
     def execute(self):
         random.seed(self.seed)
         from_node = self.inputs['Tree'].links[0].from_node
@@ -117,9 +127,15 @@ class BuildTreeNode(Node, ModularTreeNode):
         tree = from_node.execute()
         t1 = time.time()
         if self.mesh_type == "final":
-            draw_module_rec(tree)
+            draw_module(tree)
         else:
             visualize_with_curves(tree)
+
+        if self.armature:
+            amt = add_armature(tree, self.min_armature_radius)
+            if self.animation:
+                wind(amt)
+
         t2 = time.time()
         print("creating tree", t1 - t0)
         print("building object", t2 - t1)

@@ -6,7 +6,7 @@ import bpy
 from bpy.types import Operator
 from bpy.props import IntProperty, BoolProperty
 
-from .modules import Root, Split, Branch, draw_module_rec
+from .modules import Root, Split, Branch, draw_module
 from .grease_pencil import build_tree_from_strokes
 
 
@@ -81,7 +81,7 @@ def create_tree(iterations):
         root = build_tree_from_strokes(strokes)
         add_splits(root, .3)
         # grow(root, iterations)
-        draw_module_rec(root)
+        draw_module(root)
 
 
 def add_splits(root, proba, selection, creator, split_angle, spin, head_size, offset):
@@ -108,4 +108,42 @@ def add_splits_rec(module, parent_module, head, proba, selection, creator, split
         add_splits_rec(module.head_module_1, module, 0, proba, selection, creator, split_angle, spin, curr_spin, head_size, max(0, offset-1))
         if module.type == 'split':
             add_splits_rec(module.head_module_2, module, 1, proba, selection, creator, split_angle, spin, curr_spin, head_size, max(0, offset-1))
+
+
+def add_armature(root, min_radius):
+    amt = bpy.data.armatures.new('MyRigData')
+    rig = bpy.data.objects.new('MyRig', amt)
+    rig.location = Vector((0, 0, 0))
+    rig.show_x_ray = True
+    # amt.show_names = True
+    # Link object to scene
+    scene = bpy.context.scene
+    scene.objects.link(rig)
+    scene.objects.active = rig
+    scene.update()
+
+    bpy.ops.object.mode_set(mode='EDIT')
+
+    add_bone_rec(root, amt, min_radius, None)
+
+    bpy.ops.object.mode_set(mode='OBJECT')
+    return amt
+
+
+def add_bone_rec(module, amt, min_radius, parent):
+    if module.base_radius >= min_radius:
+        if module.head_module_1 is not None:
+            bone = amt.edit_bones.new('branch' + str(module.position.to_tuple()))
+            bone.tail_radius = module.base_radius
+            bone.head = module.position
+            bone.tail = module.head_module_1.position
+            if parent is not None:
+                bone.parent = parent
+                bone.use_connect = True
+
+            add_bone_rec(module.head_module_1, amt, min_radius, bone)
+
+        if module.head_module_2 is not None:
+            add_bone_rec(module.head_module_2, amt, min_radius, parent)
+
 

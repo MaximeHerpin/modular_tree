@@ -149,7 +149,7 @@ def find_faces_number_rec(module):
         return 7 + find_faces_number_rec(module.head_module_1) + find_faces_number_rec(module.head_module_2)
 
 
-def draw_module_rec(root):
+def draw_module(root):
     verts_number = find_verts_number_rec(root)
     faces_number = find_faces_number_rec(root)
     # print(verts_number, faces_number)

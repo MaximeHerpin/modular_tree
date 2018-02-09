@@ -4,7 +4,7 @@ import bpy
 from bpy.types import Operator
 from bpy.props import IntProperty, BoolProperty, FloatProperty
 
-from .modules import Root, Split, Branch, draw_module_rec, directions_to_spin
+from .modules import Root, Split, Branch, draw_module, directions_to_spin
 
 from math import cos, inf, pi
 from random import random
@@ -166,8 +166,8 @@ def build_tree_from_strokes_rec(points, module, head, curr_index, curr_stroke, s
                 child_points.popleft()
                 child_direction = (child_points[0] - pos)
                 child_length = child_direction.length
-                if child_length < radius:
-                    for i in range(int(2*radius/child_length)):
+                if child_length < 1.5*radius:
+                    for i in range(int(1.5*radius/child_length)):
                         if len(child_points)>1:
                             child_points.popleft()
                 child_direction = (child_points[0] - pos)
