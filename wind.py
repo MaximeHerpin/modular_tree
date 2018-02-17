@@ -9,7 +9,7 @@ from math import sqrt, cos, sin, exp
 from random import random
 
 
-class Wind1:
+class Wind:
     def __init__(self, armature_object):
         self.time = 0
         self.bones = armature_object.pose.bones
@@ -17,15 +17,18 @@ class Wind1:
         self.bone_sizes = np.zeros(self.n, dtype=np.float)
         self.bone_lengths = np.zeros(self.n, dtype=np.float)
         self.bone_lengths.shape = (self.n, 1)
-
+        self.stiffness = np.zeros(self.n, dtype=np.float)
         for i, b in enumerate(self.bones):
             self.bone_sizes[i] = b.bone.head_radius
             self.bone_lengths[i] = b.length
+            self.stiffness[i] = b.bone.head_radius * 1000
+            if b.parent is not None and len(b.parent.children) > 1:
+                self.stiffness[i] *= 3
 
         inertia_moment = self.bone_lengths ** 2
         damping = np.ones(self.n, dtype=np.float) * 10
         damping.shape = (self.n, 1)
-        self.stiffness = self.bone_sizes * 50
+        #self.stiffness = self.bone_sizes * 100
         self.stiffness[0] *= 10
         self.stiffness.shape = (self.n, 1)
 
@@ -41,8 +44,9 @@ class Wind1:
         self.current_speeds.shape = (self.n, 2)
 
     def step(self, strength=1, wind_direction=Vector((1, 0, 0))):
+        wind_direction = Vector((0,1,0))
         self.time += 1
-        wind_vector = np.array(wind_direction) * (1 + np.cos(self.time / 10) * random() / 4) * strength / 500
+        wind_vector = np.array(wind_direction) * (1 + np.cos(self.time / 40) * random() / 4) * strength / 500
         t = 1 / 34
         matrices = np.zeros(self.n * 16, dtype=np.float)
         self.bones.foreach_get('matrix', matrices)
@@ -61,7 +65,7 @@ class Wind1:
         true_angle = angle - memory
         self.current_rotations = angle
         self.current_speeds = self.r * (angle - torque) + np.exp(self.r * t) * (
-        -alpha * self.s * np.sin(self.s * t) + beta * self.s * np.cos(self.s * t))
+            -alpha * self.s * np.sin(self.s * t) + beta * self.s * np.cos(self.s * t))
 
         Cos = np.cos(true_angle)
         Sin = np.sin(true_angle)
@@ -87,23 +91,25 @@ class Wind1:
         rot_Z = rot_Z_cos + rot_Z_sin + diag
         rot_Z.shape = (self.n, 4, 4)
 
-        # for i in range(self.n):
-        #    matrices[i] = matrices[i].dot(rot_X[i])
-        # matrices[i] = matrices[i].dot(np.array([list(i.to_tuple()) for i in list(Matrix.Rotation(true_angle[i,0], 4, 'X'))]))
-        # matrices[i] = matrices[i].dot(np.array([list(i.to_tuple()) for i in list(Matrix.Rotation(angle[i,1] - memory[i,1], 4, 'Y'))]))
-        # self.bones.foreach_set('matrix', matrices.ravel())
-        self.bones.foreach_set('matrix',
-                               np.einsum('hik,hkj->hij', np.einsum('hik,hkj->hij', matrices, rot_Z), rot_X).ravel())
+        for i in range(self.n):
+            #matrices[i] = matrices[i].dot(rot_X[i])
+            #matrices[i] = matrices[i].dot(rot_Z[i])
+            matrices[i] = matrices[i].dot(np.array([list(i.to_tuple()) for i in list(Matrix.Rotation(true_angle[i,0], 4, 'X'))]))
+            matrices[i] = matrices[i].dot(np.array([list(i.to_tuple()) for i in list(Matrix.Rotation(true_angle[i,1], 4, 'Y'))]))
+        self.bones.foreach_set('matrix', matrices.ravel())
+        #self.bones.foreach_set('matrix', np.einsum('hik,hkj->hij', np.einsum('hik,hkj->hij', matrices, rot_Z), rot_X).ravel())
         # bones.foreach_set('matrix', matrices.ravel())
-        # bpy.ops.object.mode_set(mode='EDIT')
-        # bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.context.scene.frame_set(1)
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.object.mode_set(mode='OBJECT')
+        #bpy.context.scene.update()
+        #bpy.context.scene.frame_set(self.time)
+        #bpy.context.scene.update()
 
 
-class ModalOperator(bpy.types.Operator):
-    """Move an object with the mouse, example"""
-    bl_idname = "object.modal_operator"
-    bl_label = "Simple Modal Operator"
+class ModalWindOperator(bpy.types.Operator):
+    """Start armature wind simulation"""
+    bl_idname = "object.modal_wind_operator"
+    bl_label = "Wind Operator"
 
 
     _timer = None
@@ -116,26 +122,17 @@ class ModalOperator(bpy.types.Operator):
             return {'CANCELLED'}
 
         if event.type == 'TIMER':
-            # delta = self.first_mouse_x - event.mouse_x
-            # context.object.location.x = self.first_value + delta * 0.01
-            # numpy_wind(context.object)
-
-            self.wind.step(self.wind_object.field.strength,
-                           Matrix.Rotation(self.wind_object.rotation_euler.z, 3, 'Z') * Vector((1, 0, 0)))
-
-        if event.type == 'NUMPAD_PLUS':
-            self.strength += .1
-        if event.type == 'NUMPAD_MINUS':
-            self.strength -= .1
+            self.wind.step(self.wind_object.field.strength, Matrix.Rotation(self.wind_object.rotation_euler.z, 3, 'Z') * Vector((1, 0, 0)))
 
         return {'PASS_THROUGH'}
 
     def execute(self, context):
+        print("wind")
         wm = context.window_manager
         self._timer = wm.event_timer_add(0.1, context.window)
         wm.modal_handler_add(self)
-        self.wind = Wind1(context.object)
-        self.wind_object = context.scene.objects['Field']
+        self.wind = Wind(context.object)
+        self.wind_object = context.scene.objects.get('Field')
         return {'RUNNING_MODAL'}
 
     def cancel(self, context):
@@ -143,62 +140,14 @@ class ModalOperator(bpy.types.Operator):
         wm.event_timer_remove(self._timer)
 
 
-def organize_bones(armature_object):
-    bones = deque()
-    organize_bones_rec(armature_object.pose.bones[0], bones)
-    return list(reversed(bones))
-
-
-def organize_bones_rec(bone, bones):
-    bones.append(bone)
-    for child in bone.children:
-        organize_bones_rec(child, bones)
-
-
-# def compute_composite_body_forces(bone):
-#     mass = bone.bone.tail_radius**2 * bone.length
-#     center_of_mass =
-#     if bone.parent is not None:
-
-
-
-def general_solution_second_order(a, b, c, d, x0, x1, t):
-    """solve linear diferential equation of second order ax'' + bx' + cx = d with x(0)=x0 and x'(0)=x1"""
-
-    constant_sol = d / c
-
-    delta = b ** 2 - 4 * a * c
-    if delta > 0:
-        r_delta = sqrt(delta)
-        r1 = (-b - r_delta) / (2 * a)
-        r2 = (-b + r_delta) / (2 * a)
-        beta = (x1 - r1 * x0) / (r2 - r1)
-        alpha = x0 - beta
-
-        derived = r1 * alpha * exp(r1 * t) + r2 * beta * exp(r2 * t)
-        return alpha * exp(r1 * t) + beta * exp(r2 * t) + constant_sol, derived
-
-    else:
-        s = sqrt(-delta) / (2 * a)
-        r = -b / (2 * a)
-        alpha = x0
-        beta = (x1 - r * alpha) / s
-
-        sol = exp(r * t) * (alpha * cos(s * t) + beta * sin(s * t)) + constant_sol
-        derived = r * (sol - constant_sol) + exp(r * t) * (-alpha * s * sin(s * t) + beta * s * cos(s * t))
-        return sol, derived
-
-
 def register():
-    bpy.utils.register_class(ModalOperator)
+    bpy.utils.register_class(ModalWindOperator)
 
 
 def unregister():
-    bpy.utils.unregister_class(ModalOperator)
+    bpy.utils.unregister_class(ModalWindOperator)
 
 
-if __name__ == "__main__":
-    register()
-
-    # test call
-    bpy.ops.object.modal_operator('INVOKE_DEFAULT')
+# if __name__ == "__main__":
+#     register()
+#     bpy.ops.object.modal_operator('INVOKE_DEFAULT')

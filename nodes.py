@@ -14,7 +14,6 @@ from math import pi
 from .grease_pencil import build_tree_from_strokes
 from .tree_functions import draw_module, add_splits, grow, add_armature
 from .modules import visualize_with_curves
-from .wind import wind
 
 
 def get_tree_parameters_rec(state_list, node):
@@ -22,7 +21,7 @@ def get_tree_parameters_rec(state_list, node):
         state_list += str(node.items())
 
     else:
-        state_list += str(node.seed) + str(node.mesh_type)
+        state_list += str(node.seed) + str(node.mesh_type) + str(node.armature) + str(node.min_length)
 
     if node.bl_idname == "GreasePencilNode":
         return state_list
@@ -100,6 +99,7 @@ class BuildTreeNode(Node, ModularTreeNode):
     armature = BoolProperty(default=False)
     animation = BoolProperty(default=False)
     min_armature_radius = FloatProperty(min=0, default=.3)
+    min_length = FloatProperty(min=0, default=1)
 
     def init(self, context):
         self.inputs.new("TreeSocketType", "Tree")
@@ -118,7 +118,8 @@ class BuildTreeNode(Node, ModularTreeNode):
         box.prop(self, "armature")
         if self.armature:
             box.prop(self, "min_armature_radius")
-            box.prop(self, "animation")
+            box.prop(self, "min_length")
+
 
     def execute(self):
         random.seed(self.seed)
@@ -132,9 +133,8 @@ class BuildTreeNode(Node, ModularTreeNode):
             visualize_with_curves(tree)
 
         if self.armature:
-            amt = add_armature(tree, self.min_armature_radius)
-            if self.animation:
-                wind(amt)
+            amt = add_armature(tree, self.min_armature_radius, self.min_length)
+            amt.select = True
 
         t2 = time.time()
         print("creating tree", t1 - t0)
@@ -237,6 +237,7 @@ class GrowNode(Node, ModularTreeNode):
     spin = FloatProperty(default=135)
     spin_randomness = FloatProperty(min=0, max=7, default=.1)
     gravity_strength = FloatProperty(default=.1)
+    pruning_strength = FloatProperty(default=1)
 
     def init(self, context):
         self.inputs.new("TreeSocketType", "Tree")
@@ -251,7 +252,7 @@ class GrowNode(Node, ModularTreeNode):
     def draw_buttons(self, context, layout):
         properties = ['limit_method', self.limit_method, "branch_length", "split_proba", "split_angle",
                       "split_deviation", "split_radius", "radius_decrease", "randomness", "spin", "spin_randomness",
-                      "gravity_strength"]
+                      "gravity_strength", "pruning_strength"]
         row = col = layout.column()
         # layout.prop(self, 'limit_method')
         for i in properties:
@@ -263,7 +264,7 @@ class GrowNode(Node, ModularTreeNode):
         selection = self.inputs["Selection"].get_selection()
         grow(tree, self.iterations, self.radius, self.limit_method, self.branch_length, self.split_proba,
              self.split_angle, self.split_deviation, self.split_radius, self.radius_decrease, self.randomness,
-             self.spin, self.spin_randomness, self.selection[0], selection, self.gravity_strength)
+             self.spin, self.spin_randomness, self.selection[0], selection, self.gravity_strength, self.pruning_strength)
         return tree
 
 

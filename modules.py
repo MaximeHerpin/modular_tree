@@ -140,7 +140,7 @@ def find_verts_number_rec(module):
 
 def find_faces_number_rec(module):
     if module is None:
-        return 0
+        return 1
     if module.type == 'root':
         return find_faces_number_rec(module.head_module_1)
     if module.type == 'branch':
@@ -179,6 +179,7 @@ def draw_module(root):
                     uvs[curr_faces_number:curr_faces_number+len(new_module.faces), :] = new_module.uvs
                     curr_faces_number += len(new_module.faces)
                     new_extremities.append(new_module)
+
         extremities = new_extremities
 
     mesh = bpy.data.meshes.new("tree")
@@ -218,60 +219,6 @@ def draw_module(root):
     bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.mesh.normals_make_consistent(inside=False)
     bpy.ops.object.mode_set(mode='OBJECT')
-
-    # root.build()
-    # verts = root.verts
-    # faces = []
-    # uvs = []
-    # extremities = [root]
-    # while len(extremities) > 0:
-    #     new_extremities = []
-    #     for module in extremities:
-    #         for head in range(module.head_number):
-    #             verts_number = len(verts)
-    #             new_module = module.head_module_1 if head == 0 else module.head_module_2
-    #             if new_module is not None:
-    #                 module.link(new_module, head, verts_number)
-    #                 verts.extend(new_module.verts)
-    #                 faces.extend(new_module.faces)
-    #                 uvs.extend(new_module.uvs)
-    #                 new_extremities.append(new_module)
-    #     extremities = new_extremities
-    #
-    # mesh = bpy.data.meshes.new("tree")
-    # bm = bmesh.new()
-    # bm.from_mesh(mesh)
-    #
-    # for v in verts:
-    #     bm.verts.new(v)
-    # bm.verts.ensure_lookup_table()
-    #
-    # for f in faces:
-    #     try:
-    #         bm.faces.new([bm.verts[j] for j in f])
-    #     except:
-    #         print('something happened')
-    #
-    # bm.faces.ensure_lookup_table()
-    #
-    # bm.loops.layers.uv.new()
-    # uv_layer = bm.loops.layers.uv.active
-    # for index, face in enumerate(bm.faces):
-    #     print("coucou", index)
-    #     for i, loop in enumerate(face.loops):
-    #         loop[uv_layer].uv = uvs[index][i]
-    #
-    # bm.to_mesh(mesh)
-    # bm.free()
-    # obj = bpy.data.objects.new("tree", mesh)
-    # obj.location = Vector((0, 0, 0))
-    # bpy.context.scene.objects.link(obj)
-    # bpy.context.scene.objects.active = obj
-    # obj.select = True
-    # bpy.ops.object.mode_set(mode='EDIT')
-    # bpy.ops.mesh.select_all(action='SELECT')
-    # bpy.ops.mesh.normals_make_consistent(inside=False)
-    # bpy.ops.object.mode_set(mode='OBJECT')
 
 
 def visualize_with_curves(root):
@@ -430,8 +377,8 @@ class Split(Module):
         self.verts = v2 + v3
         si = self.starting_index
         i0, i1, i2, i3 = base_indexes
-        self.faces = np.asarray([(i0, si, si + 1, i1), (i1, si + 1, si + 2, i2), (i2, si + 2, si + 3, i3), (i3, si+3, si+6, si+7),
-                      (si+4, si+5, si, i0), (si+6, si+3, si, si+5), (i3, si+7, si+4, i0)])
+        faces = [(i0, si, si + 1, i1), (i1, si + 1, si + 2, i2), (i2, si + 2, si + 3, i3), (i3, si+3, si+6, si+7), (si+4, si+5, si, i0), (si+6, si+3, si, si+5), (i3, si+7, si+4, i0)]
+
         spin_rotation = Matrix.Rotation(self.spin, 4, 'Z')
         direction_rotation = self.direction.rotation_difference(Vector((0,0,1))).to_matrix()
         self.verts = [((v * spin_rotation) * direction_rotation) + self.position for v in self.verts]
@@ -439,8 +386,18 @@ class Split(Module):
         self.head_2_direction = (self.verts[-1] + self.verts[-3])/2 - self.position
         self.verts = np.asarray([i.to_tuple() for i in self.verts])
         self.base_pos = [(v * spin_rotation) * direction_rotation + self.position for v in square(self.base_radius)]
-        uvs = [[(i / 4, uv_height), (i / 4, uv_height + .1*self.head_1_length / self.head_1_radius), ((i + 1) / 4,uv_height + .1*self.head_1_length / self.head_1_radius), ((i + 1) / 4, uv_height)] for i in range(3)]
+        uvs = [[(i / 4, uv_height), (i / 4, uv_height + .1*self.head_1_length / self.head_1_radius), ((i + 1) / 4, uv_height + .1*self.head_1_length / self.head_1_radius), ((i + 1) / 4, uv_height)] for i in range(3)]
         uvs.extend([[(i / 4, uv_height), (i / 4, uv_height + .1*self.head_2_length / self.head_2_radius), ((i + 1) / 4, uv_height + .1*self.head_2_length / self.head_2_radius), ((i + 1) / 4, uv_height)] for i in range(4)])
+
+        if self.head_module_1 is None:
+            faces.append([i for i in range(si, si+4)])
+            uvs.append([(0, 0), (0, 1), (1, 1), (1, 0)])
+
+        if self.head_module_2 is None:
+            faces.append([i for i in range(si+4, si + 8)])
+            uvs.append([(0, 0), (0, 1), (1, 1), (1, 0)])
+
+        self.faces = np.asarray(faces)
         self.uvs = np.asarray(uvs)
 
     def link(self, module, head, verts_number):
@@ -479,13 +436,21 @@ class Branch(Module):
         self.verts = v2
         i0, i1, i2, i3 = base_indexes
         si = self.starting_index
-        self.faces = np.asarray([(i0, si, si+1, i1), (i1, si+1, si+2, i2), (i2, si+2, si+3, i3), (i3, si+3, si, i0)])
+
         spin_rotation = Matrix.Rotation(self.spin, 4, 'Z')
         direction_rotation = self.direction.rotation_difference(Vector((0, 0, 1))).to_matrix()
         self.verts = np.asarray([((v * spin_rotation) * direction_rotation + self.position).to_tuple() for v in self.verts])
         self.base_pos = [(v * spin_rotation) * direction_rotation + self.position for v in square(self.base_radius)]
         m = min(base_indexes)
-        self.uvs = np.asarray([[(i/4, uv_height), (i/4, uv_height + .1*self.length/self.base_radius), ((i+1)/4, uv_height + .1*self.length/self.base_radius), ((i+1)/4, uv_height)] for i in range(4)])
+        faces = [(i0, si, si + 1, i1), (i1, si + 1, si + 2, i2), (i2, si + 2, si + 3, i3), (i3, si + 3, si, i0)]
+        uvs = [[(i/4, uv_height), (i/4, uv_height + .1*self.length/self.base_radius), ((i+1)/4, uv_height + .1*self.length/self.base_radius), ((i+1)/4, uv_height)] for i in range(4)]
+
+        if self.head_module_1 is None:
+            faces.append([i for i in range(si, si+4)])
+            uvs.append([(0, 0), (0, 1), (1, 1), (1, 0)])
+
+        self.faces = np.asarray(faces)
+        self.uvs = np.asarray(uvs)
 
     def link(self, module, head, verts_number):
         # module.position = (self.verts[0] + self.verts[2])/2
@@ -509,7 +474,7 @@ class Root(Module):
         self.type = "root"
         self.head_number = 1
         self.head_1_radius = self.base_radius
-
+        self.density_dict = dict()
     def build(self):
         spin_rotation = Matrix.Rotation(self.spin, 4, 'Z')
         direction_rotation = self.direction.rotation_difference(Vector((0, 0, 1))).to_matrix()
