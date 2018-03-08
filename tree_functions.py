@@ -1,12 +1,15 @@
+from collections import deque
+
 from random import random, randint
-from math import pi
-from mathutils import Vector
+from math import pi, sqrt
+from mathutils import Vector, Matrix
 
 import bpy
+import bmesh
 from bpy.types import Operator
 from bpy.props import IntProperty, BoolProperty
 
-from .modules import Root, Split, Branch, draw_module
+from .modules import Root, Split, Branch, draw_module, square
 from .grease_pencil import build_tree_from_strokes
 
 
@@ -64,7 +67,7 @@ def grow(root, iterations, min_radius, limit_method, branch_length, split_proba,
                     if new_module.type == 'split':
                         new_extremities.append((new_module, 1))
 
-                    density_dict[key] += new_module.base_radius
+                    density_dict[key] += sqrt(new_module.base_radius)
 
         if iteration > iterations and limit_method == 'iterations':
             condition = False
@@ -87,6 +90,17 @@ def create_tree(iterations):
         draw_module(root)
 
 
+def add_basic_trunk(radius, radius_decrease, randomness, up_attraction, twist, height, branch_length):
+    root = Root(position=Vector((0,0,0)), direction=Vector((0, 0, 1)), radius=radius, resolution=0)
+    extremity = root
+    while extremity.position.length < height:
+        direction = (extremity.direction + Vector((random()-.5, random()-.5, random()-.5)) * randomness + Vector((0, 0, 1)) * up_attraction).normalized()
+        new_module = Branch(extremity.get_head_pos(0), direction, extremity.head_1_radius, branch_length, radius_decrease, resolution=0, spin=extremity.spin + twist)
+        extremity.head_module_1 = new_module
+        extremity = new_module
+    return root
+
+
 def add_splits(root, proba, selection, creator, split_angle, spin, head_size, offset):
     add_splits_rec(root.head_module_1, root, 0, proba, selection, creator, split_angle, spin, root.spin, head_size, offset)
 
@@ -95,7 +109,7 @@ def add_splits_rec(module, parent_module, head, proba, selection, creator, split
     if module is not None:
         is_selected = offset <= 0 and (selection == [] or module.creator in selection)
         if module.type == 'branch' and parent_module.head_module_1 is not None and random() < proba and is_selected:
-            #curr_spin += spin
+            curr_spin += spin
             split = Split(module.position, module.direction, module.base_radius, module.resolution,
                           module.starting_index, curr_spin, head_2_length=module.base_radius*2,
                           head_2_radius=head_size)
@@ -170,5 +184,102 @@ def add_bone_rec(module, amt, min_radius, parent, min_dist):
 
         if module.head_module_2 is not None:
             add_bone_rec(module.head_module_2, amt, min_radius, parent, min_dist)
+
+
+def add_particles_emitter(root, max_radius, proba, dupli_object):
+    mesh = bpy.data.meshes.new("tree_leaves_emitter")
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+
+    verts = deque()
+    weights = deque()
+
+    add_emitters_rec(root, max_radius, verts, proba, weights)
+
+    verts = list(verts)
+    weights = list(weights)
+
+    for v in verts:
+        bm.verts.new(v)
+    bm.verts.ensure_lookup_table()
+
+    for i in range(int(len(verts)/4)):
+        try:
+            bm.faces.new([bm.verts[j] for j in range(i*4, i*4+4)])
+        except:
+            print('unable to create face')
+
+    bm.faces.ensure_lookup_table()
+
+    bm.to_mesh(mesh)
+    bm.free()
+
+    obj = bpy.data.objects.new("tree_leaves_emitter", mesh)
+    obj.location = Vector((0, 0, 0))
+    bpy.context.scene.objects.link(obj)
+    bpy.context.scene.objects.active = obj
+    vg = obj.vertex_groups.new("leaves")
+    for i in range(len(verts)):
+        vg.add([i], weights[i//4], "ADD")
+    create_particle_system(obj, len(verts), vg, dupli_object, 1)
+
+
+def add_emitters_rec(module, max_radius, verts, proba, weights):
+    if module.base_radius < max_radius and random() < proba:
+        axis = Vector((1, 0, 0))
+        if module.direction != Vector((0, 0, 1)):
+            axis = module.direction.cross(Vector((0, 0, 1))).cross(module.direction).normalized()
+        angle = (random() - .5) * pi/2
+        direction = module.direction * Matrix.Rotation(angle, 3, axis)
+        direction.z *= .2
+        v = square(.1)
+        rot = direction.rotation_difference(Vector((0, 0, 1))).to_matrix()
+        verts.extend([i*rot + module.position for i in v])
+        weights.append(min(1, module.base_radius))
+
+    if module .head_module_1 is not None:
+        add_emitters_rec(module.head_module_1, max_radius, verts, proba, weights)
+    if module.head_module_2 is not None:
+        add_emitters_rec(module.head_module_2, max_radius, verts, proba, weights)
+
+
+def create_particle_system(obj, number, vertex_group, dupli_object, size):
+    """ Creates a particle system
+
+    Args:
+        ob - (object) The object on which the particle system is created
+        number - (int) The number of particles that will be rendered
+        display - (int) The number of particles displayed on the viewport
+        vertex_group - (vertex group) The vertex group controlling the density of particles
+    """
+    leaf = obj.modifiers.new("leafs", 'PARTICLE_SYSTEM')
+    part = obj.particle_systems[0]
+
+    settings = leaf.particle_system.settings
+    settings.name = "leaf"
+    settings.type = "HAIR"
+    settings.use_advanced_hair = True
+    settings.use_rotation_dupli = True
+    settings.use_rotations = True
+    settings.particle_size = 0.1 * size
+    settings.size_random = 0.25
+    settings.brownian_factor = 1
+    settings.render_type = "OBJECT"
+    if dupli_object is not None:
+        settings.dupli_object = dupli_object
+    settings.count = number
+    settings.emit_from = 'FACE'
+    settings.userjit = 1
+    settings.rotation_mode = 'NOR'
+    bpy.data.particles["leaf"].phase_factor = -.1
+    settings.phase_factor_random = 0.2
+    settings.phase_factor_random = 0.30303
+    settings.factor_random = 0.2
+    settings.vertex_group_length = vertex_group
+
+
+
+
+
 
 

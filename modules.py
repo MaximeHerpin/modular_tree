@@ -10,6 +10,7 @@ import bpy, bmesh
 import numpy as np
 from mathutils import Vector, Matrix
 from math import pi, sqrt
+from .bridge import bridge
 from random import random
 
 
@@ -40,95 +41,6 @@ def average_vector(vectors):
     return v
 
 
-def catmull_clark_subdivision(verts, faces, resolution, faces_shift=0, junctions = []):
-    """subdivides the vertices and faces with th catmull clark algorithm"""
-
-    for k in range(resolution):
-        verts_number = len(verts)
-        face_number = len(faces)
-        # list of vectors at the center of each faces
-        face_points = []
-
-        # list of new edge points positions
-        edge_points = []
-
-        # lists of centers of adjacent faces for each vertex
-        verts_adjacent_faces_points = [[] for i in range(len(verts))]
-
-        # lists of center of adjacent edges for each vertex
-        verts_adjacent_edges_centers = [[] for i in range(len(verts))]
-
-        # dictionary where the keys are the edges and the values are lists of centers of adjacent faces
-        edges = defaultdict(list)
-
-        # dictionary where the keys are the edges and the values are the indexes of each edge new point
-        edges_new_points = {}
-
-        # dictionary where the keys are the index of boundary vertices and the values a list of boundary neighbours
-        boundary_vertices = defaultdict(list)
-
-        for f in faces:
-            average = average_vector([verts[j] for j in f])
-            face_points.append(average)
-            for v in range(len(f)):
-                verts_adjacent_faces_points[f[v]].append(average)
-                v1, v2 = sorted((f[v], f[(v + 1) % len(f)]))
-                edge_center = (verts[v1] + verts[v2]) / 2
-                verts_adjacent_edges_centers[v1].append(edge_center)
-                verts_adjacent_edges_centers[v2].append(edge_center)
-                edges[(v1, v2)].append(average)
-
-        for i, edge in enumerate(edges):
-            i1, i2 = edge
-            edge_center = (verts[i1] + verts[i2]) / 2
-
-            if len(edges[edge]) == 2:
-                adjacent_faces_average = sum(edges[edge], Vector()) / 2
-                new_point = (edge_center + adjacent_faces_average) / 2
-            else:
-                new_point = edge_center
-                boundary_vertices[i1].append(new_point)
-                boundary_vertices[i2].append(new_point)
-            edges_new_points[edge] = i
-            edge_points.append(new_point)
-
-        for i in range(len(verts)):
-            n = len(verts_adjacent_faces_points[i])
-            if n >= 3:
-                p = verts[i]
-                m1 = (n - 3) / n
-                f = average_vector(verts_adjacent_faces_points[i])  # sum(verts_adjacent_faces_points[i], Vector())/4
-                m2 = 1 / n
-                r = average_vector(verts_adjacent_edges_centers[i])  # sum(verts_adjacent_edges_centers[i], Vector())/4
-                m3 = 3 / n
-                verts[i] = (f + 2 * r + (n - 3) * p) / n  # m1*p + (2*r + f)/4
-            else:
-                p = verts[i]
-                r = sum(boundary_vertices[i], Vector()) / 2
-                verts[i] = (p + r) / 2
-
-        verts.extend(face_points + edge_points)
-        new_faces = []
-        fs = faces_shift
-        for i, f in enumerate(faces):
-            a, b, c, d = f
-            edge_point_ab = verts_number + face_number + edges_new_points[tuple(sorted((a, b)))]
-            edge_point_bc = verts_number + face_number + edges_new_points[tuple(sorted((b, c)))]
-            edge_point_cd = verts_number + face_number + edges_new_points[tuple(sorted((c, d)))]
-            edge_point_da = verts_number + face_number + edges_new_points[tuple(sorted((d, a)))]
-            face_point = verts_number + i
-            f1 = (a+fs, edge_point_ab+fs, face_point+fs, edge_point_da+fs)
-            f2 = (b+fs, edge_point_bc+fs, face_point+fs, edge_point_ab+fs)
-            f3 = (c+fs, edge_point_cd+fs, face_point+fs, edge_point_bc+fs)
-            f4 = (d+fs, edge_point_da+fs, face_point+fs, edge_point_cd+fs)
-            new_faces.extend([f1, f2, f3, f4])
-
-        faces = new_faces
-    if resolution == 0:
-        faces = [tuple([i + faces_shift for i in f]) for f in faces]
-    return verts, faces
-
-
 def find_verts_number_rec(module):
     if module is None:
         return 0
@@ -149,7 +61,7 @@ def find_faces_number_rec(module):
         return 7 + find_faces_number_rec(module.head_module_1) + find_faces_number_rec(module.head_module_2)
 
 
-def draw_module(root):
+def draw_module_old(root):
     verts_number = find_verts_number_rec(root)
     faces_number = find_faces_number_rec(root)
     # print(verts_number, faces_number)
@@ -186,7 +98,8 @@ def draw_module(root):
     bm = bmesh.new()
     bm.from_mesh(mesh)
 
-    for v in verts:
+
+    for i, v in enumerate(verts):
         bm.verts.new(v)
     bm.verts.ensure_lookup_table()
 
@@ -198,16 +111,15 @@ def draw_module(root):
 
     bm.faces.ensure_lookup_table()
 
-    bm.loops.layers.uv.new()
-    uv_layer = bm.loops.layers.uv.active
-    for index, face in enumerate(bm.faces):
-        for i, loop in enumerate(face.loops):
-            loop[uv_layer].uv = uvs[index][i]
+    # bm.loops.layers.uv.new()
+    # uv_layer = bm.loops.layers.uv.active
+    # for index, face in enumerate(bm.faces):
+    #     for i, loop in enumerate(face.loops):
+    #         loop[uv_layer].uv = uvs[index][i]
+
 
     bm.to_mesh(mesh)
     bm.free()
-
-
 
     obj = bpy.data.objects.new("tree", mesh)
     obj.location = Vector((0, 0, 0))
@@ -219,6 +131,92 @@ def draw_module(root):
     bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.mesh.normals_make_consistent(inside=False)
     bpy.ops.object.mode_set(mode='OBJECT')
+
+
+def draw_module(root, resolution_levels):
+    max_radius = root.base_radius
+    apply_resolution_rec(root, resolution_levels, max_radius, resolution_levels, 'root')
+    # verts_number = find_verts_number_rec(root)
+    # faces_number = find_faces_number_rec(root)
+    #
+    # verts = np.zeros((verts_number, 3))
+    # faces = np.zeros((faces_number, 4), dtype=int)
+    # uvs = np.zeros((faces_number, 4, 2))
+    #
+    # root.build()
+    # verts[:4, :] = root.verts
+
+    verts = [[] for i in range(resolution_levels+1)]
+    faces = [[] for i in range(resolution_levels+1)]
+    uvs = [[] for i in range(resolution_levels+1)]
+
+
+    extremities = [root]
+    while len(extremities) > 0:
+        new_extremities = []
+        for module in extremities:
+            for head in range(module.head_number):
+                new_module = module.head_module_1 if head == 0 else module.head_module_2
+                if new_module is not None:
+                    resolution = new_module.resolution
+                    curr_verts_number = len(verts[resolution])
+                    module.link(new_module, head, curr_verts_number)
+                    verts[resolution].extend(new_module.verts)
+                    faces[resolution].extend(new_module.faces)
+                    uvs[resolution].extend(new_module.uvs)
+                    new_extremities.append(new_module)
+
+        extremities = new_extremities
+
+    objects = []
+
+    for i in range(resolution_levels+1):
+        bpy.ops.object.select_all(action='DESELECT')
+        mesh = bpy.data.meshes.new("tree")
+        bm = bmesh.new()
+        bm.from_mesh(mesh)
+
+        for v in verts[i]:
+            bm.verts.new(v)
+        bm.verts.ensure_lookup_table()
+
+        for f in faces[i]:
+            try:
+                bm.faces.new([bm.verts[j] for j in f])
+            except:
+                print(f)
+
+        bm.faces.ensure_lookup_table()
+
+        bm.loops.layers.uv.new()
+        uv_layer = bm.loops.layers.uv.active
+        for index, face in enumerate(bm.faces):
+            for j, loop in enumerate(face.loops):
+                loop[uv_layer].uv = uvs[i][index][j]
+
+        bm.to_mesh(mesh)
+        bm.free()
+
+        obj = bpy.data.objects.new("tree", mesh)
+        obj.location = Vector((0, 0, 0))
+        bpy.context.scene.objects.link(obj)
+        bpy.context.scene.objects.active = obj
+        obj["is_tree"] = True
+        obj.select = True
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.mesh.normals_make_consistent(inside=False)
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.subdivision_set(level=i)
+        print(i)
+        objects.append(obj)
+
+    for o in objects:
+        o.select = True
+    bpy.ops.object.convert(target='MESH')
+    bpy.ops.object.join()
+    bridge(bpy.context.object)
+
 
 
 def visualize_with_curves(root):
@@ -263,6 +261,22 @@ def roll_indexes(indexes, angle_diff):
     shifts = np.array([0, -1, -1, -2, -2, -3, -3, 0, 0, 0])
     shift = shifts[shift]
     return np.roll(indexes, -shift)
+
+
+def apply_resolution_rec(module, resolution_levels, max_radius, parent_res, parent_type):
+    resolution = int(resolution_levels * module.base_radius / max_radius +.7)
+    if module.type == 'branch' and parent_type == 'branch':
+        module.resolution = resolution
+        if resolution < parent_res:
+            module.draw_base = True
+    else:
+        module.resolution = parent_res
+
+    if module.head_module_1 is not None:
+        apply_resolution_rec(module.head_module_1, resolution_levels, max_radius, module.resolution, module.type)
+
+    if module.head_module_2 is not None:
+        apply_resolution_rec(module.head_module_2, resolution_levels, max_radius, module.resolution, module.type)
 
 
 class Module:
@@ -367,6 +381,11 @@ class Split(Module):
             return get_direction(self.direction, self.primary_angle - self.secondary_angle, self.spin)
 
     def build(self, base_indexes=range(4)):
+        radius_correction = 1 - .25**(self.resolution+1)
+        self.base_radius *= radius_correction
+        self.head_1_radius *= radius_correction
+        self.head_2_radius *= radius_correction
+
         uv_height = self.uv_height
         v2 = square(self.head_1_radius)
         v3 = square(self.head_2_radius)
@@ -419,6 +438,7 @@ class Branch(Module):
         self.length = length
         self.head_1_radius = head_radius * self.base_radius
         self.head_number = 1
+        self.draw_base = False
 
         # self.build()
         # self.draw()
@@ -431,11 +451,19 @@ class Branch(Module):
         return self.position + self.direction * self.length
 
     def build(self, base_indexes=np.arange(4)):
+        radius_correction = 1 - .25**(self.resolution+1)
+        self.base_radius *= radius_correction
+        self.head_1_radius *= radius_correction
         uv_height = self.uv_height
         v2 = [v + Vector((0,0, self.length)) for v in square(self.head_1_radius)]
+        if self.draw_base:
+            v2.extend(square(self.base_radius))
         self.verts = v2
+
         i0, i1, i2, i3 = base_indexes
         si = self.starting_index
+        if self.draw_base:
+            i0, i1, i2, i3 = [si + 4 + i for i in range(4)]
 
         spin_rotation = Matrix.Rotation(self.spin, 4, 'Z')
         direction_rotation = self.direction.rotation_difference(Vector((0, 0, 1))).to_matrix()
@@ -528,100 +556,3 @@ class Transition(Module):
         spin_diff = module.spin - self.spin
         module.build(roll_indexes(head_indexes, spin_diff))
 
-
-class Tree:
-    def __init__(self):
-        print('new_tree')
-        self.position = Vector()
-        # list of the radius factors at which the resolution change
-        self.resolutions = [.5, .25, 0]
-        self.verts = [[] for i in self.resolutions]
-        self.faces = [[] for i in self.resolutions]
-        self.radius = 1
-
-        root = Root(direction=Vector((0, 0, 1)), resolution=0)
-        root.build()
-        self.tree = root
-        self.verts[0] = root.verts
-        self.faces[0] = root.faces
-        self.extremities = [root]
-        # list of vertices that are not connected because of a change of resolution
-        self. junctions = [[] for i in range(len(self.resolutions))]
-        self.junctions_table = {}
-
-        self.grow()
-        self.draw()
-
-    def lod(self, radius):
-        res = 0
-        while radius < self.resolutions[res]:
-            res += 1
-        return res
-
-    def grow(self):
-        for iteration in range(20):
-            new_extremities = []
-            for module in self.extremities:
-                for head in range(module.head_number):
-                    radius = module.head_1_radius if head == 0 else module.head_2_radius
-                    if self.resolutions[module.resolution] > radius and module.type != "transition":
-                        res = module.resolution + 1
-                    else:
-                        res = module.resolution
-                    override_choice = False
-                    if res != module.resolution:
-                        new_module = Transition(spin=module.spin, resolution=res)
-                        override_choice = True
-                    verts_number = len(self.verts[res])
-                    if not override_choice:
-                        choice = random()
-                        if choice < 0.3:
-                            new_module = Split(spin=module.spin + pi/2, resolution=res)
-                        else:
-                            new_module = Branch(spin=module.spin, resolution=res)
-                    module.link(new_module, head, verts_number)
-
-                    if new_module.type == "transition":
-                        junction_index = len(self.junctions)
-                        for i in module.get_head_indexes(head)+[j+verts_number for j in range(4)]:
-                            self.junctions_table[i] = junction_index
-                        self.junctions[res].append(((module.get_head_indexes(head)), [i+verts_number for i in range(4)]))
-                    self.verts[res].extend(new_module.verts)
-                    self.faces[res].extend(new_module.faces)
-                    new_extremities.append(new_module)
-            self.extremities = new_extremities
-
-    def draw(self):
-        mesh = bpy.data.meshes.new("tree")
-        bm = bmesh.new()
-        bm.from_mesh(mesh)
-        faces_shift = 0
-        for i in range(len(self.resolutions)):
-            if len(self.verts[i]) > 0 and self.faces is not None:
-                res = len(self.resolutions) - 1 - i
-                self.verts[i], self.faces[i] = catmull_clark_subdivision(self.verts[i], self.faces[i], res, faces_shift,
-                                                                         self.junctions)
-
-            faces_shift += len(self.verts[i])
-
-            for v in self.verts[i]:
-                bm.verts.new(v)
-            bm.verts.ensure_lookup_table()
-
-            for f in self.faces[i]:
-                try:
-                    bm.faces.new([bm.verts[j] for j in f])
-                except:
-                    print('something happened')
-
-        bm.to_mesh(mesh)
-        bm.free()
-        obj = bpy.data.objects.new("tree", mesh)
-        obj.location = Vector((0, 0, 0))
-        bpy.context.scene.objects.link(obj)
-        bpy.context.scene.objects.active = obj
-        obj.select = True
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.mesh.normals_make_consistent(inside=False)
-        bpy.ops.object.mode_set(mode='OBJECT')

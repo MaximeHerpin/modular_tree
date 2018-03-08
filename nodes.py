@@ -12,7 +12,7 @@ import random
 from math import pi
 
 from .grease_pencil import build_tree_from_strokes
-from .tree_functions import draw_module, add_splits, grow, add_armature
+from .tree_functions import draw_module, add_splits, grow, add_basic_trunk, add_armature, add_particles_emitter
 from .modules import visualize_with_curves
 
 
@@ -89,17 +89,25 @@ class BuildTreeNode(Node, ModularTreeNode):
     bl_idname = "BuildTreeNode"
     bl_label = "BuildTree"
 
+    memory = StringProperty(default="")
+
     mesh_type = bpy.props.EnumProperty(
         items=[('final', 'Final', ''), ('preview', 'Preview', '')],
         name="visualisation",
         default="preview")
+    resolution_levels = IntProperty(min=0, default=1)
     auto_update = BoolProperty(default=False)
-    memory = StringProperty(default="")
     seed = IntProperty(default=42)
+
     armature = BoolProperty(default=False)
-    animation = BoolProperty(default=False)
     min_armature_radius = FloatProperty(min=0, default=.3)
     min_length = FloatProperty(min=0, default=1)
+
+    create_particle_emitter = BoolProperty(default=False)
+    dupli_object = StringProperty(default="")
+    max_radius = FloatProperty(default=.2, min=0)
+    particle_proba = FloatProperty(default=.5, min=0, max=1)
+
 
     def init(self, context):
         self.inputs.new("TreeSocketType", "Tree")
@@ -108,6 +116,8 @@ class BuildTreeNode(Node, ModularTreeNode):
 
     def draw_buttons(self, context, layout):
         layout.prop(self, "mesh_type")
+        if self.mesh_type == "final":
+            layout.prop(self, "resolution_levels")
         layout.prop(self, "seed")
         row = layout.row()
         row.prop(self, "auto_update")
@@ -120,6 +130,11 @@ class BuildTreeNode(Node, ModularTreeNode):
             box.prop(self, "min_armature_radius")
             box.prop(self, "min_length")
 
+        box = layout.box()
+        box.prop(self, "create_particle_emitter")
+        if self.create_particle_emitter:
+            box.prop(self, "max_radius")
+
 
     def execute(self):
         random.seed(self.seed)
@@ -128,7 +143,7 @@ class BuildTreeNode(Node, ModularTreeNode):
         tree = from_node.execute()
         t1 = time.time()
         if self.mesh_type == "final":
-            draw_module(tree)
+            draw_module(tree, self.resolution_levels)
         else:
             visualize_with_curves(tree)
 
@@ -136,6 +151,8 @@ class BuildTreeNode(Node, ModularTreeNode):
             amt = add_armature(tree, self.min_armature_radius, self.min_length)
             amt.select = True
 
+        if self.create_particle_emitter:
+            add_particles_emitter(tree, self.max_radius, self.particle_proba)
         t2 = time.time()
         print("creating tree", t1 - t0)
         print("building object", t2 - t1)
@@ -268,13 +285,45 @@ class GrowNode(Node, ModularTreeNode):
         return tree
 
 
+class TrunkNode(Node, ModularTreeNode):
+    bl_idname = "TrunkNode"
+    bl_label = "Trunk"
+
+    height = FloatProperty(min=0, default=10)
+    radius = FloatProperty(min=.0005, default=.8)
+    branch_length = FloatProperty(min=.002, default=.9)
+    radius_decrease = FloatProperty(min=0.01, max=.999, default=.97)
+    randomness = FloatProperty(default=.1)
+    up_attraction = FloatProperty(default=.7)
+    twist = FloatProperty(default=0)
+
+    def init(self, context):
+        self.inputs.new("TreeSocketType", "Tree")
+        self.inputs.new("SelectionSocketType", "Selection")
+        self.outputs.new("TreeSocketType", "Tree")
+
+    @property
+    def selection(self):
+        return [self.name]
+
+    def draw_buttons(self, context, layout):
+        properties = ["radius", "height", "branch_length", "radius_decrease", "randomness", "up_attraction", "twist"]
+        col = layout.column()
+        for i in properties:
+            col.prop(self, i)
+
+    def execute(self):
+        tree = add_basic_trunk(self.radius, self.radius_decrease, self.randomness, self.up_attraction, self.twist, self.height, self.branch_length)
+        return tree
+
+
 class ModularTreeNodeCategory(NodeCategory):
     @classmethod
     def poll(cls, context):
         return context.space_data.tree_type == 'ModularTreeType'
 
 
-inputs = [GreasePencilNode]
+inputs = [GreasePencilNode, TrunkNode]
 tree_functions = [SplitNode, GrowNode]
 outputs = [BuildTreeNode]
 
@@ -282,7 +331,7 @@ node_categories = [ModularTreeNodeCategory("inputs", "inputs", items=[NodeItem(i
                    ModularTreeNodeCategory("tree_functions", "tree functions", items=[NodeItem(i.bl_idname) for i in tree_functions]),
                    ModularTreeNodeCategory("outputs", "outputs", items=[NodeItem(i.bl_idname) for i in outputs])]
 
-node_classes_to_register = [ModularTree, TreeSocket, BuildTreeNode, GreasePencilNode, SplitNode, GrowNode]
+node_classes_to_register = [ModularTree, TreeSocket, BuildTreeNode, GreasePencilNode, SplitNode, GrowNode, TrunkNode]
 
 
 @persistent
