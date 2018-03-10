@@ -1,7 +1,7 @@
 from collections import deque
 
 from random import random, randint
-from math import pi, sqrt
+from math import pi, sqrt, cos, sin, atan
 from mathutils import Vector, Matrix
 
 import bpy
@@ -14,7 +14,7 @@ from .grease_pencil import build_tree_from_strokes
 
 
 def grow(root, iterations, min_radius, limit_method, branch_length, split_proba, split_angle, split_deviation,
-         split_radius, radius_decrease, randomness, spin, spin_randomness, creator, selection, gravity_strength, pruning_strength):
+         split_radius, radius_decrease, randomness, spin, spin_randomness, creator, selection, gravity_strength, pruning_strength, shape_factor):
     density_dict = root.density_dict
     extremities = []
     root.get_extremities_rec(extremities, selection)
@@ -33,15 +33,15 @@ def grow(root, iterations, min_radius, limit_method, branch_length, split_proba,
             key = module.position.to_tuple(0)
             if key not in density_dict:
                 density_dict[key] = 0.0
-
-            if random()*pruning_strength*density_dict[key] < 1:
+            dist_from_axis = (module.position - root.position).xy.length
+            if random()*(pruning_strength*density_dict[key] + dist_from_axis/30 * shape_factor) < 1:
                 radius = module.head_1_radius if head == 0 else module.head_2_radius
                 if not (limit_method == "radius" and radius < min_radius):
                     position = module.get_head_pos(head)
                     direction = module.get_head_direction(head) + Vector((random()-.5, random()-.5, random()-.5))*randomness
                     direction.normalize()
                     if gravity_strength !=0:
-                        direction += Vector((0, 0, -1)) * gravity_strength
+                        direction += Vector((0, 0, -.1)) * gravity_strength
                         direction.normalize()
                     choice = random()
                     if choice < split_proba:
@@ -276,7 +276,6 @@ def create_particle_system(obj, number, vertex_group, dupli_object, size):
     settings.phase_factor_random = 0.30303
     settings.factor_random = 0.2
     settings.vertex_group_length = vertex_group
-
 
 
 

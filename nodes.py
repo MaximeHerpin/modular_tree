@@ -9,7 +9,7 @@ from bpy.types import NodeTree, Node, NodeSocket
 from bpy.props import IntProperty, FloatProperty, EnumProperty, BoolProperty, StringProperty
 from nodeitems_utils import NodeCategory, NodeItem
 import random
-from math import pi
+from math import pi, inf
 
 from .grease_pencil import build_tree_from_strokes
 from .tree_functions import draw_module, add_splits, grow, add_basic_trunk, add_armature, add_particles_emitter
@@ -18,12 +18,12 @@ from .modules import visualize_with_curves
 
 def get_tree_parameters_rec(state_list, node):
     if node.bl_idname != "BuildTreeNode":
-        state_list += str(node.items())
+        state_list += str(node.items()) + ","
 
     else:
-        state_list += str(node.seed) + str(node.mesh_type) + str(node.armature) + str(node.min_length)
+        state_list += str(node.seed) + str(node.mesh_type) + str(node.armature) + str(node.min_length) + ","
 
-    if node.bl_idname == "GreasePencilNode":
+    if node.bl_idname == "GreasePencilNode" or node.bl_idname == "TrunkNode":
         return state_list
 
     try:
@@ -33,6 +33,61 @@ def get_tree_parameters_rec(state_list, node):
 
     if from_node is not None:
         return get_tree_parameters_rec(state_list, from_node)
+
+
+def get_last_memory_match(new, old):
+    new = new.split(",")
+    old = old.split(',')
+    level = len(new)
+    for i in range(min(len(new), len(old))):
+        if new[-(i+1)] != old[-(i+1)]:
+            break
+        level -= 1
+    return level
+
+
+class ModalModularTreedOperator(bpy.types.Operator):
+    """real time tree tweaking"""
+    bl_idname = "object.modal_tree_operator"
+    bl_label = "Modal Tree Operator"
+
+
+    _timer = None
+
+    node = None
+    tree = None
+
+    def modal(self, context, event):
+        if event.type in {'ESC'}:
+            self.cancel(context)
+            self.node.auto_update = False
+            return {'CANCELLED'}
+
+        if event.type == 'TIMER':
+
+            new_memory = get_tree_parameters_rec("", self.node)
+            level = get_last_memory_match(new_memory, self.node.memory)
+            if level > 0:
+            # if new_memory != self.node.memory:
+                bpy.ops.object.delete(use_global=False)
+                self.node.memory = new_memory
+                self.tree = self.node.execute()
+
+        return {'PASS_THROUGH'}
+
+    def execute(self, context):
+        wm = context.window_manager
+        self.node = bpy.context.active_node.id_data.nodes.get("BuildTree")
+        self._timer = wm.event_timer_add(0.1, context.window)
+        wm.modal_handler_add(self)
+        self.node.auto_update = True
+        # self.tree = self.node.execute()
+        # self.node = bpy.context.active_node.id_data.nodes.get("BuildTree")
+        return {'RUNNING_MODAL'}
+
+    def cancel(self, context):
+        wm = context.window_manager
+        wm.event_timer_remove(self._timer)
 
 
 class ModularTree(NodeTree):
@@ -120,7 +175,8 @@ class BuildTreeNode(Node, ModularTreeNode):
             layout.prop(self, "resolution_levels")
         layout.prop(self, "seed")
         row = layout.row()
-        row.prop(self, "auto_update")
+        row.operator("object.modal_tree_operator", text='auto_update_tree')
+        # row.prop(self, "auto_update")
         if not self.auto_update:
             row.operator("mod_tree.tree_from_nodes", text='create tree').node_name = self.name
 
@@ -136,16 +192,21 @@ class BuildTreeNode(Node, ModularTreeNode):
             box.prop(self, "max_radius")
 
 
-    def execute(self):
+    def execute(self, rebuild=True, old_tree=None):
+        print("build_node")
         random.seed(self.seed)
         from_node = self.inputs['Tree'].links[0].from_node
         t0 = time.time()
-        tree = from_node.execute()
-        t1 = time.time()
-        if self.mesh_type == "final":
-            draw_module(tree, self.resolution_levels)
+        if rebuild:
+            tree = from_node.execute()
         else:
-            visualize_with_curves(tree)
+            tree = old_tree
+        t1 = time.time()
+        if rebuild:
+            if self.mesh_type == "final":
+                draw_module(tree, self.resolution_levels)
+            else:
+                visualize_with_curves(tree)
 
         if self.armature:
             amt = add_armature(tree, self.min_armature_radius, self.min_length)
@@ -156,6 +217,7 @@ class BuildTreeNode(Node, ModularTreeNode):
         t2 = time.time()
         print("creating tree", t1 - t0)
         print("building object", t2 - t1)
+        return tree
 
 
 class GreasePencilNode(Node, ModularTreeNode):
@@ -226,8 +288,10 @@ class SplitNode(Node, ModularTreeNode):
             col.prop(self, i)
 
     def execute(self):
+        print("split_node", level)
         from_node = self.inputs['Tree'].links[0].from_node
         tree = from_node.execute()
+
         selection = self.inputs["Selection"].get_selection()
         add_splits(tree, self.proba, selection, self.selection[0], self.split_angle, self.spin/180*pi, self.head_size, self.offset)
         return tree
@@ -241,20 +305,21 @@ class GrowNode(Node, ModularTreeNode):
         items=[('iterations', 'Iterations', ''), ('radius', 'Radius', '')],
         name="limit method",
         default="radius")
-
-    iterations = IntProperty(min=0, default=5)
-    radius = FloatProperty(min=.0005, default=.2)
-    branch_length = FloatProperty(min=.001, default=.9)
-    split_proba = FloatProperty(min=0, max=1, default=.3)
-    split_angle = FloatProperty(min=0, max=180, default=45)
-    split_deviation = FloatProperty(min=0, max=7, default=.25)
-    split_radius = FloatProperty(min=.01, max=.999, default=.6)
-    radius_decrease = FloatProperty(min=0.01, max=.999, default=.97)
-    randomness = FloatProperty(default=.1)
-    spin = FloatProperty(default=135)
-    spin_randomness = FloatProperty(min=0, max=7, default=.1)
-    gravity_strength = FloatProperty(default=.1)
-    pruning_strength = FloatProperty(default=1)
+    advanced_settings = BoolProperty(default=False, description="Show advanced settings")
+    iterations = IntProperty(min=0, default=5, description="Number of branches iterations")
+    radius = FloatProperty(min=.0005, default=.2, description="The radius at which branches stop growing")
+    branch_length = FloatProperty(min=.001, default=.9, description="The length of each branch iteration")
+    split_proba = FloatProperty(min=0, max=1, default=.3, description="The probability for a branch to fork")
+    split_angle = FloatProperty(min=0, max=180, default=45, description="When a branch is splitting, the angle between the branches of the split")
+    split_deviation = FloatProperty(min=0, max=7, default=.25, description="When a branch is splitting, the angle between the split and the previous branch")
+    split_radius = FloatProperty(min=.01, max=.999, default=.6, description="When a branch is splitting, the radius of the secondary branch of the fork")
+    radius_decrease = FloatProperty(min=0.01, max=.999, default=.97, description="The radius of each branch iteration compared to the previous one")
+    randomness = FloatProperty(default=.1, description="Noise affecting the direction of each branch")
+    spin = FloatProperty(default=135, description="relative rotation of a split compared to the previous split in the branch")
+    spin_randomness = FloatProperty(min=0, max=7, default=.1, description="The randomness of the spin")
+    gravity_strength = FloatProperty(default=.1, description="Amount of downward attraction")
+    pruning_strength = FloatProperty(default=1, description="Decrease the probability of branching when the density of branches is high")
+    shape_factor = FloatProperty(default=1, min=0, description="Decrease of branching probability when the branch is far from the axis of the tree")
 
     def init(self, context):
         self.inputs.new("TreeSocketType", "Tree")
@@ -267,21 +332,25 @@ class GrowNode(Node, ModularTreeNode):
         return [self.name]
 
     def draw_buttons(self, context, layout):
-        properties = ['limit_method', self.limit_method, "branch_length", "split_proba", "split_angle",
-                      "split_deviation", "split_radius", "radius_decrease", "randomness", "spin", "spin_randomness",
-                      "gravity_strength", "pruning_strength"]
-        row = col = layout.column()
-        # layout.prop(self, 'limit_method')
+        properties = ["advanced_settings", "limit_method", self.limit_method, "branch_length", "split_proba", "randomness", "gravity_strength"]
+        advanced_properties = ["split_angle", "split_deviation", "split_radius", "radius_decrease", "spin", "spin_randomness", "pruning_strength", "shape_factor"]
+        col = layout.column()
         for i in properties:
             col.prop(self, i)
 
+        if self.advanced_settings:
+            for i in advanced_properties:
+                col.prop(self, i)
+
     def execute(self):
         from_node = self.inputs['Tree'].links[0].from_node
+
         tree = from_node.execute()
+
         selection = self.inputs["Selection"].get_selection()
         grow(tree, self.iterations, self.radius, self.limit_method, self.branch_length, self.split_proba,
              self.split_angle, self.split_deviation, self.split_radius, self.radius_decrease, self.randomness,
-             self.spin, self.spin_randomness, self.selection[0], selection, self.gravity_strength, self.pruning_strength)
+             self.spin, self.spin_randomness, self.selection[0], selection, self.gravity_strength, self.pruning_strength, self.shape_factor)
         return tree
 
 
@@ -313,6 +382,7 @@ class TrunkNode(Node, ModularTreeNode):
             col.prop(self, i)
 
     def execute(self):
+        print("trunk_node")
         tree = add_basic_trunk(self.radius, self.radius_decrease, self.randomness, self.up_attraction, self.twist, self.height, self.branch_length)
         return tree
 

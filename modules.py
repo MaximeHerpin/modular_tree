@@ -5,7 +5,7 @@
 
 
 
-from collections import defaultdict
+
 import bpy, bmesh
 import numpy as np
 from mathutils import Vector, Matrix
@@ -149,6 +149,7 @@ def draw_module(root, resolution_levels):
     verts = [[] for i in range(resolution_levels+1)]
     faces = [[] for i in range(resolution_levels+1)]
     uvs = [[] for i in range(resolution_levels+1)]
+    v_groups = [[] for i in range(resolution_levels+1)]
 
 
     extremities = [root]
@@ -164,6 +165,7 @@ def draw_module(root, resolution_levels):
                     verts[resolution].extend(new_module.verts)
                     faces[resolution].extend(new_module.faces)
                     uvs[resolution].extend(new_module.uvs)
+                    v_groups[resolution].append((list(range(curr_verts_number, curr_verts_number+len(new_module.verts))), new_module.base_radius))
                     new_extremities.append(new_module)
 
         extremities = new_extremities
@@ -199,6 +201,9 @@ def draw_module(root, resolution_levels):
 
         obj = bpy.data.objects.new("tree", mesh)
         obj.location = Vector((0, 0, 0))
+        vg = obj.vertex_groups.new("radius")
+        for weights in v_groups[i]:
+            vg.add(weights[0], weights[1], 'REPLACE')
         bpy.context.scene.objects.link(obj)
         bpy.context.scene.objects.active = obj
         obj["is_tree"] = True
@@ -216,7 +221,6 @@ def draw_module(root, resolution_levels):
     bpy.ops.object.convert(target='MESH')
     bpy.ops.object.join()
     bridge(bpy.context.object)
-
 
 
 def visualize_with_curves(root):
@@ -264,7 +268,7 @@ def roll_indexes(indexes, angle_diff):
 
 
 def apply_resolution_rec(module, resolution_levels, max_radius, parent_res, parent_type):
-    resolution = int(resolution_levels * module.base_radius / max_radius +.7)
+    resolution = int(resolution_levels * module.base_radius / max_radius +.6)
     if module.type == 'branch' and parent_type == 'branch':
         module.resolution = resolution
         if resolution < parent_res:
@@ -457,7 +461,7 @@ class Branch(Module):
         uv_height = self.uv_height
         v2 = [v + Vector((0,0, self.length)) for v in square(self.head_1_radius)]
         if self.draw_base:
-            v2.extend(square(self.base_radius))
+            v2.extend([v + Vector((0,0, self.length/4)) for v in square(self.base_radius)])
         self.verts = v2
 
         i0, i1, i2, i3 = base_indexes
