@@ -288,7 +288,6 @@ class SplitNode(Node, ModularTreeNode):
             col.prop(self, i)
 
     def execute(self):
-        print("split_node", level)
         from_node = self.inputs['Tree'].links[0].from_node
         tree = from_node.execute()
 
@@ -382,7 +381,6 @@ class TrunkNode(Node, ModularTreeNode):
             col.prop(self, i)
 
     def execute(self):
-        print("trunk_node")
         tree = add_basic_trunk(self.radius, self.radius_decrease, self.randomness, self.up_attraction, self.twist, self.height, self.branch_length)
         return tree
 
