@@ -20,14 +20,17 @@
 from mathutils import Vector, Matrix, Euler
 from random import random, randint, seed
 from math import pi, radians, exp, sqrt, atan
+from import numpy as np
 
 import bpy
 import bmesh
+import csv
 
 
 from .nodes import get_node_group, curve_node_mapping
 from .pruning import *
 from .clock import Clock
+from time import time
 
 from .particle_configurator import create_system
 from .material_tools import build_bark_material
@@ -1164,13 +1167,13 @@ def join(verts, faces, indexes, object_verts, object_faces, scale, i1, i2, entre
     to_be_painted += indexes
     uv_list += [[Vector(uv)+Vector((0, height)) for uv in u] for u in jonc_uv]
     faces += [add_tuple(f, n) for f in object_faces]
-    verts += [barycentre + i for i in v]
+    verts.extend( [barycentre + i for i in v])
     joindre(verts, faces, indexes, nentree)
     uv_list += [[m*Vector(uv) for uv in u] for u in branch.uv]
 
     i1 = [n + i for i in i1]
     i2 = [n + i for i in i2]
-            
+
     return i1, i2, d1, d2, r1, r2, to_be_painted  # no need to return i1[0] and i2[0]...just do that outside of the func
 
 
@@ -1213,7 +1216,7 @@ def join_branch(verts, faces, indexes, scale, branch_length, branch_verts, direc
     n = len(verts)
     v = rot_scale(branch_verts, scale, direction, 0)
     nentree = [n + i for i in range(8)]
-    verts += [ve + barycentre for ve in v]
+    verts.extend( [ve + barycentre for ve in v])
     joindre(verts, faces, indexes, nentree)
 
     uv_scale = 3*branch_length / real_radius
@@ -1360,7 +1363,7 @@ def rehash_set(s, p_dist):
 
 
 def smooth_stroke(iterations, smooth, points):
-    
+
     for i in range(iterations):
         new_points = list()
         new_points.append(points[0])
@@ -1406,6 +1409,13 @@ class Tree:
     def __init__(self, position=Vector((0, 0, 0))):
         scene = bpy.context.scene
         mtree_props = scene.mtree_props
+
+        total_iterations = mtree_props.iteration + mtree_props.trunk_length
+        # interpolation function from test data
+        points_number_prediction = int(220000 / (1 + exp(-.2 * (total_iterations - 30))))
+        self.verts = np.array()
+
+
         self.verts = []
         self.edges = []
         self.faces = []
@@ -1922,7 +1932,7 @@ def eval_tree_validity(operator, node_tree):
 def alt_create_tree(operator, position=Vector((0,0,0))):
     scene = bpy.context.scene
     mtree_props = scene.mtree_props
-
+    delta_t = time()
     clock = Clock("create_tree")
 
     if mtree_props.use_node_workflow:
@@ -1978,6 +1988,15 @@ def alt_create_tree(operator, position=Vector((0,0,0))):
     clock.stop("create_tree")
     print("\nDeveloper Info:")
     clock.display()
+    delta_t -= time()
+    delta_t *= -1
+    verts_len = len(tree.verts)
+    n =  mtree_props.iteration + mtree_props.trunk_length
+
+    with open('G:/Max/3D/Blender/Addons/Modular Tree/time2.csv', 'a') as csvfile:
+        spamwriter = csv.writer(csvfile, delimiter=' ',
+                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        spamwriter.writerow([n, verts_len, delta_t])
 
     return obj
 
@@ -2259,7 +2278,7 @@ def late_roots(node_tree, tree):
     print("generating late roots")
     tree.last_iteration = mtree_props.roots_iteration
     n = len(tree.verts)
-    tree.verts += [Vector(v) * mtree_props.radius for v in R1.verts]
+    tree.verts.extend( [Vector(v) * mtree_props.radius for v in R1.verts])
     tree.vcol_rad += [mtree_props.radius] * len(R1.verts)
     tree.faces += [add_tuple(f, n) for f in R1.faces]
     tree.uv_list += R1.uv
