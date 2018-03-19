@@ -34,7 +34,7 @@ def grow(root, iterations, min_radius, limit_method, branch_length, split_proba,
             if key not in density_dict:
                 density_dict[key] = 0.0
             dist_from_axis = (module.position - root.position).xy.length
-            if random()*(pruning_strength*density_dict[key] + dist_from_axis/30 * shape_factor) < 1:
+            if random()*(pruning_strength*density_dict[key] + dist_from_axis/30 * shape_factor) * int(module.position.z > 0) < 1:
                 radius = module.head_1_radius if head == 0 else module.head_2_radius
                 if not (limit_method == "radius" and radius < min_radius):
                     position = module.get_head_pos(head)

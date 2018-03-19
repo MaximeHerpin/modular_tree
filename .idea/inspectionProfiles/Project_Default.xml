@@ -14,6 +14,7 @@
         <list>
           <option value="tree_creator.mathutils" />
           <option value="int.*" />
+          <option value="cython.tree_functions.DTYPE_t" />
         </list>
       </option>
     </inspection_tool>

@@ -46,48 +46,48 @@ def get_last_memory_match(new, old):
     return level
 
 
-class ModalModularTreedOperator(bpy.types.Operator):
-    """real time tree tweaking"""
-    bl_idname = "object.modal_tree_operator"
-    bl_label = "Modal Tree Operator"
-
-
-    _timer = None
-
-    node = None
-    tree = None
-
-    def modal(self, context, event):
-        if event.type in {'ESC'}:
-            self.cancel(context)
-            self.node.auto_update = False
-            return {'CANCELLED'}
-
-        if event.type == 'TIMER':
-
-            new_memory = get_tree_parameters_rec("", self.node)
-            level = get_last_memory_match(new_memory, self.node.memory)
-            if level > 0:
-            # if new_memory != self.node.memory:
-                bpy.ops.object.delete(use_global=False)
-                self.node.memory = new_memory
-                self.tree = self.node.execute()
-
-        return {'PASS_THROUGH'}
-
-    def execute(self, context):
-        wm = context.window_manager
-        self.node = bpy.context.active_node.id_data.nodes.get("BuildTree")
-        self._timer = wm.event_timer_add(0.1, context.window)
-        wm.modal_handler_add(self)
-        self.node.auto_update = True
-        # self.tree = self.node.execute()
-        # self.node = bpy.context.active_node.id_data.nodes.get("BuildTree")
-        return {'RUNNING_MODAL'}
-
-    def cancel(self, context):
-        wm = context.window_manager
-        wm.event_timer_remove(self._timer)
+# class ModalModularTreedOperator(bpy.types.Operator):
+#     """real time tree tweaking"""
+#     bl_idname = "object.modal_tree_operator"
+#     bl_label = "Modal Tree Operator"
+#
+#
+#     _timer = None
+#
+#     node = None
+#     tree = None
+#
+#     def modal(self, context, event):
+#         if event.type in {'ESC'}:
+#             self.cancel(context)
+#             self.node.auto_update = False
+#             return {'CANCELLED'}
+#
+#         if event.type == 'TIMER':
+#
+#             new_memory = get_tree_parameters_rec("", self.node)
+#             level = get_last_memory_match(new_memory, self.node.memory)
+#             if level > 0:
+#             # if new_memory != self.node.memory:
+#                 bpy.ops.object.delete(use_global=False)
+#                 self.node.memory = new_memory
+#                 self.tree = self.node.execute()
+#
+#         return {'PASS_THROUGH'}
+#
+#     def execute(self, context):
+#         wm = context.window_manager
+#         self.node = bpy.context.active_node.id_data.nodes.get("BuildTree")
+#         self._timer = wm.event_timer_add(0.1, context.window)
+#         wm.modal_handler_add(self)
+#         self.node.auto_update = True
+#         # self.tree = self.node.execute()
+#         # self.node = bpy.context.active_node.id_data.nodes.get("BuildTree")
+#         return {'RUNNING_MODAL'}
+#
+#     def cancel(self, context):
+#         wm = context.window_manager
+#         wm.event_timer_remove(self._timer)
 
 
 class ModularTree(NodeTree):
@@ -174,11 +174,13 @@ class BuildTreeNode(Node, ModularTreeNode):
         if self.mesh_type == "final":
             layout.prop(self, "resolution_levels")
         layout.prop(self, "seed")
-        row = layout.row()
-        row.operator("object.modal_tree_operator", text='auto_update_tree')
+        box = layout.row()
         # row.prop(self, "auto_update")
-        if not self.auto_update:
-            row.operator("mod_tree.tree_from_nodes", text='create tree').node_name = self.name
+        if self.auto_update:
+            box.label("press ESC to stop")
+            box.operator("object.modal_tree_operator", text='auto_update_tree')
+        else:
+            box.operator("mod_tree.tree_from_nodes", text='create tree')
 
         box = layout.box()
         box.prop(self, "armature")
