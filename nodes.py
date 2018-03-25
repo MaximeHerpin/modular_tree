@@ -16,12 +16,22 @@ from .tree_functions import draw_module, add_splits, grow, add_basic_trunk, add_
 from .modules import visualize_with_curves
 
 
-def get_tree_parameters_rec(state_list, node):
-    if node.bl_idname != "BuildTreeNode":
-        state_list += str(node.items()) + ","
+def get_tree_parameters_rec(state_list, node, props_dict):
+    if props_dict is None:
+        props_dict = {"SplitNode": ['proba', "split_angle", "spin", "head_size", "offset"],
+                     "GrowNode": ["advanced_settings", "limit_method", "branch_length", "split_proba", "randomness", "gravity_strength", "split_angle",
+                              "split_deviation", "split_radius", "radius_decrease", "spin", "spin_randomness", "pruning_strength", "shape_factor"],
+                     "TrunkNode": ["radius", "height", "branch_length", "radius_decrease", "randomness", "up_attraction", "twist"],
+                     "GreasePencilNode": ["smooth_iterations", "radius", "radius_decrease", "branch_length"],
+                     "BuildTreeNode": ["mesh_type", "resolution_levels", "seed", "auto_update", "scale", "armature", "min_armature_radius", "min_length", "create_particle_emitter",
+                                   "dupli_object", "max_radius", "particle_proba"]}
+    for prop in props_dict[node.bl_idname]:
 
-    else:
-        state_list += str(node.seed) + str(node.mesh_type) + str(node.armature) + str(node.min_length) + ","
+        state_list += prop + ' ' + str(getattr(node, prop)) + ";"
+
+    state_list += ','
+    # else:
+    #     state_list += "{};{};{};{};{};{};" str(node.seed) + str(node.mesh_type) + str(node.armature) + str(node.min_length) + ","
 
     if node.bl_idname == "GreasePencilNode" or node.bl_idname == "TrunkNode":
         return state_list
@@ -32,7 +42,32 @@ def get_tree_parameters_rec(state_list, node):
         return state_list
 
     if from_node is not None:
-        return get_tree_parameters_rec(state_list, from_node)
+        return get_tree_parameters_rec(state_list, from_node, props_dict)
+
+
+def get_change_level(new, old):
+    if old == new:
+        return "unchanged"
+
+    new = new.split(",")
+    old = old.split(",")
+    if len(new) != len(old):
+        return "gen"
+
+    for i in range(1, len(new)):
+        if new[i] != old[i]:
+            return "gen"
+
+    new = new[0].split(';')
+    old = old[0].split(';')
+
+    for i in range(len(new)):
+        if new[i] != old[i]:
+            if i < 4:
+                return "gen"
+            elif i == 4:
+                print('scale')
+                return "scale"
 
 
 def get_last_memory_match(new, old):
@@ -151,8 +186,10 @@ class BuildTreeNode(Node, ModularTreeNode):
         name="visualisation",
         default="preview")
     resolution_levels = IntProperty(min=0, default=1)
-    auto_update = BoolProperty(default=False)
     seed = IntProperty(default=42)
+    auto_update = BoolProperty(default=False)
+
+    scale = FloatProperty(min = .001, default=1)
 
     armature = BoolProperty(default=False)
     min_armature_radius = FloatProperty(min=0, default=.3)
@@ -166,7 +203,7 @@ class BuildTreeNode(Node, ModularTreeNode):
 
     def init(self, context):
         self.inputs.new("TreeSocketType", "Tree")
-        self.memory = get_tree_parameters_rec("", self)
+        self.memory = get_tree_parameters_rec("", self, None)
 
 
     def draw_buttons(self, context, layout):
@@ -174,12 +211,14 @@ class BuildTreeNode(Node, ModularTreeNode):
         if self.mesh_type == "final":
             layout.prop(self, "resolution_levels")
         layout.prop(self, "seed")
+        layout.prop(self, "scale")
         box = layout.row()
         # row.prop(self, "auto_update")
         if self.auto_update:
             box.label("press ESC to stop")
-            box.operator("object.modal_tree_operator", text='auto_update_tree')
+
         else:
+            box.operator("object.modal_tree_operator", text='auto_update_tree')
             box.operator("mod_tree.tree_from_nodes", text='create tree')
 
         box = layout.box()
@@ -192,30 +231,45 @@ class BuildTreeNode(Node, ModularTreeNode):
         box.prop(self, "create_particle_emitter")
         if self.create_particle_emitter:
             box.prop(self, "max_radius")
+            layout.prop_search(self, "dupli_object", context.scene, "objects")
 
 
-    def execute(self, rebuild=True, old_tree=None):
+    def execute(self, level="gen", old_tree=None):
         print("build_node")
         random.seed(self.seed)
         from_node = self.inputs['Tree'].links[0].from_node
         t0 = time.time()
+        t1 = time.time()
+        rebuild = level == "gen"
         if rebuild:
             tree = from_node.execute()
-        else:
-            tree = old_tree
-        t1 = time.time()
-        if rebuild:
+            t1 = time.time()
             if self.mesh_type == "final":
                 draw_module(tree, self.resolution_levels)
             else:
                 visualize_with_curves(tree)
+        else:
+            tree = old_tree
+
+        tree_object = bpy.context.object
+        if level != "scale":
+            tree_object.scale = tuple([self.scale * .3]*3)
 
         if self.armature:
             amt = add_armature(tree, self.min_armature_radius, self.min_length)
+            tree_object["amt"] = amt.name
             amt.select = True
+            amt.scale = tuple([self.scale * .3] * 3)
 
         if self.create_particle_emitter:
-            add_particles_emitter(tree, self.max_radius, self.particle_proba)
+            emitter = add_particles_emitter(tree, self.max_radius, self.particle_proba, bpy.context.scene.objects.get(self.dupli_object))
+            tree_object["emitter"] = emitter.name
+            emitter.select = True
+            emitter.scale = tuple([self.scale * .3] * 3)
+
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+
+
         t2 = time.time()
         print("creating tree", t1 - t0)
         print("building object", t2 - t1)
@@ -224,7 +278,7 @@ class BuildTreeNode(Node, ModularTreeNode):
 
 class GreasePencilNode(Node, ModularTreeNode):
     bl_idname = "GreasePencilNode"
-    bl_label = "Grease Pencil"
+    bl_label = "Grease_Pencil"
 
     smooth_iterations = IntProperty(min=0, default=1)
     radius = FloatProperty(min=0, default=.7)
@@ -404,19 +458,19 @@ node_categories = [ModularTreeNodeCategory("inputs", "inputs", items=[NodeItem(i
 node_classes_to_register = [ModularTree, TreeSocket, BuildTreeNode, GreasePencilNode, SplitNode, GrowNode, TrunkNode]
 
 
-@persistent
-def has_nodes_changed(dummy):
-    node = bpy.context.active_node.id_data.nodes.get("BuildTree")
-    new_memory = get_tree_parameters_rec("", node)
-    # new_memory = "coucou"
-    # condition = True
-    if node.auto_update and new_memory != node.memory:
-        bpy.ops.object.delete(use_global=False)
-        node.execute()
-        # bpy.ops.mod_tree.tree_from_nodes()
-
-        node.memory = new_memory
-        # node.execute()
-
-
-bpy.app.handlers.frame_change_pre.append(has_nodes_changed)
+# @persistent
+# def has_nodes_changed(dummy):
+#     node = bpy.context.active_node.id_data.nodes.get("BuildTree")
+#     new_memory = get_tree_parameters_rec("", node)
+#     # new_memory = "coucou"
+#     # condition = True
+#     if node.auto_update and new_memory != node.memory:
+#         bpy.ops.object.delete(use_global=False)
+#         node.execute()
+#         # bpy.ops.mod_tree.tree_from_nodes()
+#
+#         node.memory = new_memory
+#         # node.execute()
+#
+#
+# bpy.app.handlers.frame_change_pre.append(has_nodes_changed)

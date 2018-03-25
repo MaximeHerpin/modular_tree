@@ -10,10 +10,15 @@ bl_info = {
     "category": "Add Mesh"}
 
 from . import addon_updater_ops
-import bpy
-import nodeitems_utils
-from .nodes import node_classes_to_register, node_categories, get_last_memory_match, get_tree_parameters_rec
+from .nodes import node_classes_to_register, node_categories, get_last_memory_match, get_tree_parameters_rec, get_change_level
 from .wind import ModalWindOperator
+from .toolbar_functions import TrunkDisplacement
+
+import bpy
+from bpy.types import Operator
+from bpy.props import IntProperty, FloatProperty, EnumProperty, BoolProperty, StringProperty
+
+import nodeitems_utils
 
 
 class Preferences(bpy.types.AddonPreferences):
@@ -59,7 +64,7 @@ class Preferences(bpy.types.AddonPreferences):
 
 class WindPanel(bpy.types.Panel):
     bl_label = "Modular tree wind"
-    bl_idname = "3D_VIEW_PT_layout_WIND"
+    bl_idname = "mod_tree.wind_panel"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
     bl_context = "objectmode"
@@ -71,7 +76,21 @@ class WindPanel(bpy.types.Panel):
         row.operator("object.modal_wind_operator", icon="FORCE_WIND")
 
 
-class ModalModularTreedOperator(bpy.types.Operator):
+class DetailsPanel(bpy.types.Panel):
+    bl_label = "Modular tree details"
+    bl_idname = "mod_tree.details_panel"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'TOOLS'
+    bl_context = "objectmode"
+    bl_category = 'Tree'
+
+    def draw(self, context):
+        layout = self.layout
+        row = layout.row()
+        row.operator("mod_tree.trunk_displace", icon="MOD_DISPLACE")
+
+
+class ModalModularTreedOperator(Operator):
     """real time tree tweaking"""
     bl_idname = "object.modal_tree_operator"
     bl_label = "Modal Tree Operator"
@@ -88,12 +107,14 @@ class ModalModularTreedOperator(bpy.types.Operator):
 
         if event.type == 'TIMER':
 
-            new_memory = get_tree_parameters_rec("", self.node)
-            level = get_last_memory_match(new_memory, self.node.memory)
-            if level > 0:
-                bpy.ops.object.delete(use_global=False)
+            new_memory = get_tree_parameters_rec("", self.node, None)
+            # level = get_last_memory_match(new_memory, self.node.memory)
+            level = get_change_level(new_memory, self.node.memory)
+            if level != "unchanged":
+                if level == "gen":
+                    delete_old_tree()
                 self.node.memory = new_memory
-                self.tree = self.node.execute()
+                self.tree = self.node.execute(level, self.tree)
 
         return {'PASS_THROUGH'}
 
@@ -110,6 +131,70 @@ class ModalModularTreedOperator(bpy.types.Operator):
     def cancel(self, context):
         wm = context.window_manager
         wm.event_timer_remove(self._timer)
+
+
+class MakeTreeFromNodes(Operator):
+    """makes a tree from a node group"""
+    bl_idname = "mod_tree.tree_from_nodes"
+    bl_label = " Make Tree"
+    bl_options = {"REGISTER", "UNDO"}
+
+    node_group_name = StringProperty()
+    node_name = StringProperty()
+
+    def draw(self, context):
+        pass
+
+    def execute(self, context):
+        delete_old_tree()
+        # node = bpy.data.node_groups.get("NodeTree.002").nodes.get("BuildTree")
+        node = context.active_node.id_data.nodes.get("BuildTree")
+        node.execute()
+
+        # bpy.ops.object.subdivision_set(level=1)
+
+        return {'FINISHED'}
+
+
+class visualize_with_curves(Operator):
+    """makes a tree from a node group"""
+    bl_idname = "mod_tree.visualize"
+    bl_label = " visualize Tree"
+    bl_options = {"REGISTER", "UNDO"}
+
+    node_group_name = StringProperty()
+    node_name = StringProperty()
+
+    def draw(self, context):
+        pass
+
+    def execute(self, context):
+        bpy.ops.object.delete(use_global=False)
+        print("tree")
+        print(self.node_name)
+        print(self.node_group_name)
+        node = bpy.data.node_groups.get("NodeTree.002").nodes.get("BuildTree")
+        node.execute()
+
+        # bpy.ops.object.subdivision_set(level=1)
+
+        return {'FINISHED'}
+
+
+def delete_old_tree():
+    obj = bpy.context.object
+    bpy.ops.object.select_all(action='DESELECT')
+    if obj is not None and obj.get("is_tree") is not None:
+        obj.select = True
+        if obj.get("amt") is not None:
+            amt = bpy.context.scene.objects.get(obj.get("amt"))
+            if amt is not None:
+                amt.select = True
+        if obj.get("emitter") is not None:
+            emitter = bpy.context.scene.objects.get(obj.get("emitter"))
+            if emitter is not None:
+                emitter.select = True
+    bpy.ops.object.delete(use_global=False)
 
 
 def register():

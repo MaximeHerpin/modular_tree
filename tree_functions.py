@@ -222,6 +222,7 @@ def add_particles_emitter(root, max_radius, proba, dupli_object):
     for i in range(len(verts)):
         vg.add([i], weights[i//4], "ADD")
     create_particle_system(obj, len(verts), vg, dupli_object, 1)
+    return obj
 
 
 def add_emitters_rec(module, max_radius, verts, proba, weights):
@@ -235,7 +236,7 @@ def add_emitters_rec(module, max_radius, verts, proba, weights):
         v = square(.1)
         rot = direction.rotation_difference(Vector((0, 0, 1))).to_matrix()
         verts.extend([i*rot + module.position for i in v])
-        weights.append(min(1, module.base_radius))
+        weights.append(min(1, module.base_radius)/2 + .5)
 
     if module .head_module_1 is not None:
         add_emitters_rec(module.head_module_1, max_radius, verts, proba, weights)
@@ -275,7 +276,8 @@ def create_particle_system(obj, number, vertex_group, dupli_object, size):
     settings.phase_factor_random = 0.2
     settings.phase_factor_random = 0.30303
     settings.factor_random = 0.2
-    settings.vertex_group_length = vertex_group
+    leaf.particle_system.vertex_group_length = vertex_group.name
+
 
 
 
