@@ -1,3 +1,5 @@
+import os
+
 import bpy
 import nodeitems_utils
 import time
@@ -20,14 +22,18 @@ def get_tree_parameters_rec(state_list, node, props_dict):
     if props_dict is None:
         props_dict = {"SplitNode": ['proba', "split_angle", "spin", "head_size", "offset"],
                      "GrowNode": ["advanced_settings", "limit_method", "branch_length", "split_proba", "randomness", "gravity_strength", "split_angle",
-                              "split_deviation", "split_radius", "radius_decrease", "spin", "spin_randomness", "pruning_strength", "shape_factor"],
+                              "split_deviation", "split_radius", "radius_decrease", "spin", "spin_randomness", "pruning_strength", "shape_factor",
+                                  "up_attraction", "iterations", "radius"],
                      "TrunkNode": ["radius", "height", "branch_length", "radius_decrease", "randomness", "up_attraction", "twist"],
                      "GreasePencilNode": ["smooth_iterations", "radius", "radius_decrease", "branch_length"],
                      "BuildTreeNode": ["mesh_type", "resolution_levels", "seed", "auto_update", "scale", "armature", "min_armature_radius", "min_length", "create_particle_emitter",
-                                   "dupli_object", "max_radius", "particle_proba"]}
+                                   "dupli_object", "max_radius", "particle_proba", "material"]}
     for prop in props_dict[node.bl_idname]:
-
-        state_list += prop + ' ' + str(getattr(node, prop)) + ";"
+        value = getattr(node, prop)
+        if type(value) != str:
+            value = str(round(value, 3))
+        state_list += value + ";"
+        # state_list += prop + ' ' + str(round(getattr(node, prop), 3)) + ";"
 
     state_list += ','
     # else:
@@ -66,8 +72,13 @@ def get_change_level(new, old):
             if i < 4:
                 return "gen"
             elif i == 4:
-                print('scale')
                 return "scale"
+            elif i < 8:
+                return "armature"
+            elif i < 12:
+                return "emitter"
+            else:
+                return "material"
 
 
 def get_last_memory_match(new, old):
@@ -189,7 +200,7 @@ class BuildTreeNode(Node, ModularTreeNode):
     seed = IntProperty(default=42)
     auto_update = BoolProperty(default=False)
 
-    scale = FloatProperty(min = .001, default=1)
+    scale = FloatProperty(min=.001, default=1)
 
     armature = BoolProperty(default=False)
     min_armature_radius = FloatProperty(min=0, default=.3)
@@ -199,12 +210,22 @@ class BuildTreeNode(Node, ModularTreeNode):
     dupli_object = StringProperty(default="")
     max_radius = FloatProperty(default=.2, min=0)
     particle_proba = FloatProperty(default=.5, min=0, max=1)
-
+    material = StringProperty(default="")
 
     def init(self, context):
         self.inputs.new("TreeSocketType", "Tree")
         self.memory = get_tree_parameters_rec("", self, None)
 
+        path = os.path.dirname(__file__) + "/materials/materials.blend\\Material\\"
+
+        if bpy.data.materials.get("birch") is None:
+            bpy.ops.wm.append(filename="birch", directory=path)
+        if bpy.data.materials.get("oak") is None:
+            bpy.ops.wm.append(filename="oak", directory=path)
+        if bpy.data.materials.get("Pine") is None:
+            bpy.ops.wm.append(filename="Pine", directory=path)
+        if bpy.data.materials.get("Redwood") is None:
+            bpy.ops.wm.append(filename="Redwood", directory=path)
 
     def draw_buttons(self, context, layout):
         layout.prop(self, "mesh_type")
@@ -231,11 +252,14 @@ class BuildTreeNode(Node, ModularTreeNode):
         box.prop(self, "create_particle_emitter")
         if self.create_particle_emitter:
             box.prop(self, "max_radius")
+            box.prop(self, "particle_proba")
             layout.prop_search(self, "dupli_object", context.scene, "objects")
 
+        layout.prop_search(self, "material", bpy.data, "materials")
 
     def execute(self, level="gen", old_tree=None):
         print("build_node")
+        print(level)
         random.seed(self.seed)
         from_node = self.inputs['Tree'].links[0].from_node
         t0 = time.time()
@@ -252,22 +276,23 @@ class BuildTreeNode(Node, ModularTreeNode):
             tree = old_tree
 
         tree_object = bpy.context.object
-        if level != "scale":
+        if level in ("gen", "scale"):
             tree_object.scale = tuple([self.scale * .3]*3)
 
-        if self.armature:
+        if self.armature and level in ("armature", "gen"):
             amt = add_armature(tree, self.min_armature_radius, self.min_length)
             tree_object["amt"] = amt.name
-            amt.select = True
+            # amt.select = True
             amt.scale = tuple([self.scale * .3] * 3)
 
-        if self.create_particle_emitter:
+        if self.create_particle_emitter and level in ("emitter", "gen"):
             emitter = add_particles_emitter(tree, self.max_radius, self.particle_proba, bpy.context.scene.objects.get(self.dupli_object))
             tree_object["emitter"] = emitter.name
-            emitter.select = True
+            # emitter.select = True
             emitter.scale = tuple([self.scale * .3] * 3)
 
-        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+        if bpy.data.materials.get(self.material) is not None and level in ("material", "gen"):
+            tree_object.active_material = bpy.data.materials.get(self.material)
 
 
         t2 = time.time()
@@ -321,11 +346,11 @@ class SplitNode(Node, ModularTreeNode):
     bl_idname = "SplitNode"
     bl_label = "Split"
 
-    proba = FloatProperty(min=0, max=1, default=.3)
-    split_angle = FloatProperty(min=0, max=180, default=45)
-    spin = FloatProperty(min=0, max=360, default=45)
-    head_size = FloatProperty(min=0.001, max=.999, default=.6)
-    offset = IntProperty(min=0, default=0)
+    proba = FloatProperty(min=0, max=1, default=.3, description="Probability of replacing a branch by a split")
+    split_angle = FloatProperty(min=0, max=180, default=45, description="Angle between the branch branch direction and the secondary split direction")
+    spin = FloatProperty(min=0, max=360, default=45, description="Rotation between each split")
+    head_size = FloatProperty(min=0.001, max=.999, default=.6, description="Size of the secondary branch compared to the main one")
+    offset = IntProperty(min=0, default=0, description="Number of branches before the first one")
 
     def init(self, context):
         self.inputs.new("TreeSocketType", "Tree")
@@ -375,6 +400,7 @@ class GrowNode(Node, ModularTreeNode):
     gravity_strength = FloatProperty(default=.1, description="Amount of downward attraction")
     pruning_strength = FloatProperty(default=1, description="Decrease the probability of branching when the density of branches is high")
     shape_factor = FloatProperty(default=1, min=0, description="Decrease of branching probability when the branch is far from the axis of the tree")
+    up_attraction = FloatProperty(default=.5, description="Favor branches going up")
 
     def init(self, context):
         self.inputs.new("TreeSocketType", "Tree")
@@ -387,15 +413,34 @@ class GrowNode(Node, ModularTreeNode):
         return [self.name]
 
     def draw_buttons(self, context, layout):
-        properties = ["advanced_settings", "limit_method", self.limit_method, "branch_length", "split_proba", "randomness", "gravity_strength"]
-        advanced_properties = ["split_angle", "split_deviation", "split_radius", "radius_decrease", "spin", "spin_randomness", "pruning_strength", "shape_factor"]
-        col = layout.column()
-        for i in properties:
-            col.prop(self, i)
+        layout.prop(self, "advanced_settings")
+        layout.prop(self, "limit_method")
+        box = layout.box()
+        box.prop(self, self.limit_method)
 
+        box = layout.box()
+        box.prop(self, "branch_length")
+        box.prop(self, "randomness")
         if self.advanced_settings:
-            for i in advanced_properties:
-                col.prop(self, i)
+            box.prop(self, "radius_decrease")
+        box.prop(self, "gravity_strength")
+
+        box = layout.box()
+        box.prop(self, "split_proba")
+        if self.advanced_settings:
+            box.prop(self, "split_angle")
+            box.prop(self, "split_deviation")
+            box.prop(self, "split_radius")
+
+            box = layout.box()
+            box.prop(self, "spin")
+            box.prop(self, "spin_randomness")
+
+        box = layout.box()
+        if self.advanced_settings:
+            box.prop(self, "pruning_strength")
+        box.prop(self, "shape_factor")
+        box.prop(self, "up_attraction")
 
     def execute(self):
         from_node = self.inputs['Tree'].links[0].from_node
@@ -405,7 +450,8 @@ class GrowNode(Node, ModularTreeNode):
         selection = self.inputs["Selection"].get_selection()
         grow(tree, self.iterations, self.radius, self.limit_method, self.branch_length, self.split_proba,
              self.split_angle, self.split_deviation, self.split_radius, self.radius_decrease, self.randomness,
-             self.spin, self.spin_randomness, self.selection[0], selection, self.gravity_strength, self.pruning_strength, self.shape_factor)
+             self.spin, self.spin_randomness, self.selection[0], selection, self.gravity_strength, self.pruning_strength,
+             self.shape_factor, self.up_attraction)
         return tree
 
 

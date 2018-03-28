@@ -9,10 +9,13 @@ bl_info = {
     "tracker_url": "https://github.com/MaximeHerpin/modular_tree/issues/new",
     "category": "Add Mesh"}
 
+import os
+
 from . import addon_updater_ops
 from .nodes import node_classes_to_register, node_categories, get_last_memory_match, get_tree_parameters_rec, get_change_level
 from .wind import ModalWindOperator
 from .toolbar_functions import TrunkDisplacement
+from .tree_functions import create_twig
 
 import bpy
 from bpy.types import Operator
@@ -111,8 +114,7 @@ class ModalModularTreedOperator(Operator):
             # level = get_last_memory_match(new_memory, self.node.memory)
             level = get_change_level(new_memory, self.node.memory)
             if level != "unchanged":
-                if level == "gen":
-                    delete_old_tree()
+                delete_old_tree(level)
                 self.node.memory = new_memory
                 self.tree = self.node.execute(level, self.tree)
 
@@ -130,6 +132,7 @@ class ModalModularTreedOperator(Operator):
 
     def cancel(self, context):
         wm = context.window_manager
+        self.node.auto_update = False
         wm.event_timer_remove(self._timer)
 
 
@@ -156,7 +159,57 @@ class MakeTreeFromNodes(Operator):
         return {'FINISHED'}
 
 
-class visualize_with_curves(Operator):
+class Twigoperator(Operator):
+    """create a branch with leafs"""
+    bl_idname = "mod_tree.twig"
+    bl_label = " Make Twig"
+    bl_options = {"REGISTER", "UNDO"}
+
+    seed = IntProperty(default=43)
+    length = FloatProperty(min=.01, default=20)
+    iterations = IntProperty(min=1, default=4)
+    radius = FloatProperty(min=0.001, default=.4)
+    randomness = FloatProperty(default=.4)
+    split_proba = FloatProperty(min=0, max=1, default=.3)
+    offset = IntProperty(min=0, default=5)
+    gravity_strength = FloatProperty(default=.5)
+    leaf_type = EnumProperty(
+        items=[('palmate', 'Palmate', ''), ('serrate', 'Serrate', ''), ('palmatisate', 'Palmatisate', '')],
+        name="leaf type",
+        default="palmate")
+    leaf_size = FloatProperty(min=0, default=1)
+    leaf_proba = FloatProperty(min=0, max=1, default=.5)
+
+
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(self, "seed")
+        layout.prop(self, "length")
+        layout.prop(self, "iterations")
+        layout.prop(self, "radius")
+        layout.prop(self, "randomness")
+        layout.prop(self, "split_proba")
+        layout.prop(self, "offset")
+        layout.prop(self, "gravity_strength")
+        layout.prop(self, "leaf_type")
+        layout.prop(self, "leaf_size")
+        layout.prop(self, "leaf_proba")
+
+    def execute(self, context):
+        bpy.ops.object.select_all(action='DESELECT')
+        path = os.path.dirname(__file__) + "/materials/materials.blend\\Object\\"
+        bpy.ops.wm.append(filename=self.leaf_type, directory=path)
+        leaf_object = bpy.context.scene.objects.get(self.leaf_type)
+        print("leaf:", leaf_object)
+
+        create_twig(random_seed=self.seed, length=self.length, iterations=self.iterations, randomness=self.randomness, radius=self.radius,
+                    split_proba=self.split_proba, offset=self.offset, gravity_strength=self.gravity_strength,
+                    particle_proba=self.leaf_proba, leaf=leaf_object, leaf_size=self.leaf_size * 20)
+
+        return {'FINISHED'}
+
+
+class VisualizeWithCurves(Operator):
     """makes a tree from a node group"""
     bl_idname = "mod_tree.visualize"
     bl_label = " visualize Tree"
@@ -181,16 +234,17 @@ class visualize_with_curves(Operator):
         return {'FINISHED'}
 
 
-def delete_old_tree():
+def delete_old_tree(level="gen"):
     obj = bpy.context.object
     bpy.ops.object.select_all(action='DESELECT')
     if obj is not None and obj.get("is_tree") is not None:
-        obj.select = True
-        if obj.get("amt") is not None:
+        if level == "gen":
+            obj.select = True
+        if obj.get("amt") is not None and level in {"amt", "gen"}:
             amt = bpy.context.scene.objects.get(obj.get("amt"))
             if amt is not None:
                 amt.select = True
-        if obj.get("emitter") is not None:
+        if obj.get("emitter") is not None and level in {"emitter", "gen"}:
             emitter = bpy.context.scene.objects.get(obj.get("emitter"))
             if emitter is not None:
                 emitter.select = True
