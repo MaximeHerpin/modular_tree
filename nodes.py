@@ -21,7 +21,7 @@ from .modules import visualize_with_curves
 def get_tree_parameters_rec(state_list, node, props_dict):
     if props_dict is None:
         props_dict = {"SplitNode": ['proba', "split_angle", "spin", "head_size", "offset"],
-                     "GrowNode": ["advanced_settings", "limit_method", "branch_length", "split_proba", "randomness", "gravity_strength", "split_angle",
+                     "GrowNode": ["limit_method", "branch_length", "split_proba", "randomness", "gravity_strength", "split_angle",
                               "split_deviation", "split_radius", "radius_decrease", "spin", "spin_randomness", "pruning_strength", "shape_factor",
                                   "up_attraction", "iterations", "radius"],
                      "TrunkNode": ["radius", "height", "branch_length", "radius_decrease", "randomness", "up_attraction", "twist"],
@@ -90,50 +90,6 @@ def get_last_memory_match(new, old):
             break
         level -= 1
     return level
-
-
-# class ModalModularTreedOperator(bpy.types.Operator):
-#     """real time tree tweaking"""
-#     bl_idname = "object.modal_tree_operator"
-#     bl_label = "Modal Tree Operator"
-#
-#
-#     _timer = None
-#
-#     node = None
-#     tree = None
-#
-#     def modal(self, context, event):
-#         if event.type in {'ESC'}:
-#             self.cancel(context)
-#             self.node.auto_update = False
-#             return {'CANCELLED'}
-#
-#         if event.type == 'TIMER':
-#
-#             new_memory = get_tree_parameters_rec("", self.node)
-#             level = get_last_memory_match(new_memory, self.node.memory)
-#             if level > 0:
-#             # if new_memory != self.node.memory:
-#                 bpy.ops.object.delete(use_global=False)
-#                 self.node.memory = new_memory
-#                 self.tree = self.node.execute()
-#
-#         return {'PASS_THROUGH'}
-#
-#     def execute(self, context):
-#         wm = context.window_manager
-#         self.node = bpy.context.active_node.id_data.nodes.get("BuildTree")
-#         self._timer = wm.event_timer_add(0.1, context.window)
-#         wm.modal_handler_add(self)
-#         self.node.auto_update = True
-#         # self.tree = self.node.execute()
-#         # self.node = bpy.context.active_node.id_data.nodes.get("BuildTree")
-#         return {'RUNNING_MODAL'}
-#
-#     def cancel(self, context):
-#         wm = context.window_manager
-#         wm.event_timer_remove(self._timer)
 
 
 class ModularTree(NodeTree):
@@ -213,19 +169,9 @@ class BuildTreeNode(Node, ModularTreeNode):
     material = StringProperty(default="")
 
     def init(self, context):
+
         self.inputs.new("TreeSocketType", "Tree")
         self.memory = get_tree_parameters_rec("", self, None)
-
-        path = os.path.dirname(__file__) + "/materials/materials.blend\\Material\\"
-
-        if bpy.data.materials.get("birch") is None:
-            bpy.ops.wm.append(filename="birch", directory=path)
-        if bpy.data.materials.get("oak") is None:
-            bpy.ops.wm.append(filename="oak", directory=path)
-        if bpy.data.materials.get("Pine") is None:
-            bpy.ops.wm.append(filename="Pine", directory=path)
-        if bpy.data.materials.get("Redwood") is None:
-            bpy.ops.wm.append(filename="Redwood", directory=path)
 
     def draw_buttons(self, context, layout):
         layout.prop(self, "mesh_type")
@@ -258,15 +204,18 @@ class BuildTreeNode(Node, ModularTreeNode):
         layout.prop_search(self, "material", bpy.data, "materials")
 
     def execute(self, level="gen", old_tree=None):
-        print("build_node")
-        print(level)
         random.seed(self.seed)
-        from_node = self.inputs['Tree'].links[0].from_node
+        try:
+            from_node = self.inputs['Tree'].links[0].from_node
+        except:
+            return None
         t0 = time.time()
         t1 = time.time()
         rebuild = level == "gen"
         if rebuild:
             tree = from_node.execute()
+            if tree is None:
+                return None
             t1 = time.time()
             if self.mesh_type == "final":
                 draw_module(tree, self.resolution_levels)
@@ -277,19 +226,19 @@ class BuildTreeNode(Node, ModularTreeNode):
 
         tree_object = bpy.context.object
         if level in ("gen", "scale"):
-            tree_object.scale = tuple([self.scale * .3]*3)
+            tree_object.scale = tuple([self.scale]*3)
 
         if self.armature and level in ("armature", "gen"):
             amt = add_armature(tree, self.min_armature_radius, self.min_length)
             tree_object["amt"] = amt.name
             # amt.select = True
-            amt.scale = tuple([self.scale * .3] * 3)
+            amt.scale = tuple([self.scale] * 3)
 
         if self.create_particle_emitter and level in ("emitter", "gen"):
             emitter = add_particles_emitter(tree, self.max_radius, self.particle_proba, bpy.context.scene.objects.get(self.dupli_object))
             tree_object["emitter"] = emitter.name
             # emitter.select = True
-            emitter.scale = tuple([self.scale * .3] * 3)
+            emitter.scale = tuple([self.scale] * 3)
 
         if bpy.data.materials.get(self.material) is not None and level in ("material", "gen"):
             tree_object.active_material = bpy.data.materials.get(self.material)
@@ -321,6 +270,16 @@ class GreasePencilNode(Node, ModularTreeNode):
 
     def draw_buttons(self, context, layout):
         properties = ["smooth_iterations", "radius", "radius_decrease", "branch_length"]
+        # bpy.ops.mod_tree.connect_strokes(point_dist=self.branch_length, automatic=True, connect_all=True,
+        #                                  child_stroke_index=1, parent_stroke_index=0,
+        #                                  smooth_iterations=self.smooth_iterations)
+
+        op_props = layout.operator("mod_tree.connect_strokes", text='update strokes')
+        op_props.point_dist = self.branch_length
+        op_props.connect_all = True
+        op_props.child_stroke_index = 1
+        op_props.parent_stroke_index = 0
+        op_props.smooth_iterations = self.smooth_iterations
         for i in properties:
             layout.prop(self, i)
 
@@ -329,13 +288,6 @@ class GreasePencilNode(Node, ModularTreeNode):
         gp = bpy.context.scene.grease_pencil
         if gp is not None and gp.layers.active is not None and gp.layers.active.active_frame is not None and len(
                 gp.layers.active.active_frame.strokes) > 0 and len(gp.layers.active.active_frame.strokes[0].points) > 1:
-
-            new_memory = str([[i.co for i in j.points] for j in gp.layers.active.active_frame.strokes]) + str(self.smooth_iterations) + str(self.branch_length)
-            if self.grease_pencil_memory != new_memory:
-                print("updating strokes")
-                bpy.ops.mod_tree.connect_strokes(point_dist=self.branch_length, automatic=True, connect_all=True,
-                                                 child_stroke_index=1, parent_stroke_index=0, smooth_iterations=self.smooth_iterations)
-                self.grease_pencil_memory = str([[i.co for i in j.points] for j in gp.layers.active.active_frame.strokes]) + str(self.smooth_iterations) + str(self.branch_length)
 
             strokes = [[i.co for i in j.points] for j in gp.layers.active.active_frame.strokes]
             root = build_tree_from_strokes(strokes, self.radius, self.radius_decrease)
@@ -369,8 +321,13 @@ class SplitNode(Node, ModularTreeNode):
             col.prop(self, i)
 
     def execute(self):
-        from_node = self.inputs['Tree'].links[0].from_node
+        try:
+            from_node = self.inputs['Tree'].links[0].from_node
+        except:
+            return None
         tree = from_node.execute()
+        if tree is None:
+            return None
 
         selection = self.inputs["Selection"].get_selection()
         add_splits(tree, self.proba, selection, self.selection[0], self.split_angle, self.spin/180*pi, self.head_size, self.offset)
@@ -408,6 +365,7 @@ class GrowNode(Node, ModularTreeNode):
         self.outputs.new("TreeSocketType", "Tree")
         self.outputs.new("SelectionSocketType", "Selection")
 
+
     @property
     def selection(self):
         return [self.name]
@@ -443,9 +401,14 @@ class GrowNode(Node, ModularTreeNode):
         box.prop(self, "up_attraction")
 
     def execute(self):
-        from_node = self.inputs['Tree'].links[0].from_node
+        try:
+            from_node = self.inputs['Tree'].links[0].from_node
+        except:
+            return None
 
         tree = from_node.execute()
+        if tree is None:
+            return None
 
         selection = self.inputs["Selection"].get_selection()
         grow(tree, self.iterations, self.radius, self.limit_method, self.branch_length, self.split_proba,

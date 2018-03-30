@@ -13,9 +13,10 @@ import os
 
 from . import addon_updater_ops
 from .nodes import node_classes_to_register, node_categories, get_last_memory_match, get_tree_parameters_rec, get_change_level
-from .wind import ModalWindOperator
-from .toolbar_functions import TrunkDisplacement
-from .tree_functions import create_twig
+from .wind import ModalWindOperator, FastWind
+from .toolbar_functions import TrunkDisplacement, Twigoperator
+from .color_ramp_sampler import ColorRampSampler,ColorRampPanel
+
 
 import bpy
 from bpy.types import Operator
@@ -76,11 +77,12 @@ class WindPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         row = layout.row()
-        row.operator("object.modal_wind_operator", icon="FORCE_WIND")
+        row.operator("mod_tree.modal_wind_operator", icon="FORCE_WIND")
+        row.operator("mod_tree.fast_wind", icon="FORCE_WIND")
 
 
 class DetailsPanel(bpy.types.Panel):
-    bl_label = "Modular tree details"
+    bl_label = "Tree tools"
     bl_idname = "mod_tree.details_panel"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
@@ -89,8 +91,9 @@ class DetailsPanel(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        row = layout.row()
-        row.operator("mod_tree.trunk_displace", icon="MOD_DISPLACE")
+        layout.operator("mod_tree.bark_materials")
+        layout.operator("mod_tree.trunk_displace", icon="MOD_DISPLACE")
+        layout.operator("mod_tree.twig")
 
 
 class ModalModularTreedOperator(Operator):
@@ -114,9 +117,14 @@ class ModalModularTreedOperator(Operator):
             # level = get_last_memory_match(new_memory, self.node.memory)
             level = get_change_level(new_memory, self.node.memory)
             if level != "unchanged":
+                print(level)
                 delete_old_tree(level)
                 self.node.memory = new_memory
                 self.tree = self.node.execute(level, self.tree)
+                if self.tree is None:
+                    self.report({'ERROR'}, "Invalid Node Tree")
+                    self.node.auto_update = False
+                    return {'CANCELLED'}
 
         return {'PASS_THROUGH'}
 
@@ -126,7 +134,8 @@ class ModalModularTreedOperator(Operator):
         self._timer = wm.event_timer_add(0.1, context.window)
         wm.modal_handler_add(self)
         self.node.auto_update = True
-        # self.tree = self.node.execute()
+        delete_old_tree(level="gen")
+        self.tree = self.node.execute()
         # self.node = bpy.context.active_node.id_data.nodes.get("BuildTree")
         return {'RUNNING_MODAL'}
 
@@ -152,59 +161,14 @@ class MakeTreeFromNodes(Operator):
         delete_old_tree()
         # node = bpy.data.node_groups.get("NodeTree.002").nodes.get("BuildTree")
         node = context.active_node.id_data.nodes.get("BuildTree")
-        node.execute()
+        tree = node.execute()
+        if tree is None:
+            self.report({'ERROR'}, "Invalid Node Tree")
+            node.auto_update = False
+            return {'CANCELLED'}
+
 
         # bpy.ops.object.subdivision_set(level=1)
-
-        return {'FINISHED'}
-
-
-class Twigoperator(Operator):
-    """create a branch with leafs"""
-    bl_idname = "mod_tree.twig"
-    bl_label = " Make Twig"
-    bl_options = {"REGISTER", "UNDO"}
-
-    seed = IntProperty(default=43)
-    length = FloatProperty(min=.01, default=20)
-    iterations = IntProperty(min=1, default=4)
-    radius = FloatProperty(min=0.001, default=.4)
-    randomness = FloatProperty(default=.4)
-    split_proba = FloatProperty(min=0, max=1, default=.3)
-    offset = IntProperty(min=0, default=5)
-    gravity_strength = FloatProperty(default=.5)
-    leaf_type = EnumProperty(
-        items=[('palmate', 'Palmate', ''), ('serrate', 'Serrate', ''), ('palmatisate', 'Palmatisate', '')],
-        name="leaf type",
-        default="palmate")
-    leaf_size = FloatProperty(min=0, default=1)
-    leaf_proba = FloatProperty(min=0, max=1, default=.5)
-
-
-    def draw(self, context):
-        layout = self.layout
-        layout.prop(self, "seed")
-        layout.prop(self, "length")
-        layout.prop(self, "iterations")
-        layout.prop(self, "radius")
-        layout.prop(self, "randomness")
-        layout.prop(self, "split_proba")
-        layout.prop(self, "offset")
-        layout.prop(self, "gravity_strength")
-        layout.prop(self, "leaf_type")
-        layout.prop(self, "leaf_size")
-        layout.prop(self, "leaf_proba")
-
-    def execute(self, context):
-        bpy.ops.object.select_all(action='DESELECT')
-        path = os.path.dirname(__file__) + "/materials/materials.blend\\Object\\"
-        bpy.ops.wm.append(filename=self.leaf_type, directory=path)
-        leaf_object = bpy.context.scene.objects.get(self.leaf_type)
-        print("leaf:", leaf_object)
-
-        create_twig(random_seed=self.seed, length=self.length, iterations=self.iterations, randomness=self.randomness, radius=self.radius,
-                    split_proba=self.split_proba, offset=self.offset, gravity_strength=self.gravity_strength,
-                    particle_proba=self.leaf_proba, leaf=leaf_object, leaf_size=self.leaf_size * 20)
 
         return {'FINISHED'}
 
@@ -237,8 +201,10 @@ class VisualizeWithCurves(Operator):
 def delete_old_tree(level="gen"):
     obj = bpy.context.object
     bpy.ops.object.select_all(action='DESELECT')
-    if obj is not None and obj.get("is_tree") is not None:
+    if obj is not None:# and obj.select: #and obj.get("is_tree") is not None:
+        print(obj.select)
         if level == "gen":
+            print("selecting")
             obj.select = True
         if obj.get("amt") is not None and level in {"amt", "gen"}:
             amt = bpy.context.scene.objects.get(obj.get("amt"))

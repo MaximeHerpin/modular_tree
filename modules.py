@@ -129,7 +129,7 @@ def draw_module(root, resolution_levels, twig=False):
         bm.to_mesh(mesh)
         bm.free()
         obj = bpy.data.objects.new(name, mesh)
-        obj.location = Vector((0, 0, 0))
+        obj.location = bpy.context.scene.cursor_location
         vg = obj.vertex_groups.new("radius")
         for weights in v_groups[i]:
             vg.add(weights[0], weights[1], 'REPLACE')
@@ -165,6 +165,7 @@ def visualize_with_curves(root):
     draw_curve_rec(root, polyline, curve_data)
 
     curveOB = bpy.data.objects.new('Tree', curve_data)
+    curveOB.location = bpy.context.scene.cursor_location
     curve_data.bevel_depth = 1
     curve_data.bevel_resolution = 0
     curve_data.fill_mode = 'FULL'

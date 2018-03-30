@@ -299,7 +299,8 @@ def create_particle_system(obj, number, vertex_group, dupli_object, size):
     leaf.particle_system.vertex_group_length = vertex_group.name
 
 
-def create_twig(random_seed, length, iterations, randomness, radius, split_proba, offset, gravity_strength, particle_proba, leaf, leaf_size):
+def create_twig(random_seed, length, iterations, randomness, radius, split_proba, offset, gravity_strength,
+                particle_proba, leaf, leaf_size, material):
     seed(random_seed)
     tree = add_basic_trunk(radius=radius, radius_decrease=.97, randomness=randomness, up_attraction=2, twist=0, height=length, branch_length=.8, horizontal=True)
 
@@ -311,6 +312,7 @@ def create_twig(random_seed, length, iterations, randomness, radius, split_proba
 
     draw_module(tree, 0, twig=True)
     obj = bpy.context.object
+    obj.active_material = bpy.data.materials.get(material)
     bpy.ops.object.select_all(action='DESELECT')
 
     emitter = add_particles_emitter(tree, radius * particle_proba / 2, particle_proba, leaf, leaf_size, ends_only=False)
@@ -324,6 +326,8 @@ def create_twig(random_seed, length, iterations, randomness, radius, split_proba
     obj.select = True
     bpy.context.scene.objects.active = obj
     bpy.ops.object.join()
+    obj.scale = (.2,.2,.2)
+
     bpy.ops.object.select_all(action='DESELECT')
     emitter.select = True
     leaf.select = True
