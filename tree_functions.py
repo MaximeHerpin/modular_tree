@@ -1,6 +1,6 @@
 from collections import deque
 
-from random import random, randint
+from random import random, seed
 from math import pi, sqrt, cos, sin, atan
 from mathutils import Vector, Matrix
 
@@ -13,8 +13,16 @@ from .modules import Root, Split, Branch, draw_module, square
 from .grease_pencil import build_tree_from_strokes
 
 
+def get_pruning_key(position, resolution=2):
+    result = []
+    for x in position.to_tuple():
+        result.append(int(x*resolution) / 2)
+    return tuple(result)
+
+
 def grow(root, iterations, min_radius, limit_method, branch_length, split_proba, split_angle, split_deviation,
-         split_radius, radius_decrease, randomness, spin, spin_randomness, creator, selection, gravity_strength, pruning_strength, shape_factor):
+         split_radius, radius_decrease, randomness, spin, spin_randomness, creator, selection, gravity_strength,
+         pruning_strength, shape_factor, up_attraction, kill_below_0=True):
     density_dict = root.density_dict
     extremities = []
     root.get_extremities_rec(extremities, selection)
@@ -30,11 +38,12 @@ def grow(root, iterations, min_radius, limit_method, branch_length, split_proba,
         iteration += 1
         new_extremities = []
         for module, head in extremities:
-            key = module.position.to_tuple(0)
+            key = get_pruning_key(module.position)
             if key not in density_dict:
                 density_dict[key] = 0.0
             dist_from_axis = (module.position - root.position).xy.length
-            if random()*(pruning_strength*density_dict[key] + dist_from_axis/30 * shape_factor) < 1:
+            if random()*(pruning_strength*density_dict[key] + dist_from_axis/30 * shape_factor - module.direction.z*up_attraction) < 1 \
+                    and (not kill_below_0 or module.position.z >= 0):
                 radius = module.head_1_radius if head == 0 else module.head_2_radius
                 if not (limit_method == "radius" and radius < min_radius):
                     position = module.get_head_pos(head)
@@ -78,38 +87,29 @@ def grow(root, iterations, min_radius, limit_method, branch_length, split_proba,
             condition = False
 
 
-def create_tree(iterations):
-    gp = bpy.context.scene.grease_pencil
-    if gp is not None and gp.layers.active is not None and gp.layers.active.active_frame is not None and len(
-            gp.layers.active.active_frame.strokes) > 0 and len(gp.layers.active.active_frame.strokes[0].points) > 1:
-
-        strokes = [[i.co for i in j.points] for j in gp.layers.active.active_frame.strokes]
-        root = build_tree_from_strokes(strokes)
-        add_splits(root, .3)
-        # grow(root, iterations)
-        draw_module(root)
-
-
-def add_basic_trunk(radius, radius_decrease, randomness, up_attraction, twist, height, branch_length):
-    root = Root(position=Vector((0,0,0)), direction=Vector((0, 0, 1)), radius=radius, resolution=0)
+def add_basic_trunk(radius, radius_decrease, randomness, up_attraction, twist, height, branch_length, horizontal=False):
+    direction = Vector((1, 0, 0)) if horizontal else Vector((0, 0, 1))
+    root = Root(position=Vector((0,0,0)), direction=direction, radius=radius, resolution=0)
     extremity = root
     while extremity.position.length < height:
-        direction = (extremity.direction + Vector((random()-.5, random()-.5, random()-.5)) * randomness + Vector((0, 0, 1)) * up_attraction).normalized()
+        direction = (extremity.direction + Vector((random()-.5, random()-.5, random()-.5)) * randomness + direction * up_attraction).normalized()
         new_module = Branch(extremity.get_head_pos(0), direction, extremity.head_1_radius, branch_length, radius_decrease, resolution=0, spin=extremity.spin + twist)
         extremity.head_module_1 = new_module
         extremity = new_module
     return root
 
 
-def add_splits(root, proba, selection, creator, split_angle, spin, head_size, offset):
-    add_splits_rec(root.head_module_1, root, 0, proba, selection, creator, split_angle, spin, root.spin, head_size, offset)
+def add_splits(root, proba, selection, creator, split_angle, spin, head_size, offset, constraint_z=False):
+    add_splits_rec(root.head_module_1, root, 0, proba, selection, creator, split_angle, spin, root.spin, head_size, offset, offset, constraint_z)
 
 
-def add_splits_rec(module, parent_module, head, proba, selection, creator, split_angle, spin, curr_spin, head_size, offset):
+def add_splits_rec(module, parent_module, head, proba, selection, creator, split_angle, spin, curr_spin, head_size, curr_offset, original_offset, constraint_z):
     if module is not None:
-        is_selected = offset <= 0 and (selection == [] or module.creator in selection)
+        is_selected = curr_offset <= 0 and (selection == [] or module.creator in selection)
         if module.type == 'branch' and parent_module.head_module_1 is not None and random() < proba and is_selected:
             curr_spin += spin
+            if constraint_z:
+                curr_spin = -90 + int(random() < .5) * 180
             split = Split(module.position, module.direction, module.base_radius, module.resolution,
                           module.starting_index, curr_spin, head_2_length=module.base_radius*2,
                           head_2_radius=head_size)
@@ -128,12 +128,15 @@ def add_splits_rec(module, parent_module, head, proba, selection, creator, split
                 parent_module.head_module_1 = split
             else:
                 parent_module.head_module_2 = split
-            add_splits_rec(split.head_module_1, module, 0, proba, selection, creator, split_angle, spin, curr_spin, head_size, max(0, offset-1))
+            add_splits_rec(split.head_module_1, module, 0, proba, selection, creator, split_angle, spin, curr_spin,
+                           head_size, max(0, curr_offset-1), original_offset, constraint_z)
 
         else:
-            add_splits_rec(module.head_module_1, module, 0, proba, selection, creator, split_angle, spin, curr_spin, head_size, max(0, offset - 1))
+            add_splits_rec(module.head_module_1, module, 0, proba, selection, creator, split_angle, spin, curr_spin,
+                           head_size, max(0, curr_offset - 1), original_offset, constraint_z)
             if module.type == 'split':
-                add_splits_rec(module.head_module_2, module, 1, proba, selection, creator, split_angle, spin, curr_spin, head_size, max(0, offset-1))
+                add_splits_rec(module.head_module_2, module, 1, proba, selection, creator, split_angle, spin, curr_spin,
+                               head_size, original_offset, original_offset, constraint_z)
 
 
 def add_armature(root, min_radius, min_dist):
@@ -186,7 +189,7 @@ def add_bone_rec(module, amt, min_radius, parent, min_dist):
             add_bone_rec(module.head_module_2, amt, min_radius, parent, min_dist)
 
 
-def add_particles_emitter(root, max_radius, proba, dupli_object):
+def add_particles_emitter(root, max_radius, proba, dupli_object, size=1, ends_only=True):
     mesh = bpy.data.meshes.new("tree_leaves_emitter")
     bm = bmesh.new()
     bm.from_mesh(mesh)
@@ -194,7 +197,8 @@ def add_particles_emitter(root, max_radius, proba, dupli_object):
     verts = deque()
     weights = deque()
 
-    add_emitters_rec(root, max_radius, verts, proba, weights)
+    density_dict = root.density_dict
+    add_emitters_rec(root, max_radius, verts, proba, weights, density_dict, ends_only)
 
     verts = list(verts)
     weights = list(weights)
@@ -215,32 +219,49 @@ def add_particles_emitter(root, max_radius, proba, dupli_object):
     bm.free()
 
     obj = bpy.data.objects.new("tree_leaves_emitter", mesh)
-    obj.location = Vector((0, 0, 0))
+    obj.location = bpy.context.scene.cursor_location
     bpy.context.scene.objects.link(obj)
     bpy.context.scene.objects.active = obj
     vg = obj.vertex_groups.new("leaves")
     for i in range(len(verts)):
         vg.add([i], weights[i//4], "ADD")
-    create_particle_system(obj, len(verts), vg, dupli_object, 1)
+    create_particle_system(obj, len(verts)/4, vg, dupli_object, size)
+    return obj
 
 
-def add_emitters_rec(module, max_radius, verts, proba, weights):
-    if module.base_radius < max_radius and random() < proba:
-        axis = Vector((1, 0, 0))
-        if module.direction != Vector((0, 0, 1)):
-            axis = module.direction.cross(Vector((0, 0, 1))).cross(module.direction).normalized()
-        angle = (random() - .5) * pi/2
-        direction = module.direction * Matrix.Rotation(angle, 3, axis)
-        direction.z *= .2
-        v = square(.1)
-        rot = direction.rotation_difference(Vector((0, 0, 1))).to_matrix()
-        verts.extend([i*rot + module.position for i in v])
-        weights.append(min(1, module.base_radius))
+def add_emitters_rec(module, max_radius, verts, proba, weights, density_dict, ends_only):
+    if module.base_radius < max_radius:
+
+        chance = random()*(module.base_radius/max_radius)
+        # print(chance)
+        if ends_only and False:
+            chance *= .5 + module.position.normalized().dot(module.direction) * .5
+
+        key = get_pruning_key(module.position)
+        can_see_sun = not ends_only
+        if key not in density_dict or density_dict[key] < .5:
+            print("key")
+            can_see_sun = True
+            if not ends_only:
+                chance /= 2
+
+        if can_see_sun and chance < proba:
+            print('coucou')
+            axis = Vector((1, 0, 0))
+            if module.direction != Vector((0, 0, 1)):
+                axis = module.direction.cross(Vector((0, 0, 1))).cross(module.direction).normalized()
+            angle = (random() - .5) * pi/2
+            direction = module.direction * Matrix.Rotation(angle, 3, axis)
+            direction.z *= .3
+            v = square(.1)
+            rot = direction.rotation_difference(Vector((0, 0, 1))).to_matrix()
+            verts.extend([i*rot + module.position for i in v])
+            weights.append(min(1, module.base_radius)/2 + .5)
 
     if module .head_module_1 is not None:
-        add_emitters_rec(module.head_module_1, max_radius, verts, proba, weights)
+        add_emitters_rec(module.head_module_1, max_radius, verts, proba, weights, density_dict, ends_only)
     if module.head_module_2 is not None:
-        add_emitters_rec(module.head_module_2, max_radius, verts, proba, weights)
+        add_emitters_rec(module.head_module_2, max_radius, verts, proba, weights, density_dict, ends_only)
 
 
 def create_particle_system(obj, number, vertex_group, dupli_object, size):
@@ -259,11 +280,14 @@ def create_particle_system(obj, number, vertex_group, dupli_object, size):
     settings.name = "leaf"
     settings.type = "HAIR"
     settings.use_advanced_hair = True
+    settings.use_emit_random = False
     settings.use_rotation_dupli = True
     settings.use_rotations = True
     settings.particle_size = 0.1 * size
     settings.size_random = 0.25
     settings.brownian_factor = 1
+    settings.use_render_emitter = False
+
     settings.render_type = "OBJECT"
     if dupli_object is not None:
         settings.dupli_object = dupli_object
@@ -275,8 +299,42 @@ def create_particle_system(obj, number, vertex_group, dupli_object, size):
     settings.phase_factor_random = 0.2
     settings.phase_factor_random = 0.30303
     settings.factor_random = 0.2
-    settings.vertex_group_length = vertex_group
+    leaf.particle_system.vertex_group_length = vertex_group.name
 
+
+def create_twig(random_seed, length, iterations, randomness, radius, split_proba, offset, gravity_strength,
+                particle_proba, leaf, leaf_size, material):
+    seed(random_seed)
+    tree = add_basic_trunk(radius=radius, radius_decrease=.97, randomness=randomness, up_attraction=2, twist=0, height=length, branch_length=.8, horizontal=True)
+
+    add_splits(root=tree, proba=.97, selection=[], creator="", split_angle=50, spin=180, head_size=.6, offset=offset, constraint_z=True)
+
+    grow(root=tree, iterations=iterations, min_radius=0, limit_method="iterations", branch_length=2.5, split_proba=split_proba,
+         split_angle=45, split_deviation=.25, split_radius=.6, radius_decrease=.88, randomness=randomness, spin=180,
+         spin_randomness=.1, creator="", selection=[], gravity_strength=gravity_strength, pruning_strength=0, shape_factor=0, up_attraction=0, kill_below_0=False)
+
+    draw_module(tree, 0, twig=True)
+    obj = bpy.context.object
+    obj.active_material = bpy.data.materials.get(material)
+    bpy.ops.object.select_all(action='DESELECT')
+
+    emitter = add_particles_emitter(tree, radius * particle_proba / 2, particle_proba, leaf, leaf_size, ends_only=False)
+    emitter.select = True
+    bpy.context.scene.objects.active = emitter
+    bpy.ops.object.duplicates_make_real()
+
+    for ob in bpy.context.selected_objects:
+        if ob == emitter:
+            ob.select = False
+    obj.select = True
+    bpy.context.scene.objects.active = obj
+    bpy.ops.object.join()
+    obj.scale = (.2,.2,.2)
+
+    bpy.ops.object.select_all(action='DESELECT')
+    emitter.select = True
+    leaf.select = True
+    bpy.ops.object.delete(use_global=False)
 
 
 

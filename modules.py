@@ -9,7 +9,7 @@
 import bpy, bmesh
 import numpy as np
 from mathutils import Vector, Matrix
-from math import pi, sqrt
+from math import pi, sqrt, cos, sin
 from .bridge import bridge
 from random import random
 
@@ -17,6 +17,14 @@ from random import random
 def square(size):
     """Returns a list of 4 vectors arranged in a square of specified size"""
     return [Vector((-1, -1, 0))*size, Vector((1, -1, 0))*size, Vector((1, 1, 0))*size, Vector((-1, 1, 0))*size]
+
+
+def octagon(size):
+    result = []
+    for i in range(8):
+        angle = pi*i/4
+        result.append(Vector((cos(angle), sin(angle), 0)) * size)
+    return result
 
 
 def directions_to_spin(direction, secondary_direction):
@@ -61,97 +69,18 @@ def find_faces_number_rec(module):
         return 7 + find_faces_number_rec(module.head_module_1) + find_faces_number_rec(module.head_module_2)
 
 
-def draw_module_old(root):
-    verts_number = find_verts_number_rec(root)
-    faces_number = find_faces_number_rec(root)
-    # print(verts_number, faces_number)
-
-    verts = np.zeros((verts_number, 3))
-    faces = np.zeros((faces_number, 4), dtype=np.int)
-    uvs = np.zeros((faces_number, 4, 2))
-
-    root.build()
-    verts[:4, :] = root.verts
-
-    curr_verts_number = 4
-    curr_faces_number = 0
-
-    extremities = [root]
-    while len(extremities) > 0:
-        new_extremities = []
-        for module in extremities:
-            for head in range(module.head_number):
-
-                new_module = module.head_module_1 if head == 0 else module.head_module_2
-                if new_module is not None:
-                    module.link(new_module, head, curr_verts_number)
-                    verts[curr_verts_number:curr_verts_number+len(new_module.verts), :] = new_module.verts
-                    curr_verts_number += len(new_module.verts)
-                    faces[curr_faces_number:curr_faces_number + len(new_module.faces), :] = new_module.faces
-                    uvs[curr_faces_number:curr_faces_number+len(new_module.faces), :] = new_module.uvs
-                    curr_faces_number += len(new_module.faces)
-                    new_extremities.append(new_module)
-
-        extremities = new_extremities
-
-    mesh = bpy.data.meshes.new("tree")
-    bm = bmesh.new()
-    bm.from_mesh(mesh)
-
-
-    for i, v in enumerate(verts):
-        bm.verts.new(v)
-    bm.verts.ensure_lookup_table()
-
-    for f in faces:
-        try:
-            bm.faces.new([bm.verts[j] for j in f])
-        except:
-            print(f)
-
-    bm.faces.ensure_lookup_table()
-
-    # bm.loops.layers.uv.new()
-    # uv_layer = bm.loops.layers.uv.active
-    # for index, face in enumerate(bm.faces):
-    #     for i, loop in enumerate(face.loops):
-    #         loop[uv_layer].uv = uvs[index][i]
-
-
-    bm.to_mesh(mesh)
-    bm.free()
-
-    obj = bpy.data.objects.new("tree", mesh)
-    obj.location = Vector((0, 0, 0))
-    bpy.context.scene.objects.link(obj)
-    bpy.context.scene.objects.active = obj
-    obj["is_tree"] = True
-    obj.select = True
-    bpy.ops.object.mode_set(mode='EDIT')
-    bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.mesh.normals_make_consistent(inside=False)
-    bpy.ops.object.mode_set(mode='OBJECT')
-
-
-def draw_module(root, resolution_levels):
+def draw_module(root, resolution_levels, twig=False):
     max_radius = root.base_radius
-    apply_resolution_rec(root, resolution_levels, max_radius, resolution_levels, 'root')
-    # verts_number = find_verts_number_rec(root)
-    # faces_number = find_faces_number_rec(root)
-    #
-    # verts = np.zeros((verts_number, 3))
-    # faces = np.zeros((faces_number, 4), dtype=int)
-    # uvs = np.zeros((faces_number, 4, 2))
-    #
-    # root.build()
-    # verts[:4, :] = root.verts
+    root.resolution = resolution_levels
+    apply_resolution_rec(root.head_module_1, resolution_levels, max_radius, root)
 
     verts = [[] for i in range(resolution_levels+1)]
     faces = [[] for i in range(resolution_levels+1)]
     uvs = [[] for i in range(resolution_levels+1)]
     v_groups = [[] for i in range(resolution_levels+1)]
 
-
+    root.build()
+    verts[-1] = [v for v in root.verts]
     extremities = [root]
     while len(extremities) > 0:
         new_extremities = []
@@ -165,7 +94,7 @@ def draw_module(root, resolution_levels):
                     verts[resolution].extend(new_module.verts)
                     faces[resolution].extend(new_module.faces)
                     uvs[resolution].extend(new_module.uvs)
-                    v_groups[resolution].append((list(range(curr_verts_number, curr_verts_number+len(new_module.verts))), new_module.base_radius))
+                    v_groups[resolution].append((list(range(curr_verts_number, curr_verts_number+len(new_module.verts))), new_module.base_radius / max_radius))
                     new_extremities.append(new_module)
 
         extremities = new_extremities
@@ -174,7 +103,8 @@ def draw_module(root, resolution_levels):
 
     for i in range(resolution_levels+1):
         bpy.ops.object.select_all(action='DESELECT')
-        mesh = bpy.data.meshes.new("tree")
+        name = "twig" if twig else "tree"
+        mesh = bpy.data.meshes.new(name)
         bm = bmesh.new()
         bm.from_mesh(mesh)
 
@@ -198,15 +128,17 @@ def draw_module(root, resolution_levels):
 
         bm.to_mesh(mesh)
         bm.free()
-
-        obj = bpy.data.objects.new("tree", mesh)
-        obj.location = Vector((0, 0, 0))
+        obj = bpy.data.objects.new(name, mesh)
+        obj.location = bpy.context.scene.cursor_location
         vg = obj.vertex_groups.new("radius")
         for weights in v_groups[i]:
             vg.add(weights[0], weights[1], 'REPLACE')
         bpy.context.scene.objects.link(obj)
         bpy.context.scene.objects.active = obj
-        obj["is_tree"] = True
+        if not twig:
+            obj["is_tree"] = True
+
+        obj["tree_type"] = "object"
         obj.select = True
         bpy.ops.object.mode_set(mode='EDIT')
         bpy.ops.mesh.select_all(action='SELECT')
@@ -233,6 +165,7 @@ def visualize_with_curves(root):
     draw_curve_rec(root, polyline, curve_data)
 
     curveOB = bpy.data.objects.new('Tree', curve_data)
+    curveOB.location = bpy.context.scene.cursor_location
     curve_data.bevel_depth = 1
     curve_data.bevel_resolution = 0
     curve_data.fill_mode = 'FULL'
@@ -241,6 +174,7 @@ def visualize_with_curves(root):
     scene.objects.link(curveOB)
     scene.objects.active = curveOB
     curveOB["is_tree"] = True
+    curveOB["tree_type"] = "curve"
     curveOB.select = True
 
 
@@ -267,20 +201,29 @@ def roll_indexes(indexes, angle_diff):
     return np.roll(indexes, -shift)
 
 
-def apply_resolution_rec(module, resolution_levels, max_radius, parent_res, parent_type):
-    resolution = int(resolution_levels * module.base_radius / max_radius +.6)
-    if module.type == 'branch' and parent_type == 'branch':
+def apply_resolution_rec(module, resolution_levels, max_radius, parent):
+    resolution = max(parent.resolution - 1, int(resolution_levels * module.base_radius / max_radius +.6))
+    if module.type == 'branch' and parent.type == 'branch':
         module.resolution = resolution
-        if resolution < parent_res:
+        if resolution < parent.resolution:
+            # transition = Transition(module.position, module.direction, module.base_radius, module.length, module.head_1_radius, resolution, module.starting_index, module.spin)
+            # if parent.head_module_2 == module:
+            #     parent.head_module_2 = transition
+            # else:
+            #     parent.head_module_1 = transition
+            # transition.head_module_1 = module.head_module_1
+            # transition.head_module_2 = module.head_module_2
+            # module = transition
+            module.direction = parent.direction
             module.draw_base = True
     else:
-        module.resolution = parent_res
+        module.resolution = parent.resolution
 
     if module.head_module_1 is not None:
-        apply_resolution_rec(module.head_module_1, resolution_levels, max_radius, module.resolution, module.type)
+        apply_resolution_rec(module.head_module_1, resolution_levels, max_radius, module)
 
     if module.head_module_2 is not None:
-        apply_resolution_rec(module.head_module_2, resolution_levels, max_radius, module.resolution, module.type)
+        apply_resolution_rec(module.head_module_2, resolution_levels, max_radius, module)
 
 
 class Module:
@@ -297,7 +240,7 @@ class Module:
         self.resolution = resolution
         self.spin = spin
         self.starting_index = starting_index
-        self.base_pos = []
+        # self.base_pos = []
         self.head_module_1 = None
         self.head_module_2 = None
 
@@ -408,7 +351,7 @@ class Split(Module):
         self.head_1_direction = (self.verts[-5] + self.verts[-7])/2 - self.position
         self.head_2_direction = (self.verts[-1] + self.verts[-3])/2 - self.position
         self.verts = np.asarray([i.to_tuple() for i in self.verts])
-        self.base_pos = [(v * spin_rotation) * direction_rotation + self.position for v in square(self.base_radius)]
+        # self.base_pos = [(v * spin_rotation) * direction_rotation + self.position for v in square(self.base_radius)]
         uvs = [[(i / 4, uv_height), (i / 4, uv_height + .1*self.head_1_length / self.head_1_radius), ((i + 1) / 4, uv_height + .1*self.head_1_length / self.head_1_radius), ((i + 1) / 4, uv_height)] for i in range(3)]
         uvs.extend([[(i / 4, uv_height), (i / 4, uv_height + .1*self.head_2_length / self.head_2_radius), ((i + 1) / 4, uv_height + .1*self.head_2_length / self.head_2_radius), ((i + 1) / 4, uv_height)] for i in range(4)])
 
@@ -461,7 +404,7 @@ class Branch(Module):
         uv_height = self.uv_height
         v2 = [v + Vector((0,0, self.length)) for v in square(self.head_1_radius)]
         if self.draw_base:
-            v2.extend([v + Vector((0,0, self.length/4)) for v in square(self.base_radius)])
+            v2.extend([v + Vector((0,0, 0*self.length/4)) for v in square(self.base_radius)])
         self.verts = v2
 
         i0, i1, i2, i3 = base_indexes
@@ -472,7 +415,7 @@ class Branch(Module):
         spin_rotation = Matrix.Rotation(self.spin, 4, 'Z')
         direction_rotation = self.direction.rotation_difference(Vector((0, 0, 1))).to_matrix()
         self.verts = np.asarray([((v * spin_rotation) * direction_rotation + self.position).to_tuple() for v in self.verts])
-        self.base_pos = [(v * spin_rotation) * direction_rotation + self.position for v in square(self.base_radius)]
+        # self.base_pos = [(v * spin_rotation) * direction_rotation + self.position for v in square(self.base_radius)]
         m = min(base_indexes)
         faces = [(i0, si, si + 1, i1), (i1, si + 1, si + 2, i2), (i2, si + 2, si + 3, i3), (i3, si + 3, si, i0)]
         uvs = [[(i/4, uv_height), (i/4, uv_height + .1*self.length/self.base_radius), ((i+1)/4, uv_height + .1*self.length/self.base_radius), ((i+1)/4, uv_height)] for i in range(4)]
@@ -507,6 +450,7 @@ class Root(Module):
         self.head_number = 1
         self.head_1_radius = self.base_radius
         self.density_dict = dict()
+
     def build(self):
         spin_rotation = Matrix.Rotation(self.spin, 4, 'Z')
         direction_rotation = self.direction.rotation_difference(Vector((0, 0, 1))).to_matrix()
@@ -524,39 +468,57 @@ class Root(Module):
 
 
 class Transition(Module):
-    def __init__(self, position=Vector(), direction=Vector(), radius=1, resolution=0, starting_index=0, spin=0):
+    def __init__(self, position=Vector(), direction=Vector(), radius=1, length=1, head_radius=.95, resolution=0, starting_index=0, spin=0 ):
         Module.__init__(self, position, direction, radius, resolution, starting_index, spin)
         self.type = "transition"
-        self.head_1_radius = 1
+        self.head_1_radius = head_radius
+        self.length = length
         self.head_number = 1
         # print('transition')
 
     def build(self, base_indexes=None, create_base=False):
-        verts = [Vector(i) * self.base_radius for i in [(-0.37, 0.9, 0.0), (-0.9, 0.37, 0.0), (-0.9, -0.37, 0.0),
-                                                        (-0.37, -0.9, 0.0), (0.37, -0.9, 0.0), (0.9, -0.37, -0.0),
-                                                        (0.9, 0.37, 0.0), (0.37, 0.9, 0.0), (-0.9, -0.9, 1.38),
-                                                        (0.9, -0.9, 1.38),
-                                                        (0.9, 0.9, 1.38), (-0.9, 0.9, 1.38), (-0.93, 0.42, 0.84),
-                                                        (-0.93, -0.42, 0.84), (0.93, -0.42, 0.84), (0.93, 0.42, 0.84)]]
+        v1 = octagon(self.base_radius)
+        radius_correction = 1 - .25 ** (self.resolution + 1)
+        self.base_radius *= radius_correction
+        self.head_1_radius *= radius_correction
+        v2 = [v + Vector((0,0, self.length)) for v in square(self.base_radius)]
+        # v3 = [v * self.head_1_radius + Vector((0, 0, self.length/2)) for v in [Vector((-1, -.5, 0)), Vector((1, -.5, 0)), Vector((1, .5, 0)), Vector((-1, .5, 0))]]
 
-        f = [tuple([i + self.starting_index for i in j]) for j in [[6, 15, 14, 5], [2, 13, 12, 1], [8, 13, 2, 3],
-                                                                   [11, 12, 13, 8], [0, 1, 12, 11], [14, 9, 4, 5],
-                                                                   [10, 9, 14, 15], [6, 7, 10, 15], [4, 9, 8, 3],
-                                                                   [0, 11, 10, 7]]]
+        verts = v1 + v2
+
+        faces = np.array([[0, 1, 14, 13], [1, 2, 10, 14], [2, 3, 11, 10], [3, 4, 15, 11], [4, 5, 12, 15], [5, 6, 8, 12], [6, 7, 9, 8], [7, 0, 13, 9], [13, 14, 10, 9], [15, 12, 8, 11]])
+        faces = [[0, 1, 10, 9], [1,2,10], [2,3,11,10], [3,4,11], [4,5,8,11], [5,6,8], [6,7,9,8], [7,0,9]]
+        # faces = np.array([[0, 1, 14, 13]])
+        # self.faces = faces + self.starting_index
+        self.faces = [tuple([i + self.starting_index for i in j]) for j in faces]
+        # verts = [Vector(i) * self.base_radius for i in [(-0.37, 0.9, 0.0), (-0.9, 0.37, 0.0), (-0.9, -0.37, 0.0),
+        #                                                 (-0.37, -0.9, 0.0), (0.37, -0.9, 0.0), (0.9, -0.37, -0.0),
+        #                                                 (0.9, 0.37, 0.0), (0.37, 0.9, 0.0), (-0.9, -0.9, 1.38),
+        #                                                 (0.9, -0.9, 1.38),
+        #                                                 (0.9, 0.9, 1.38), (-0.9, 0.9, 1.38), (-0.93, 0.42, 0.84),
+        #                                                 (-0.93, -0.42, 0.84), (0.93, -0.42, 0.84), (0.93, 0.42, 0.84)]]
+        #
+        # f = [tuple([i + self.starting_index for i in j]) for j in [[6, 15, 14, 5], [2, 13, 12, 1], [8, 13, 2, 3],
+        #                                                            [11, 12, 13, 8], [0, 1, 12, 11], [14, 9, 4, 5],
+        #                                                            [10, 9, 14, 15], [6, 7, 10, 15], [4, 9, 8, 3],
+        #                                                            [0, 11, 10, 7]]]
 
         spin_rotation = Matrix.Rotation(self.spin, 4, 'Z')
         direction_rotation = self.direction.rotation_difference(Vector((0, 0, 1))).to_matrix()
-        self.verts = [(v * spin_rotation) * direction_rotation + self.position for v in verts]
-        self.faces = f
+        self.verts = np.asarray([((v * spin_rotation) * direction_rotation + self.position).to_tuple() for v in verts])
+
 
     def link(self, module, head, verts_number):
-        # noinspection PyTypeChecker
-        module.position = (self.verts[8] + self.verts[10]) / 2
-        module.base_radius = self.base_radius
-        module.direction = self.direction
+        # module.position = (self.verts[0] + self.verts[2])/2
+        # module.base_radius = self.head_1_radius
+        # module.direction = self.direction
         module.starting_index = verts_number
-        self.head_module_1 = module
-        head_indexes = list(range(8 + self.starting_index, 8 + self.starting_index + 4))
+        # self.head_module_1 = module
+        head_indexes = np.arange(4) + self.starting_index + 8
         spin_diff = module.spin - self.spin
+        module.uv_height = self.uv_height + .1*self.length/self.base_radius
         module.build(roll_indexes(head_indexes, spin_diff))
+        # base_verts = roll_indexes(module.base_pos, spin_diff)
+        # for i in range(4):
+        #     self.verts[i] = self.verts[i]*.7 + base_verts[i]*.3
 

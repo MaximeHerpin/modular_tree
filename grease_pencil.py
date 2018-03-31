@@ -200,13 +200,3 @@ def build_tree_from_strokes_rec(points, module, head, curr_index, curr_stroke, s
         if choice == 'split':
             build_tree_from_strokes_rec(child_points, new_module, 1, 2, child_stroke, splits, strokes, radius_dec)
 
-#
-# def register():
-#     bpy.utils.register_class(ConnectStrokes)
-#
-#
-# def unregister():
-#     bpy.utils.unregister_class(ConnectStrokes)
-#
-# if __name__ == "__main__":
-#     register()
