@@ -1,1 +1,0 @@
-This code is curently very messy, and not well commented. You can contribute to any part concerning the UI and user interface, but try not to edit the tree generation code, or let me know before and I will decide if you should make such contribution.

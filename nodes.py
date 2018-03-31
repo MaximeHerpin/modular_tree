@@ -1,656 +1,485 @@
+import os
+
 import bpy
-from bpy.types import NodeTree, Node, NodeSocket
-from bpy.props import *
-from mathutils import Vector
-import time
-from random import seed
-from bpy.app.handlers import persistent
 import nodeitems_utils
-from .icons import register_icons, unregister_icons, get_icon
+import time
+
+import bpy
+from bpy.app.handlers import persistent
+
+from bpy.types import NodeTree, Node, NodeSocket
+from bpy.props import IntProperty, FloatProperty, EnumProperty, BoolProperty, StringProperty
 from nodeitems_utils import NodeCategory, NodeItem
+import random
+from math import pi, inf
 
-helperMaterialName = "Helper Material for Modular Tree"
-
-
-class FloatSocket(NodeSocket):
-    # Description string
-    '''Custom float socket type'''
-    # Optional identifier string. If not explicitly defined, the python class name is used.
-    bl_idname = 'FloatSocket'
-    # Label for nice name display
-    bl_label = 'Custom Float Socket'
-
-    default_value = bpy.props.FloatProperty(name="value", default=0, min=0, soft_max=1)
-
-    # Optional function for drawing the socket input value
-    def draw(self, context, layout, node, text):
-        if self.is_output or self.is_linked:
-            layout.label(text)
-        else:
-            layout.prop(self, "default_value", text=text)
-
-    # Socket color
-    def draw_color(self, context, node):
-        return .06, 0.2, 0.5, 0.5
+from .grease_pencil import build_tree_from_strokes
+from .tree_functions import draw_module, add_splits, grow, add_basic_trunk, add_armature, add_particles_emitter
+from .modules import visualize_with_curves
 
 
-class FreeFloatSocket(NodeSocket):
-    # Description string
-    '''Custom float socket type'''
-    # Optional identifier string. If not explicitly defined, the python class name is used.
-    bl_idname = 'FreeFloatSocket'
-    # Label for nice name display
-    bl_label = 'Custom Float Socket with no mim or max'
+def get_tree_parameters_rec(state_list, node, props_dict):
+    if props_dict is None:
+        props_dict = {"SplitNode": ['proba', "split_angle", "spin", "head_size", "offset"],
+                     "GrowNode": ["limit_method", "branch_length", "split_proba", "randomness", "gravity_strength", "split_angle",
+                              "split_deviation", "split_radius", "radius_decrease", "spin", "spin_randomness", "pruning_strength", "shape_factor",
+                                  "up_attraction", "iterations", "radius"],
+                     "TrunkNode": ["radius", "height", "branch_length", "radius_decrease", "randomness", "up_attraction", "twist"],
+                     "GreasePencilNode": ["smooth_iterations", "radius", "radius_decrease", "branch_length"],
+                     "BuildTreeNode": ["mesh_type", "resolution_levels", "seed", "auto_update", "scale", "armature", "min_armature_radius", "min_length", "create_particle_emitter",
+                                   "dupli_object", "max_radius", "particle_proba", "material"]}
+    for prop in props_dict[node.bl_idname]:
+        value = getattr(node, prop)
+        if type(value) != str:
+            value = str(round(value, 3))
+        state_list += value + ";"
+        # state_list += prop + ' ' + str(round(getattr(node, prop), 3)) + ";"
 
-    default_value = bpy.props.FloatProperty(name="value", default=0, soft_min=-5, soft_max=5)
+    state_list += ','
+    # else:
+    #     state_list += "{};{};{};{};{};{};" str(node.seed) + str(node.mesh_type) + str(node.armature) + str(node.min_length) + ","
 
-    # Optional function for drawing the socket input value
-    def draw(self, context, layout, node, text):
-        if self.is_output or self.is_linked:
-            layout.label(text)
-        else:
-            layout.prop(self, "default_value", text=text)
+    if node.bl_idname == "GreasePencilNode" or node.bl_idname == "TrunkNode":
+        return state_list
 
-    # Socket color
-    def draw_color(self, context, node):
-        return .06, 0.2, 0.5, 0.5
+    try:
+        from_node = node.inputs['Tree'].links[0].from_node
+    except:
+        return state_list
 
-
-class AngleFloatSocket(NodeSocket):
-    # Description string
-    '''Custom float socket type'''
-    # Optional identifier string. If not explicitly defined, the python class name is used.
-    bl_idname = 'AngleFloatSocket'
-    # Label for nice name display
-    bl_label = 'from 0 to 360'
-
-    default_value = bpy.props.FloatProperty(name="value", default=0, min=0, max=360)
-
-    # Optional function for drawing the socket input value
-    def draw(self, context, layout, node, text):
-        if self.is_output or self.is_linked:
-            layout.label(text)
-        else:
-            layout.prop(self, "default_value", text=text)
-
-    # Socket color
-    def draw_color(self, context, node):
-        return .06, 0.2, 0.5, 0.5
+    if from_node is not None:
+        return get_tree_parameters_rec(state_list, from_node, props_dict)
 
 
-class ModularTreeNodeTree(NodeTree):
-    # Description string
+def get_change_level(new, old):
+    if old == new:
+        return "unchanged"
+
+    new = new.split(",")
+    old = old.split(",")
+    if len(new) != len(old):
+        return "gen"
+
+    for i in range(1, len(new)):
+        if new[i] != old[i]:
+            return "gen"
+
+    new = new[0].split(';')
+    old = old[0].split(';')
+
+    for i in range(len(new)):
+        if new[i] != old[i]:
+            if i < 4:
+                return "gen"
+            elif i == 4:
+                return "scale"
+            elif i < 8:
+                return "armature"
+            elif i < 12:
+                return "emitter"
+            else:
+                return "material"
+
+
+def get_last_memory_match(new, old):
+    new = new.split(",")
+    old = old.split(',')
+    level = len(new)
+    for i in range(min(len(new), len(old))):
+        if new[-(i+1)] != old[-(i+1)]:
+            break
+        level -= 1
+    return level
+
+
+class ModularTree(NodeTree):
     '''Modular tree Node workflow'''
-    # Optional identifier string. If not explicitly defined, the python class name is used.
-    bl_idname = 'ModularTreeNodeType'
-    # Label for nice name display
+    bl_idname = 'ModularTreeType'
     bl_label = 'Modular Tree Node Tree'
-    # Icon identifier
     bl_icon = 'NODETREE'
 
-    time_lap = 0
 
-    def update(self):
-        if bpy.context.scene.mtree_props.use_node_workflow:
-            for node in self.nodes:
-                node.update()
+class TreeSocket(NodeSocket):
+    """Tree socket type"""
+    bl_idname = "TreeSocketType"
+    bl_label = "Tree Socket"
+
+    default_value = None
+
+    def draw(self, context, layout, node, text):
+        layout.label(text)
+
+    def draw_color(self, context, node):
+        return .125, .571, .125, 1
 
 
-@persistent
-def update_all_trees(scene):
-    sel_obj = bpy.context.selected_objects
-    if bpy.context.scene.mtree_props.use_node_workflow:
-        try:
-            test = len(sel_obj) == 1 and sel_obj[0].get('is_tree')
-        except:
-            test = False
-        if test is None:
-            test = False
-        bpy.context.scene.mtree_props.is_tree_selected = test
+class SelectionSocket(NodeSocket):
+    """Selection socket type"""
+    bl_idname = "SelectionSocketType"
+    bl_label = "Selection Socket"
 
-        trees = [n for n in bpy.data.node_groups if n.bl_idname == 'ModularTreeNodeType' and n.name == bpy.context.scene.mtree_props.node_tree]
-        for t in trees:
-            if time.time() - t.time_lap > 1:
-                t.update()
+    default_value = []
+
+    def draw(self, context, layout, node, text):
+        layout.label(text)
+
+    def draw_color(self, context, node):
+        return .8, .8, .8, 1
+
+    def get_selection(self):
+        if self.is_output:
+            return self.node.selection
+
+        if not self.is_linked:
+            return []
+        else:
+            return self.links[0].from_socket.get_selection()
 
 
 class ModularTreeNode:
     @classmethod
     def poll(cls, ntree):
-        return ntree.bl_idname == 'ModularTreeNodeType'
+        return ntree.bl_idname == 'ModularTreeType'
+
+
+class BuildTreeNode(Node, ModularTreeNode):
+    bl_idname = "BuildTreeNode"
+    bl_label = "BuildTree"
+
+    memory = StringProperty(default="")
+
+    mesh_type = bpy.props.EnumProperty(
+        items=[('final', 'Final', ''), ('preview', 'Preview', '')],
+        name="visualisation",
+        default="preview")
+    resolution_levels = IntProperty(min=0, default=1)
+    seed = IntProperty(default=42)
+    auto_update = BoolProperty(default=False)
+
+    scale = FloatProperty(min=.001, default=1)
+
+    armature = BoolProperty(default=False)
+    min_armature_radius = FloatProperty(min=0, default=.3)
+    min_length = FloatProperty(min=0, default=1)
+
+    create_particle_emitter = BoolProperty(default=False)
+    dupli_object = StringProperty(default="")
+    max_radius = FloatProperty(default=.2, min=0)
+    particle_proba = FloatProperty(default=.5, min=0, max=1)
+    material = StringProperty(default="")
+
+    def init(self, context):
+
+        self.inputs.new("TreeSocketType", "Tree")
+        self.memory = get_tree_parameters_rec("", self, None)
+
+    def draw_buttons(self, context, layout):
+        layout.prop(self, "mesh_type")
+        if self.mesh_type == "final":
+            layout.prop(self, "resolution_levels")
+        layout.prop(self, "seed")
+        layout.prop(self, "scale")
+        box = layout.row()
+        # row.prop(self, "auto_update")
+        if self.auto_update:
+            box.label("press ESC to stop")
+
+        else:
+            box.operator("object.modal_tree_operator", text='auto_update_tree')
+            box.operator("mod_tree.tree_from_nodes", text='create tree')
+
+        box = layout.box()
+        box.prop(self, "armature")
+        if self.armature:
+            box.prop(self, "min_armature_radius")
+            box.prop(self, "min_length")
+
+        box = layout.box()
+        box.prop(self, "create_particle_emitter")
+        if self.create_particle_emitter:
+            box.prop(self, "max_radius")
+            box.prop(self, "particle_proba")
+            layout.prop_search(self, "dupli_object", context.scene, "objects")
+
+        layout.prop_search(self, "material", bpy.data, "materials")
+
+    def execute(self, level="gen", old_tree=None):
+        random.seed(self.seed)
+        try:
+            from_node = self.inputs['Tree'].links[0].from_node
+        except:
+            return None
+        t0 = time.time()
+        t1 = time.time()
+        rebuild = level == "gen"
+        if rebuild:
+            tree = from_node.execute()
+            if tree is None:
+                return None
+            t1 = time.time()
+            if self.mesh_type == "final":
+                draw_module(tree, self.resolution_levels)
+            else:
+                visualize_with_curves(tree)
+        else:
+            tree = old_tree
+
+        tree_object = bpy.context.object
+        if level in ("gen", "scale"):
+            tree_object.scale = tuple([self.scale]*3)
+
+        if self.armature and level in ("armature", "gen"):
+            amt = add_armature(tree, self.min_armature_radius, self.min_length)
+            tree_object["amt"] = amt.name
+            # amt.select = True
+            amt.scale = tuple([self.scale] * 3)
+
+        if self.create_particle_emitter and level in ("emitter", "gen"):
+            emitter = add_particles_emitter(tree, self.max_radius, self.particle_proba, bpy.context.scene.objects.get(self.dupli_object))
+            tree_object["emitter"] = emitter.name
+            # emitter.select = True
+            emitter.scale = tuple([self.scale] * 3)
+
+        if bpy.data.materials.get(self.material) is not None and level in ("material", "gen"):
+            tree_object.active_material = bpy.data.materials.get(self.material)
+
+
+        t2 = time.time()
+        print("creating tree", t1 - t0)
+        print("building object", t2 - t1)
+        return tree
+
+
+class GreasePencilNode(Node, ModularTreeNode):
+    bl_idname = "GreasePencilNode"
+    bl_label = "Grease_Pencil"
+
+    smooth_iterations = IntProperty(min=0, default=1)
+    radius = FloatProperty(min=0, default=.7)
+    branch_length = FloatProperty(min=.001, default=.6)
+    radius_decrease = FloatProperty(min=0, max=.999, default=.97)
+    grease_pencil_memory = StringProperty(default="")
+
+    def init(self, context):
+        self.outputs.new("TreeSocketType", "Tree")
+        self.outputs.new("SelectionSocketType", "Selection")
+
+    @property
+    def selection(self):
+        return ["gp_branch"]
+
+    def draw_buttons(self, context, layout):
+        properties = ["smooth_iterations", "radius", "radius_decrease", "branch_length"]
+        # bpy.ops.mod_tree.connect_strokes(point_dist=self.branch_length, automatic=True, connect_all=True,
+        #                                  child_stroke_index=1, parent_stroke_index=0,
+        #                                  smooth_iterations=self.smooth_iterations)
+
+        op_props = layout.operator("mod_tree.connect_strokes", text='update strokes')
+        op_props.point_dist = self.branch_length
+        op_props.connect_all = True
+        op_props.child_stroke_index = 1
+        op_props.parent_stroke_index = 0
+        op_props.smooth_iterations = self.smooth_iterations
+        for i in properties:
+            layout.prop(self, i)
+
+    def execute(self):
+
+        gp = bpy.context.scene.grease_pencil
+        if gp is not None and gp.layers.active is not None and gp.layers.active.active_frame is not None and len(
+                gp.layers.active.active_frame.strokes) > 0 and len(gp.layers.active.active_frame.strokes[0].points) > 1:
+
+            strokes = [[i.co for i in j.points] for j in gp.layers.active.active_frame.strokes]
+            root = build_tree_from_strokes(strokes, self.radius, self.radius_decrease)
+            return root
+
+
+class SplitNode(Node, ModularTreeNode):
+    bl_idname = "SplitNode"
+    bl_label = "Split"
+
+    proba = FloatProperty(min=0, max=1, default=.3, description="Probability of replacing a branch by a split")
+    split_angle = FloatProperty(min=0, max=180, default=45, description="Angle between the branch branch direction and the secondary split direction")
+    spin = FloatProperty(min=0, max=360, default=45, description="Rotation between each split")
+    head_size = FloatProperty(min=0.001, max=.999, default=.6, description="Size of the secondary branch compared to the main one")
+    offset = IntProperty(min=0, default=0, description="Number of branches that wont be split before the first split occurs")
+
+    def init(self, context):
+        self.inputs.new("TreeSocketType", "Tree")
+        self.inputs.new("SelectionSocketType", "Selection")
+        self.outputs.new("TreeSocketType", "Tree")
+        self.outputs.new("SelectionSocketType", "Selection")
+
+    @property
+    def selection(self):
+        return [self.name]
+
+    def draw_buttons(self, context, layout):
+        properties = ['proba', "split_angle", "spin", "head_size", "offset"]
+        row = col = layout.column()
+        for i in properties:
+            col.prop(self, i)
+
+    def execute(self):
+        try:
+            from_node = self.inputs['Tree'].links[0].from_node
+        except:
+            return None
+        tree = from_node.execute()
+        if tree is None:
+            return None
+
+        selection = self.inputs["Selection"].get_selection()
+        add_splits(tree, self.proba, selection, self.selection[0], self.split_angle, self.spin/180*pi, self.head_size, self.offset)
+        return tree
+
+
+class GrowNode(Node, ModularTreeNode):
+    bl_idname = "GrowNode"
+    bl_label = "Grow"
+
+    limit_method = bpy.props.EnumProperty(
+        items=[('iterations', 'Iterations', ''), ('radius', 'Radius', '')],
+        name="limit method",
+        default="radius")
+    advanced_settings = BoolProperty(default=False, description="Show advanced settings")
+    iterations = IntProperty(min=0, default=5, description="Number of branches iterations")
+    radius = FloatProperty(min=.0005, default=.2, description="The radius at which branches stop growing")
+    branch_length = FloatProperty(min=.001, default=.9, description="The length of each branch iteration")
+    split_proba = FloatProperty(min=0, max=1, default=.3, description="The probability for a branch to fork")
+    split_angle = FloatProperty(min=0, max=180, default=45, description="When a branch is splitting, the angle between the branches of the split")
+    split_deviation = FloatProperty(min=0, max=7, default=.25, description="When a branch is splitting, the angle between the split and the previous branch")
+    split_radius = FloatProperty(min=.01, max=.999, default=.6, description="When a branch is splitting, the radius of the secondary branch of the fork")
+    radius_decrease = FloatProperty(min=0.01, max=.999, default=.97, description="The radius of each branch iteration compared to the previous one")
+    randomness = FloatProperty(default=.1, description="Noise affecting the direction of each branch")
+    spin = FloatProperty(default=135, description="Relative rotation of a split compared to the previous split in the branch")
+    spin_randomness = FloatProperty(min=0, max=7, default=.1, description="Randomness of the spin")
+    gravity_strength = FloatProperty(default=.1, description="Amount of downward attraction")
+    pruning_strength = FloatProperty(default=1, description="Decrease the probability of branching when the density of branches is high")
+    shape_factor = FloatProperty(default=1, min=0, description="Decrease of branching probability when the branch is far from the axis of the tree")
+    up_attraction = FloatProperty(default=.5, description="Favor branches going up")
+
+    def init(self, context):
+        self.inputs.new("TreeSocketType", "Tree")
+        self.inputs.new("SelectionSocketType", "Selection")
+        self.outputs.new("TreeSocketType", "Tree")
+        self.outputs.new("SelectionSocketType", "Selection")
+
+
+    @property
+    def selection(self):
+        return [self.name]
+
+    def draw_buttons(self, context, layout):
+        layout.prop(self, "advanced_settings")
+        layout.prop(self, "limit_method")
+        box = layout.box()
+        box.prop(self, self.limit_method)
+
+        box = layout.box()
+        box.prop(self, "branch_length")
+        box.prop(self, "randomness")
+        if self.advanced_settings:
+            box.prop(self, "radius_decrease")
+        box.prop(self, "gravity_strength")
+
+        box = layout.box()
+        box.prop(self, "split_proba")
+        if self.advanced_settings:
+            box.prop(self, "split_angle")
+            box.prop(self, "split_deviation")
+            box.prop(self, "split_radius")
+
+            box = layout.box()
+            box.prop(self, "spin")
+            box.prop(self, "spin_randomness")
+
+        box = layout.box()
+        if self.advanced_settings:
+            box.prop(self, "pruning_strength")
+        box.prop(self, "shape_factor")
+        box.prop(self, "up_attraction")
+
+    def execute(self):
+        try:
+            from_node = self.inputs['Tree'].links[0].from_node
+        except:
+            return None
+
+        tree = from_node.execute()
+        if tree is None:
+            return None
+
+        selection = self.inputs["Selection"].get_selection()
+        grow(tree, self.iterations, self.radius, self.limit_method, self.branch_length, self.split_proba,
+             self.split_angle, self.split_deviation, self.split_radius, self.radius_decrease, self.randomness,
+             self.spin, self.spin_randomness, self.selection[0], selection, self.gravity_strength, self.pruning_strength,
+             self.shape_factor, self.up_attraction)
+        return tree
+
+
+class TrunkNode(Node, ModularTreeNode):
+    bl_idname = "TrunkNode"
+    bl_label = "Trunk"
+
+    height = FloatProperty(min=0, default=10)
+    radius = FloatProperty(min=.0005, default=.8)
+    branch_length = FloatProperty(min=.002, default=.9)
+    radius_decrease = FloatProperty(min=0.01, max=.999, default=.97)
+    randomness = FloatProperty(default=.1)
+    up_attraction = FloatProperty(default=.7)
+    twist = FloatProperty(default=0)
+
+    def init(self, context):
+        self.inputs.new("TreeSocketType", "Tree")
+        self.inputs.new("SelectionSocketType", "Selection")
+        self.outputs.new("TreeSocketType", "Tree")
+
+    @property
+    def selection(self):
+        return [self.name]
+
+    def draw_buttons(self, context, layout):
+        properties = ["radius", "height", "branch_length", "radius_decrease", "randomness", "up_attraction", "twist"]
+        col = layout.column()
+        for i in properties:
+            col.prop(self, i)
+
+    def execute(self):
+        tree = add_basic_trunk(self.radius, self.radius_decrease, self.randomness, self.up_attraction, self.twist, self.height, self.branch_length)
+        return tree
 
 
 class ModularTreeNodeCategory(NodeCategory):
     @classmethod
     def poll(cls, context):
-        return context.space_data.tree_type == 'ModularTreeNodeType'
-
-
-class RootNode(Node, ModularTreeNodeTree):
-    ''' Roots configuration Node '''
-    bl_idname = 'RootNode'
-    bl_label = 'Roots'
-    bl_width_default = 190
-
-    iterations = bpy.props.IntProperty(default=1)
-    stay_under_ground = bpy.props.BoolProperty(default=True)
-    radius =  bpy.props.FloatProperty(default=.5, min=0.0001)
-
-    def init(self, context):
-        scene = bpy.context.scene
-        mtree_props = scene.mtree_props
-
-        self.inputs.new('FloatSocket', "Length").default_value = mtree_props.roots_length
-        self.inputs.new('FloatSocket', "split_proba").default_value = mtree_props.roots_split_proba
-        self.inputs.new('FreeFloatSocket', "ground_height").default_value = mtree_props.roots_ground_height
-
-        self.outputs.new('NodeSocketShader', "Trunk")
-
-    def update(self):
-        try:
-            if self.iterations == 0 and len([i for i in self.inputs if i.hide]) != 3:
-                for s in self.inputs:
-                    s.hide = True
-            elif self.iterations > 0 and len([i for i in self.inputs if i.hide]) > 0:
-                for s in self.inputs:
-                    s.hide = False
-        except: pass
-        scene = bpy.context.scene
-        mtree_props = scene.mtree_props
-        mtree_props.roots_iteration = self.iterations
-        mtree_props.roots_stay_under_ground = self.stay_under_ground
-
-
-    def draw_buttons(self, context, layout):
-        layout.prop(self, "iterations")
-        if self.iterations >0:
-            layout.prop(self, "stay_under_ground")
-
-
-class TrunkNode(Node, ModularTreeNodeTree):
-    ''' Trunk configuration Node '''
-    bl_idname = 'TrunkNode'
-    bl_label = 'Trunk'
-    bl_width_default = 200
-
-    preserve_trunk = bpy.props.BoolProperty(default=True)
-    finish_trunk = bpy.props.BoolProperty(default=False)
-    use_grease_pencil = bpy.props.BoolProperty(default=False)
-    radius = bpy.props.FloatProperty(default=1)
-    trunk_iterations = bpy.props.IntProperty(default=6, min=0)
-    trunk_end = bpy.props.IntProperty(default=20, min=0)
-
-    def init(self, context):
-        scene = bpy.context.scene
-        mtree_props = scene.mtree_props
-
-        self.inputs.new('NodeSocketShader', "Trunk")
-        self.inputs.new('FloatSocket', "Trunk_length").default_value = mtree_props.trunk_space
-        self.inputs.new('FloatSocket', "split_proba").default_value = mtree_props.trunk_split_proba
-        self.inputs.new('FloatSocket', "split_angle").default_value = mtree_props.trunk_split_angle
-        self.inputs.new('FreeFloatSocket', "randomness").default_value = mtree_props.trunk_variation
-        self.inputs.new('FloatSocket', "Radius_decrease").default_value = mtree_props.trunk_radius_dec
-
-        self.outputs.new('NodeSocketShader', "Branches")
-
-    def draw_buttons(self, context, layout):
-        layout.prop(self, "preserve_trunk")
-        if self.preserve_trunk:
-            layout.prop(self, "finish_trunk")
-        layout.prop(self, "use_grease_pencil")
-        layout.prop(self, "radius")
-        layout.prop(self, "trunk_iterations")
-        layout.prop(self, "trunk_end")
-
-    def update(self):
-        try:
-            if self.preserve_trunk:
-                if len([i for i in self.inputs if i.hide]) > 0:
-                    self.inputs["split_proba"].hide = False
-                    self.inputs["split_angle"].hide = False
-
-            elif len([i for i in self.inputs if i.hide]) == 0:
-                self.inputs["split_proba"].hide = True
-                self.inputs["split_angle"].hide = True
-        except: pass
-        scene = bpy.context.scene
-        mtree_props = scene.mtree_props
-        mtree_props.preserve_trunk = self.preserve_trunk
-        mtree_props.finish_trunk = self.finish_trunk
-        mtree_props.use_grease_pencil = self.use_grease_pencil
-        mtree_props.trunk_length = self.trunk_iterations
-        mtree_props.preserve_end = self.trunk_end
-        mtree_props.radius = self.radius
-
-
-class BranchNode(Node, ModularTreeNodeTree):
-    ''' Branch configuration Node '''
-    bl_idname = 'BranchNode'
-    bl_label = 'Branches'
-    bl_width_default = 170
-
-    iterations = bpy.props.IntProperty(default=25)
-
-    # radius_decrease = bpy.props.IntProperty(default = mtree_props.radius_dec)
-
-    def init(self, context):
-        scene = bpy.context.scene
-        mtree_props = scene.mtree_props
-
-        self.inputs.new('NodeSocketShader', "Branches")
-        self.inputs.new('FloatSocket', "length")
-        self.inputs.new('FreeFloatSocket', "variations")
-        self.inputs.new('FloatSocket', "split_proba")
-        self.inputs.new('FloatSocket', "split_angle")
-        self.inputs.new('FloatSocket', "break_chance")
-        self.inputs.new('FloatSocket', "radius_decrease")
-        self.inputs.new('FloatSocket', "min_radius")
-        self.inputs.new('AngleFloatSocket', "branches_rotation_angle")
-        self.inputs.new('AngleFloatSocket', "branches_random_rotation_angle")
-
-
-        self.inputs["length"].default_value = mtree_props.branch_length
-        self.inputs["variations"].default_value = mtree_props.randomangle
-        self.inputs["split_proba"].default_value = mtree_props.split_proba
-        self.inputs["split_angle"].default_value = mtree_props.split_angle
-        self.inputs["break_chance"].default_value = mtree_props.break_chance
-        self.inputs["radius_decrease"].default_value = mtree_props.radius_dec
-        self.inputs["min_radius"].default_value = mtree_props.branch_min_radius
-        self.inputs["branches_rotation_angle"].default_value = mtree_props.branch_rotate
-        self.inputs["branches_random_rotation_angle"].default_value = mtree_props.branch_random_rotate
-        self.outputs.new('NodeSocketShader', "Tree")
-
-
-    def draw_buttons(self, context, layout):
-        layout.prop(self, "iterations")
-        # layout.prop(self, "radius_decrease")
-
-    def update(self):
-        scene = bpy.context.scene
-        mtree_props = scene.mtree_props
-        mtree_props.iteration = self.iterations
-
-
-class TreeOutput(Node, ModularTreeNodeTree):
-    ''' Tree configuration Node '''
-    bl_idname = 'TreeOutput'
-    bl_label = 'Tree_Output'
-    bl_width_default = 170
-
-    Seed = bpy.props.IntProperty(default=42)
-    uv = bpy.props.BoolProperty(default=True)
-    create_material = bpy.props.BoolProperty(default=False)
-    material = bpy.props.StringProperty(default="")
-
-    def init(self, context):
-
-        self.use_custom_color = True
-        self.color = (0.0236563, 0.0913065, 0.173356)
-        self.inputs.new('NodeSocketShader', "Tree")
-
-    def draw_buttons(self, context, layout):
-        row = layout.row()
-        row.scale_y = 1.5
-        try:
-            if bpy.context.selected_objects[-1].get("is_tree"):
-                row.operator("mod_tree.update_tree", icon_value=get_icon("TREE_UPDATE"))
-            else:
-                row.operator("mod_tree.add_tree", icon_value=get_icon("TREE"))
-        except:
-            row.operator("mod_tree.add_tree", icon_value=get_icon("TREE"))
-        layout.prop(self, "Seed")
-        layout.prop(self, "uv")
-        layout.prop(self, "create_material")
-        if not self.create_material:
-            layout.prop_search(self, "material", bpy.data, "materials", text="", icon="MATERIAL_DATA")
-
-    def update(self):
-        scene = bpy.context.scene
-        mtree_props = scene.mtree_props
-        mtree_props.uv = self.uv
-        mtree_props.SeedProp = self.Seed
-        seed(self.Seed)
-        mtree_props.mat = self.create_material
-        mtree_props.bark_material = self.material
-
-
-class TwigNode(Node, ModularTreeNodeTree):
-    ''' Twig configuration Node '''
-    bl_idname = 'TwigNode'
-    bl_label = 'Twig'
-    bl_width_default = 170
-
-    Seed = bpy.props.IntProperty(default=42)
-    leaf_size = bpy.props.FloatProperty(default=1)
-    leaf_object = bpy.props.StringProperty(default='')
-    leaf_proba = bpy.props.FloatProperty(default=.5)
-    leaf_weight = bpy.props.FloatProperty(default=.2)
-    iterations = bpy.props.IntProperty(default=9)
-    material = bpy.props.StringProperty(default="")
-
-    def init(self, context):
-
-        self.use_custom_color = True
-        self.color = (0.0236563, 0.0913065, 0.173356)
-
-    def draw_buttons(self, context, layout):
-        row = layout.row()
-        row.scale_y = 1.5
-        try:
-            if bpy.context.selected_objects[-1].get("is_tree"):
-                row.operator("mod_tree.update_twig", icon="FILE_REFRESH")
-            else:
-                row.operator("mod_tree.add_twig", icon_value=get_icon("TWIG"))
-        except:
-            row.operator("mod_tree.add_twig", icon_value=get_icon("TWIG"))
-
-        layout.prop(self, "Seed")
-        layout.prop(self, "leaf_size")
-        layout.prop_search(self, "leaf_object", bpy.data, "objects", text="", icon="OBJECT_DATA")
-        layout.prop(self, "leaf_proba")
-        layout.prop(self, "leaf_weight")
-        layout.prop(self, "iterations")
-        layout.prop_search(self, "material", bpy.data, "materials", text="", icon="MATERIAL_DATA")
-
-    def update(self):
-        scene = bpy.context.scene
-        mtree_props = scene.mtree_props
-        bpy.context.scene.mtree_props.SeedProp = self.Seed
-        bpy.context.scene.mtree_props.leaf_object = self.leaf_object
-        mtree_props.leaf_size = self.leaf_size
-        mtree_props.TwigSeedProp = self.Seed
-        mtree_props.leaf_object = self.leaf_object
-        mtree_props.leaf_weight = self.leaf_weight
-        mtree_props.leaf_chance = self.leaf_proba
-        mtree_props.twig_iteration = self.iterations
-        mtree_props.twig_bark_material = self.material
-
-
-class ForcesNode(Node, ModularTreeNodeTree):
-    ''' Forces configuration Node '''
-    bl_idname = 'ForcesNode'
-    bl_label = 'Forces'
-    bl_width_default = 170
-
-    use_force_field = bpy.props.BoolProperty(default=False)
-
-    def init(self, context):
-        scene = bpy.context.scene
-        mtree_props = scene.mtree_props
-
-        self.inputs.new('NodeSocketShader', "Tree")
-        self.inputs.new('FreeFloatSocket', "gravity_strength").default_value = mtree_props.gravity_strength
-        self.inputs.new('FreeFloatSocket', "Point_force_strength").default_value = mtree_props.fields_point_strength
-        self.inputs.new('FreeFloatSocket', "wind_strength").default_value = mtree_props.fields_wind_strength
-        self.inputs.new('FreeFloatSocket', "strength_limit").default_value = mtree_props.fields_strength_limit
-        self.outputs.new('NodeSocketShader', "Tree")
-
-    def update(self):
-        try:
-            if self.use_force_field:
-                if len([i for i in self.inputs if i.hide]) > 0:
-                    self.inputs['Point_force_strength'].hide = False
-                    self.inputs['wind_strength'].hide = False
-                    self.inputs['strength_limit'].hide = False
-
-            elif len([i for i in self.inputs if i.hide]) <= 3:
-                self.inputs['Point_force_strength'].hide = True
-                self.inputs['wind_strength'].hide = True
-                self.inputs['strength_limit'].hide = True
-        except: pass
-
-    def draw_buttons(self, context, layout):
-        layout.prop(self, "use_force_field")
-
-
-class VertexNode(Node, ModularTreeNodeTree):
-    ''' Vertex group/color configuration Node '''
-    bl_idname = 'VertexNode'
-    bl_label = 'Vertex'
-    bl_width_default = 190
-
-    create_leaf_vertex_group = bpy.props.BoolProperty(default=True)
-    create_radius_vertex_paint = bpy.props.BoolProperty(default=True)
-    group_expansion = bpy.props.IntProperty(default=5, name='vertex_group_expansion')
-
-    def init(self, context):
-        scene = bpy.context.scene
-        mtree_props = scene.mtree_props
-
-        self.inputs.new('NodeSocketShader', "Tree")
-        self.outputs.new('NodeSocketShader', "Tree")
-
-    def draw_buttons(self, context, layout):
-        layout.prop(self, "create_radius_vertex_paint")
-        layout.prop(self, "create_leaf_vertex_group")
-        if self.create_leaf_vertex_group:
-            layout.prop(self, "group_expansion")
-
-    def update(self):
-        scene = bpy.context.scene
-        mtree_props = scene.mtree_props
-        mtree_props.create_leaf_vertex_group = self.create_leaf_vertex_group
-        mtree_props.create_vertex_paint = self.create_radius_vertex_paint
-        mtree_props.leafs_iteration_length = self.group_expansion
-
-
-class ObstacleNode(Node, ModularTreeNodeTree):
-    ''' obstacle configuration Node '''
-    bl_idname = 'ObstacleNode'
-    bl_label = 'Obstacle'
-    bl_width_default = 190
-
-    obstacle = bpy.props.StringProperty(default="")
-    flip_normals = bpy.props.BoolProperty(default=False)
-
-    modes = [
-        ("AVOID", "avoid", "The branches avoid the boundaries of the obstacle"),
-        ("CUT", "cut", "The branches are cut by the boundaries of the obstacle"),
-    ]
-    mode = bpy.props.EnumProperty(name="mode", description="mode", items=modes,
-                                    default='AVOID')
-
-    def init(self, context):
-        scene = bpy.context.scene
-
-        self.inputs.new('NodeSocketShader', "Tree")
-        self.inputs.new('FloatSocket', 'avoidance_strength').default_value = 1
-        self.outputs.new('NodeSocketShader', "Tree")
-
-    def draw_buttons(self, context, layout):
-        layout.prop_search(self, "obstacle", bpy.data, "objects", text="", icon="OBJECT_DATA")
-        layout.prop(self, 'mode')
-        layout.prop(self, 'flip_normals')
-
-    def update(self):
-        try:
-            if self.mode == "AVOID":
-                if len([i for i in self.inputs if i.hide]) > 0:
-                    self.inputs["avoidance_strength"].hide = False
-
-            elif len([i for i in self.inputs if i.hide]) == 0:
-                self.inputs["avoidance_strength"].hide = True
-        except: pass
-        bpy.context.scene.mtree_props.obstacle = self.obstacle
-
-
-class ParticleNode(Node, ModularTreeNodeTree):
-    ''' particles configuration Node '''
-    bl_idname = 'ParticleNode'
-    bl_label = 'Particles'
-    bl_width_default = 190
-
-    number = bpy.props.IntProperty(default=1000)
-    viewport_number = bpy.props.IntProperty(default=500)
-    leaf_object = bpy.props.StringProperty(default="")
-    leaf_size = bpy.props.FloatProperty(default=1.0)
-    emitter = bpy.props.BoolProperty(default=True, name='create particle emitter')
-
-    def init(self, context):
-        self.inputs.new('NodeSocketShader', "Tree")
-        self.outputs.new('NodeSocketShader', "Tree")
-
-    def draw_buttons(self, context, layout):
-        layout.prop(self, 'emitter')
-        layout.prop_search(self, "leaf_object", bpy.data, "objects", text="", icon="OBJECT_DATA")
-        layout.prop(self, 'number')
-        layout.prop(self, 'viewport_number')
-        layout.prop(self, 'leaf_size')
-
-    def update(self):
-        scene = bpy.context.scene
-        mtree_props = scene.mtree_props
-        mtree_props.number = self.number
-        mtree_props.display = self.viewport_number
-        mtree_props.twig_particle = self.leaf_object
-        mtree_props.particle_size = self.leaf_size
-
-
-class PruningNode(Node, ModularTreeNodeTree):
-    ''' pruning configuration Node '''
-    bl_idname = 'PruningNode'
-    bl_label = 'Pruning'
-    bl_width_default = 190
-
-    voxel_size = bpy.props.IntProperty(default = 1)
-
-    def init(self, context):
-        self.inputs.new('NodeSocketShader', "Tree")
-        self.inputs.new('FreeFloatSocket', "intensity")
-        self.outputs.new('NodeSocketShader', "Tree")
-
-    def draw_buttons(self, context, layout):
-        layout.prop(self, 'voxel_size')
-
-    def update(self):
-        bpy.context.scene.mtree_props.pruning = True
-
-
-
-class ArmatureNode(Node, ModularTreeNodeTree):
-    ''' armature configuration Node '''
-    bl_idname = 'ArmatureNode'
-    bl_label = 'Armature'
-    bl_width_default = 120
-
-    max_bones_iteration = bpy.props.IntProperty(default=5)
-
-    def init(self, context):
-        self.inputs.new('NodeSocketShader', "Tree")
-        self.outputs.new('NodeSocketShader', "Tree")
-
-    def draw_buttons(self, context, layout):
-        layout.prop(self, 'max_bones_iteration')
-
-    def update(self):
-        pass
-
-
-def get_node_group():
-    if 'curve_node_group' not in bpy.data.node_groups:
-        print('creating group')
-        node_group = bpy.data.node_groups.new('curve_node_group', 'ShaderNodeTree')
-        # node_group.use_fake_user = True
-    return bpy.data.node_groups['curve_node_group'].nodes
-
-curve_node_mapping = {}
-
-
-def CurveData(name):
-    return get_node_group()[name]
-
-
-class CurveNode(Node, ModularTreeNodeTree):
-    ''' Curve node to map values, heavily inspired by the animation node addon code'''
-
-    bl_idname = 'CurveNode'
-    bl_label = 'Curve_Mapping'
-    bl_width_default = 200
-
-    x_min = bpy.props.FloatProperty(default=0, name='x_min', description="the left bound of the x axis")
-    x_max = bpy.props.FloatProperty(default=1, name='x_max', description="the right bound of the x axis")
-    y_min = bpy.props.FloatProperty(default=0, name='y_min', description="the lower bound of the y axis")
-    y_max = bpy.props.FloatProperty(default=1, name='y_max', description="the left bound of the x axis")
-
-    drivers = [
-        ("ITERATION", "Iteration", "The current iteration of the branch"),
-        ("RADIUS", "Radius", "The current radius of the branch"),
-        ("HEIGHT", "height", "The height of the current branch")
-    ]
-    driver = bpy.props.EnumProperty(name="input", description="The X axis of the curve", items=drivers, default='ITERATION')
-
-    def init(self, context):
-        self.outputs.new('FreeFloatSocket', "value")
-        self.initialize()
-
-    def initialize(self):
-        nodes = get_node_group()
-        node = nodes.new("ShaderNodeRGBCurve")
-        node.name = self.name
-        return node
-
-    def draw_buttons(self,context, layout):
-        layout.prop(self, 'driver')
-        layout.template_curve_mapping(self.node, "mapping", use_negative_slope=True)
-        if self.driver != 'ITERATION':
-            col = layout.box()
-            col.prop(self, "x_min")
-            col.prop(self, "x_max")
-        col = layout.column()
-        col.prop(self, "y_min")
-        col.prop(self, "y_max")
-
-    def update(self):
-        pass
-
-    @property
-    def curve(self):
-        return self.node.mapping.curves[3]
-
-    @property
-    def node(self):
-        # nodes = get_node_group()
-        # node = nodes.get(self.name)
-        # if node is None:
-        #     node = self.createCurveNode()
-        # return node
-        node = CurveData(self.name)
-        return node
-
-
-nodes_to_register = [ModularTreeNodeTree, RootNode, TrunkNode, BranchNode, TreeOutput, CurveNode, FloatSocket,
-                     FreeFloatSocket, ForcesNode, VertexNode, AngleFloatSocket, ObstacleNode, ParticleNode,
-                     PruningNode, ArmatureNode, TwigNode]
-
-
-bpy.app.handlers.scene_update_post.append(update_all_trees)
-
-
-node_categories = [
-    # identifier, label, items list
-    ModularTreeNodeCategory("Tree", "Tree Nodes",
-                            items=[NodeItem("RootNode"), NodeItem("TrunkNode"), NodeItem("BranchNode")]),
-    ModularTreeNodeCategory("Input", "Input",
-                            items=[NodeItem("CurveNode")]),
-    ModularTreeNodeCategory("Output", "Output",
-                            items=[NodeItem("TreeOutput"), NodeItem("TwigNode")]),
-    ModularTreeNodeCategory("Modifiers", "Modifiers",
-                            items=[NodeItem("ForcesNode"), NodeItem("VertexNode"), NodeItem("ObstacleNode"),
-                                   NodeItem("ParticleNode"), NodeItem("PruningNode"), NodeItem("ArmatureNode")]),
-]
-
-
-def setup_node_tree(node_tree):
-    names = ['RootNode', 'TrunkNode', 'BranchNode', 'TreeOutput']
-    nodes = node_tree.nodes
-    last_node = None
-    for i, name in enumerate(names):
-        new_node = nodes.new(name)
-        new_node.location = Vector((i*260, 0))
-        if i == 0:
-            last_node = new_node
-        else:
-            node_tree.links.new(last_node.outputs[0], new_node.inputs[0])
-            last_node = new_node
-
-
+        return context.space_data.tree_type == 'ModularTreeType'
+
+
+inputs = [GreasePencilNode, TrunkNode]
+tree_functions = [SplitNode, GrowNode]
+outputs = [BuildTreeNode]
+
+node_categories = [ModularTreeNodeCategory("inputs", "inputs", items=[NodeItem(i.bl_idname) for i in inputs]),
+                   ModularTreeNodeCategory("tree_functions", "tree functions", items=[NodeItem(i.bl_idname) for i in tree_functions]),
+                   ModularTreeNodeCategory("outputs", "outputs", items=[NodeItem(i.bl_idname) for i in outputs])]
+
+node_classes_to_register = [ModularTree, TreeSocket, BuildTreeNode, GreasePencilNode, SplitNode, GrowNode, TrunkNode]
+
+
+# @persistent
+# def has_nodes_changed(dummy):
+#     node = bpy.context.active_node.id_data.nodes.get("BuildTree")
+#     new_memory = get_tree_parameters_rec("", node)
+#     # new_memory = "coucou"
+#     # condition = True
+#     if node.auto_update and new_memory != node.memory:
+#         bpy.ops.object.delete(use_global=False)
+#         node.execute()
+#         # bpy.ops.mod_tree.tree_from_nodes()
+#
+#         node.memory = new_memory
+#         # node.execute()
+#
+#
+# bpy.app.handlers.frame_change_pre.append(has_nodes_changed)
