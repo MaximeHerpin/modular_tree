@@ -52,7 +52,7 @@ class Wind:
         # wind_vector = np.array(wind_direction) * (1 + np.cos(self.time / 40) * random() / 4) * strength / 500
         turbulence_vect = mathutils.noise.turbulence_vector(Vector((.05,0,0))*self.time, 2, False)
         wind_vector = (np.array(wind_direction) + turbulence * .5 * turbulence_vect) * strength * .01
-        t = 1 / 34
+        t = 1 / 54
         matrices = np.zeros(self.n * 16, dtype=np.float)
         self.bones.foreach_get('matrix', matrices)
         matrices.shape = (self.n, 4, 4)
@@ -102,8 +102,8 @@ class Wind:
             matrices[i] = matrices[i].dot(np.array([list(i.to_tuple()) for i in list(Matrix.Rotation(true_angle[i,0], 4, 'X'))]))
             matrices[i] = matrices[i].dot(np.array([list(i.to_tuple()) for i in list(Matrix.Rotation(true_angle[i,1], 4, 'Y'))]))
         self.bones.foreach_set('matrix', matrices.ravel())
-        #self.bones.foreach_set('matrix', np.einsum('hik,hkj->hij', np.einsum('hik,hkj->hij', matrices, rot_Z), rot_X).ravel())
-        # bones.foreach_set('matrix', matrices.ravel())
+        # self.bones.foreach_set('matrix', np.einsum('hik,hkj->hij', np.einsum('hik,hkj->hij', matrices, rot_Z), rot_X).ravel())
+        # self.bones.foreach_set('matrix', matrices.ravel())
         # bpy.ops.object.mode_set(mode='EDIT')
         # bpy.ops.object.mode_set(mode='OBJECT')
         #bpy.context.scene.update()
@@ -125,9 +125,7 @@ class ModalWindOperator(bpy.types.Operator):
     turbulence = FloatProperty(default=.5)
     armature = None
 
-    def draw(self, context):
-        layout = self.layout
-        layout.prop(self, "turbulence")
+    wind_rotation = FloatProperty(default=0)
 
 
     def modal(self, context, event):
@@ -137,7 +135,12 @@ class ModalWindOperator(bpy.types.Operator):
 
         if event.type == 'TIMER':
             # bpy.context.scene.frame_set(self.time)
-            self.wind.step(self.wind_object.field.strength, Matrix.Rotation(self.wind_object.rotation_euler.z, 3, 'Z') * Vector((1, 0, 0)), 1)
+            try:
+                self.wind.step(self.wind_object.scale[0], Matrix.Rotation(self.wind_object.rotation_euler.z + self.wind_rotation, 3, 'Z') * Vector((1, 0, 0)), 1)
+            except:
+                self.cancel(context)
+                self.report({'ERROR'}, "Select the controller object, and then the armature object")
+                return {'CANCELLED'}
             ob = bpy.context.object
             self.armature.select = True
             bpy.context.scene.objects.active = self.armature
@@ -152,17 +155,25 @@ class ModalWindOperator(bpy.types.Operator):
         print("wind")
         wm = context.window_manager
         self._timer = wm.event_timer_add(0.1, context.window)
-        wm.modal_handler_add(self)
         self.armature = bpy.context.object
         if self.armature is None:
-            self.report({'ERROR'}, "no armature selected")
+            # self.report({'ERROR'}, "no armature selected")
+            self.cancel(context)
             return {'CANCELLED'}
 
         self.wind = Wind(context.object)
-        self.wind_object = context.scene.objects.get('Field')
-        if self.wind_object is None:
-            self.report({'ERROR'}, "no wind force field found")
+        try:
+            self.wind_object = [i for i in context.selected_objects if i != self.armature][0]
+            # self.wind_object = context.scene.objects.get('Field')
+        except:
+            self.cancel(context)
+            self.report({'ERROR'}, "Select the controller object, and then the armature object")
             return {'CANCELLED'}
+
+        wm.modal_handler_add(self)
+
+        # if self.wind_object is None:
+
 
         return {'RUNNING_MODAL'}
 
@@ -186,6 +197,11 @@ def organize_bones_rec(bone, bones):
 def add_f_curve_modifiers(armature_object, strength, speed):
     wind_vector = Vector((1, 0, 0)) * strength
 
+    fcurves = armature_object.animation_data.action.fcurves
+    for f in fcurves:
+        for m in f.modifiers:
+            f.modifiers.remove(m)
+
     bones = organize_bones(armature_object)
 
     for b in bones:
@@ -204,6 +220,7 @@ def add_f_curve_modifiers(armature_object, strength, speed):
 
     fcurves = armature_object.animation_data.action.fcurves
 
+
     for i in range(len(bones)):
         f0 = fcurves[2 * i]
         f1 = fcurves[2 * i + 1]
@@ -220,7 +237,7 @@ def add_f_curve_modifiers(armature_object, strength, speed):
             # torque /= 3
         # else:
         #     torque = Vector((0, 0, 0))
-        torque = i_base * wind_vector.cross(bone_vector) / (b.bone.tail_radius**2) / 1000
+        torque = i_base * wind_vector.cross(bone_vector) / (b.bone.tail_radius) / 1000
 
         f = sqrt(abs(damping ** 2 - 4 * inertia_moment * stiffness)) / (5*b.bone.tail_radius) * speed
 
@@ -256,7 +273,7 @@ class FastWind(Operator):
     def execute(self, context):
         obj = bpy.context.object
         if obj is not None and obj.type == 'ARMATURE':
-            add_f_curve_modifiers(obj, self.strength/5)
+            add_f_curve_modifiers(obj, self.strength/5, self.speed)
         else:
             self.report({'ERROR'}, "No armature object selected")
             return {'CANCELLED'}

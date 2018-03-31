@@ -302,7 +302,7 @@ class SplitNode(Node, ModularTreeNode):
     split_angle = FloatProperty(min=0, max=180, default=45, description="Angle between the branch branch direction and the secondary split direction")
     spin = FloatProperty(min=0, max=360, default=45, description="Rotation between each split")
     head_size = FloatProperty(min=0.001, max=.999, default=.6, description="Size of the secondary branch compared to the main one")
-    offset = IntProperty(min=0, default=0, description="Number of branches before the first one")
+    offset = IntProperty(min=0, default=0, description="Number of branches that wont be split before the first split occurs")
 
     def init(self, context):
         self.inputs.new("TreeSocketType", "Tree")
@@ -352,8 +352,8 @@ class GrowNode(Node, ModularTreeNode):
     split_radius = FloatProperty(min=.01, max=.999, default=.6, description="When a branch is splitting, the radius of the secondary branch of the fork")
     radius_decrease = FloatProperty(min=0.01, max=.999, default=.97, description="The radius of each branch iteration compared to the previous one")
     randomness = FloatProperty(default=.1, description="Noise affecting the direction of each branch")
-    spin = FloatProperty(default=135, description="relative rotation of a split compared to the previous split in the branch")
-    spin_randomness = FloatProperty(min=0, max=7, default=.1, description="The randomness of the spin")
+    spin = FloatProperty(default=135, description="Relative rotation of a split compared to the previous split in the branch")
+    spin_randomness = FloatProperty(min=0, max=7, default=.1, description="Randomness of the spin")
     gravity_strength = FloatProperty(default=.1, description="Amount of downward attraction")
     pruning_strength = FloatProperty(default=1, description="Decrease the probability of branching when the density of branches is high")
     shape_factor = FloatProperty(default=1, min=0, description="Decrease of branching probability when the branch is far from the axis of the tree")

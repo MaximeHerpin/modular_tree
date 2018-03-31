@@ -74,6 +74,7 @@ class WindPanel(bpy.types.Panel):
     bl_context = "objectmode"
     bl_category = 'Tree'
 
+
     def draw(self, context):
         layout = self.layout
         row = layout.row()

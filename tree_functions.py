@@ -219,7 +219,7 @@ def add_particles_emitter(root, max_radius, proba, dupli_object, size=1, ends_on
     bm.free()
 
     obj = bpy.data.objects.new("tree_leaves_emitter", mesh)
-    obj.location = Vector((0, 0, 0))
+    obj.location = bpy.context.scene.cursor_location
     bpy.context.scene.objects.link(obj)
     bpy.context.scene.objects.active = obj
     vg = obj.vertex_groups.new("leaves")
@@ -233,23 +233,26 @@ def add_emitters_rec(module, max_radius, verts, proba, weights, density_dict, en
     if module.base_radius < max_radius:
 
         chance = random()*(module.base_radius/max_radius)
-        if ends_only:
+        # print(chance)
+        if ends_only and False:
             chance *= .5 + module.position.normalized().dot(module.direction) * .5
 
         key = get_pruning_key(module.position)
         can_see_sun = not ends_only
-        if key not in density_dict:
+        if key not in density_dict or density_dict[key] < .5:
+            print("key")
             can_see_sun = True
             if not ends_only:
-                chance *= 2
+                chance /= 2
 
         if can_see_sun and chance < proba:
+            print('coucou')
             axis = Vector((1, 0, 0))
             if module.direction != Vector((0, 0, 1)):
                 axis = module.direction.cross(Vector((0, 0, 1))).cross(module.direction).normalized()
-            angle = (random() - .5) * pi/4
+            angle = (random() - .5) * pi/2
             direction = module.direction * Matrix.Rotation(angle, 3, axis)
-            direction.z *= .2
+            direction.z *= .3
             v = square(.1)
             rot = direction.rotation_difference(Vector((0, 0, 1))).to_matrix()
             verts.extend([i*rot + module.position for i in v])
