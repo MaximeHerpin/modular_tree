@@ -3,15 +3,21 @@
 class BaseNode:
     @classmethod
     def poll(cls, ntree):
-        return ntree.bl_idname == 'ModularTreeType'
-    
-    # copy function called when a node is dupplicated
-    def copy(self, node):
-        print("Copying from node ", node)
+        return ntree.bl_idname == 'MtreeNodeTree'
 
-    # Free function to clean up on removal.
-    def free(self):
-        print("Removing node ", self, ", Goodbye!")
+    def __init__(self):
+        self.name = self.name
 
     def execute(self):
         pass
+
+    def copy(self, node):
+        print("Copying from node ", node)
+
+    def free(self):
+        print("Removing node ", self, ", Goodbye!")
+
+    def draw_label(self):
+        return self.name
+
+    

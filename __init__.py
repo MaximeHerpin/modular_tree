@@ -23,7 +23,7 @@ bl_info = {
     "category": "Add Mesh"}
 
 import os
-# from nodes.node_tree import classes as node_classes, Mtree_node_categories
+from .nodes import nodes_classes
 # from . import addon_updater_ops
 # from .nodes import node_classes_to_register, node_categories, get_last_memory_match, get_tree_parameters_rec, get_change_level
 # from .wind import ModalWindOperator, FastWind
@@ -35,7 +35,14 @@ import bpy
 from bpy.types import Operator
 from bpy.props import IntProperty, FloatProperty, EnumProperty, BoolProperty, StringProperty
 import nodeitems_utils
+import bpy
+from bpy.types import NodeTree, Node, NodeSocket
+import nodeitems_utils
+from nodeitems_utils import NodeCategory, NodeItem
 
+
+classes = []
+classes += nodes_classes # node types
 
 # class Preferences(bpy.types.AddonPreferences):
 
@@ -229,21 +236,23 @@ def delete_old_tree(level="gen"):
                 emitter.select = True
     bpy.ops.object.delete(use_global=False)
 
-classes = []
+#from nodes.node_tree import classes, Mtree_node_categories
 
 def register():
-    #addon_updater_ops.register(bl_info)
-    #nodeitems_utils.register_node_categories("MODULAR_TREE_NODES", Mtree_node_categories)
+    from bpy.utils import register_class
+    from .nodes.node_tree import node_categories
     for cls in classes:
-        bpy.utils.register_class(cls)
+        register_class(cls)
+
+    nodeitems_utils.register_node_categories('CUSTOM_NODES', node_categories)
 
 
 def unregister():
-    #addon_updater_ops.unregister()
-    #nodeitems_utils.unregister_node_categories("MODULAR_TREE_NODES")
-    for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
+    nodeitems_utils.unregister_node_categories('CUSTOM_NODES')
 
+    from bpy.utils import unregister_class
+    for cls in reversed(classes):
+        unregister_class(cls)
 
 # if __name__ == "__main__":
 #     register()

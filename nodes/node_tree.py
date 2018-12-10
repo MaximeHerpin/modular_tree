@@ -1,40 +1,49 @@
 import bpy
-from bpy.types import NodeTree
+from bpy.types import NodeTree, Node, NodeSocket
 import nodeitems_utils
 from nodeitems_utils import NodeCategory, NodeItem
-from trunk_node import TrunkNode
+from .base_node import BaseNode
 
-
-class ModularTree(NodeTree):
+# Derived from the NodeTree base type, similar to Menu, Operator, Panel, etc.
+class MtreeNodeTree(NodeTree):
     '''Mtree node editor'''
-    bl_idname = 'ModularTreeType'
-    bl_label = 'Mtree Node Tree'
+    bl_idname = 'MtreeNodeTree'
+    bl_label = "Mtree Node Tree"
     bl_icon = 'NODETREE'
 
 
+class TreeSocket(NodeSocket):
+    """Tree socket type"""
+    bl_idname = "TreeSocketType"
+    bl_label = "Tree Socket"
+
+    default_value = None
+    def draw(self, context, layout, node, text):
+        layout.label(text)
+
+    def draw_color(self, context, node):
+        return .125, .571, .125, 1
 
 
-### Node Categories ###
-# Node categories are a python system for automatically
-# extending the Add menu, toolbar panels and search operator.
-
-
-
-# our own base class with an appropriate poll function,
-# so the categories only show up in our own tree type
-
-nodes = [TrunkNode]
-
-class MtreeNodeCategory(NodeCategory):
+class MyNodeCategory(NodeCategory):
     @classmethod
     def poll(cls, context):
-        return context.space_data.tree_type == 'CustomTreeType'
+        return context.space_data.tree_type == 'MtreeNodeTree'
 
 
-Mtree_node_categories = [
-    MtreeNodeCategory('Trunk', "Trunk", items=[
-        NodeItem("CustomNodeType"),
-    ])]
+# all categories in a list
+node_categories = [
+    # identifier, label, items list
+    MyNodeCategory('NODES', "Nodes", items=[
+        NodeItem("MtreeTrunk"),
+    ]),
+]
+
+classes = [
+    MtreeNodeTree,
+    TreeSocket,
+]
 
 
-classes = [ModularTree] + nodes
+
+

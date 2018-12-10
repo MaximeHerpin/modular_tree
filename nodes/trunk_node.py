@@ -1,18 +1,29 @@
 from bpy.types import Node
-from base_node import BaseNode
+from bpy.props import IntProperty, FloatProperty, EnumProperty, BoolProperty, StringProperty
+from .base_node import BaseNode
+from ..tree import Tree
 
-class TrunkNode(Node, BaseNode):
-    bl_idname = 'CustomNodeType'
-    # Label for nice name display
-    bl_label = "Custom Node"
-    # Icon identifier
-    bl_icon = 'SOUND'
+class MtreeTrunk(Node, BaseNode):
+    bl_label = "Trunk Node"
+    
+    length = FloatProperty(min=0, default=7) # length of trunk
+    radius = FloatProperty(min=.0005, default=.8) # radius of trunk
+    resolution = FloatProperty(min=.002, default=1) # how many loops the trunk has
+    shape = FloatProperty(min=0.01, max=.999, default=1) # how the radius decreases with length
+    randomness = FloatProperty(default=.1) 
+    up_attraction = FloatProperty(default=.7)
 
     def init(self, context):
-        self.inputs.new('NodeSocketFloat', "Hello")
-        self.inputs.new('NodeSocketFloat', "World")
-        self.inputs.new('NodeSocketVector', "!")
+        self.outputs.new('TreeSocketType', "Tree")
 
-        self.outputs.new('NodeSocketColor', "How")
-        self.outputs.new('NodeSocketColor', "are")
-        self.outputs.new('NodeSocketFloat', "you")
+        self.name = MtreeTrunk.bl_label
+
+    def draw_buttons(self, context, layout):        
+        properties = ["length", "radius", "resolution", "shape", "randomness", "randomness", "up_attraction"]
+        col = layout.column()
+        for i in properties:
+            col.prop(self, i)
+    
+    def execute(self, tree):
+        tree.add_trunk(self.length, self.radius, self.shape, self.resolution)
+            
