@@ -22,6 +22,11 @@ class MtreeParameters(Node, BaseNode):
         trunk = [node for node in node_tree.nodes if node.bl_idname == "MtreeTrunk"][0] # get trunk function
         # TODO : check that there is only one trunk node
         trunk.execute(tree)
+        verts, faces = tree.build_mesh_data()
+        ob = bpy.context.object
+        mesh = bpy.data.meshes.new("test")
+        mesh.from_pydata(verts, [], [])
+        ob.data = mesh
     
 
 class ExecuteMtreeNodeTreeOperator(Operator):

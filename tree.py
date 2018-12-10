@@ -1,6 +1,8 @@
 from .tree_node import TreeNode
 from mathutils import Vector
 from .geometry import random_tangent
+import numpy as np
+from collections import deque
 
 class Tree:
     def __init__(self):
@@ -10,7 +12,15 @@ class Tree:
     
 
     def build_mesh_data(self):
-        pass
+        verts = []
+        faces = []
+        extremities = deque([self.stem])
+        while len(extremities) != 0:
+            extremity = extremities.popleft()
+            verts.append(extremity.position)
+            for child in extremity.children:
+                extremities.append(child)
+        return to_array(verts), faces
     
 
     def create_object(self):
@@ -22,8 +32,8 @@ class Tree:
         remaining_length = length
         extremity = self.stem # extremity is always the current last node of the trunk
         while remaining_length > 0:
-            if remaining_length < resolution:
-                resolution = remaining_length # last last branch is shorter so that the trunk is exactly of required length
+            if remaining_length < 1/resolution:
+                resolution = 1/remaining_length # last last branch is shorter so that the trunk is exactly of required length
             tangent = random_tangent(extremity.direction)
             direction = extremity.direction + tangent * randomness / resolution # direction of new TreeNode
             position = extremity.position + extremity.direction / resolution # position of new TreeNode
@@ -31,7 +41,7 @@ class Tree:
             new_node = TreeNode(position, direction, radius, creator) # new TreeNode
             extremity.children.append(new_node) # Add new TreeNode to extremity's children
             extremity = new_node # replace extremity by new TreeNode
-            remaining_length -= resolution
+            remaining_length -= 1/resolution
 
     
     def grow(self):
@@ -45,4 +55,11 @@ class Tree:
     def add_branches(self):
         pass
 
+
+def to_array(vectors):
+    n = len(vectors)
+    result = np.zeros((n, 3))
+    for i, v in enumerate(vectors):
+        result[i] = v.xyz
+    return result
     

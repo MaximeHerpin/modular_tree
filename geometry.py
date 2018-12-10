@@ -6,5 +6,5 @@ def random_tangent(dir):
     return v.cross(dir)
 
 def random_on_unit_sphere():
-    return Vector((random(), random(), random())).normalized()
+    return Vector((random()-.5, random()-.5, random()-.5)).normalized()
     
