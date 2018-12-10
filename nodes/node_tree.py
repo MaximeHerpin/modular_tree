@@ -19,7 +19,7 @@ class TreeSocket(NodeSocket):
 
     default_value = None
     def draw(self, context, layout, node, text):
-        layout.label(text)
+        pass
 
     def draw_color(self, context, node):
         return .125, .571, .125, 1
@@ -36,9 +36,9 @@ node_categories = [
     # identifier, label, items list
     MyNodeCategory('NODES', "Nodes", items=[
         NodeItem("MtreeTrunk"),
+        NodeItem("MtreeParameters"),
     ]),
 ]
-
 classes = [
     MtreeNodeTree,
     TreeSocket,

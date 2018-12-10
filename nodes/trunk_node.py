@@ -20,10 +20,13 @@ class MtreeTrunk(Node, BaseNode):
 
     def draw_buttons(self, context, layout):        
         properties = ["length", "radius", "resolution", "shape", "randomness", "randomness", "up_attraction"]
+        box = layout.box()
+        #box.label("press ESC to stop")
         col = layout.column()
         for i in properties:
             col.prop(self, i)
     
     def execute(self, tree):
-        tree.add_trunk(self.length, self.radius, self.shape, self.resolution)
+        tree.add_trunk(self.length, self.radius, self.shape, self.resolution, self.randomness, 0)
+        print("trunk has been executed")
             

@@ -218,23 +218,23 @@ classes += nodes_classes # node types
 #         return {'FINISHED'}
 
 
-def delete_old_tree(level="gen"):
-    obj = bpy.context.object
-    bpy.ops.object.select_all(action='DESELECT')
-    if obj is not None:# and obj.select: #and obj.get("is_tree") is not None:
-        print(obj.select)
-        if level == "gen":
-            print("selecting")
-            obj.select = True
-        if obj.get("amt") is not None and level in {"amt", "gen"}:
-            amt = bpy.context.scene.objects.get(obj.get("amt"))
-            if amt is not None:
-                amt.select = True
-        if obj.get("emitter") is not None and level in {"emitter", "gen"}:
-            emitter = bpy.context.scene.objects.get(obj.get("emitter"))
-            if emitter is not None:
-                emitter.select = True
-    bpy.ops.object.delete(use_global=False)
+# def delete_old_tree(level="gen"):
+#     obj = bpy.context.object
+#     bpy.ops.object.select_all(action='DESELECT')
+#     if obj is not None:# and obj.select: #and obj.get("is_tree") is not None:
+#         print(obj.select)
+#         if level == "gen":
+#             print("selecting")
+#             obj.select = True
+#         if obj.get("amt") is not None and level in {"amt", "gen"}:
+#             amt = bpy.context.scene.objects.get(obj.get("amt"))
+#             if amt is not None:
+#                 amt.select = True
+#         if obj.get("emitter") is not None and level in {"emitter", "gen"}:
+#             emitter = bpy.context.scene.objects.get(obj.get("emitter"))
+#             if emitter is not None:
+#                 emitter.select = True
+#     bpy.ops.object.delete(use_global=False)
 
 #from nodes.node_tree import classes, Mtree_node_categories
 

@@ -1,6 +1,6 @@
-from tree_node import TreeNode
+from .tree_node import TreeNode
 from mathutils import Vector
-from geometry import random_tangent
+from .geometry import random_tangent
 
 class Tree:
     def __init__(self):
