@@ -37,6 +37,7 @@ node_categories = [
     MyNodeCategory('NODES', "Nodes", items=[
         NodeItem("MtreeTrunk"),
         NodeItem("MtreeParameters"),
+        NodeItem("MtreeGrow"),
     ]),
 ]
 classes = [

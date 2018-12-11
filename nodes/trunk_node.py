@@ -1,7 +1,7 @@
 from bpy.types import Node
 from bpy.props import IntProperty, FloatProperty, EnumProperty, BoolProperty, StringProperty
 from .base_node import BaseNode
-from ..tree import Tree
+from ..tree import MTree
 
 class MtreeTrunk(Node, BaseNode):
     bl_label = "Trunk Node"
@@ -20,13 +20,14 @@ class MtreeTrunk(Node, BaseNode):
 
     def draw_buttons(self, context, layout):        
         properties = ["length", "radius", "resolution", "shape", "randomness", "randomness", "up_attraction"]
-        box = layout.box()
-        #box.label("press ESC to stop")
         col = layout.column()
         for i in properties:
             col.prop(self, i)
     
     def execute(self, tree):
         tree.add_trunk(self.length, self.radius, self.shape, self.resolution, self.randomness, 0)
+        links = self.outputs["Tree"].links
         print("trunk has been executed")
+        if len(links) > 0:
+            links[0].to_node.execute(tree)
             
