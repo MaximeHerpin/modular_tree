@@ -1,9 +1,10 @@
 from .tree_node import MTreeNode
-from mathutils import Vector
-from .geometry import random_tangent
+from mathutils import Vector, Quaternion
+from .geometry import random_tangent, build_module_rec
 import numpy as np
 from collections import deque
-from random import random
+from random import random, randint
+from math import pi
 
 class MTree:
     def __init__(self):
@@ -15,12 +16,13 @@ class MTree:
     def build_mesh_data(self):
         verts = []
         faces = []
-        extremities = deque([self.stem])
-        while len(extremities) != 0:
-            extremity = extremities.popleft()
-            verts.append(extremity.position)
-            for child in extremity.children:
-                extremities.append(child)
+        # extremities = deque([self.stem])
+        # while len(extremities) != 0:
+        #     extremity = extremities.popleft()
+        #     verts.append(extremity.position)
+        #     for child in extremity.children:
+        #         extremities.append(child)
+        build_module_rec(self.stem, 16, verts, faces)
         return to_array(verts), faces
     
 
@@ -38,13 +40,13 @@ class MTree:
             tangent = random_tangent(extremity.direction)
             direction = extremity.direction + tangent * randomness / resolution # direction of new TreeNode
             position = extremity.position + extremity.direction / resolution # position of new TreeNode
-            radius = extremity.radius * (1 - remaining_length/length)**shape # radius of new TreeNode
-            new_node = MTreeNode(position, direction, radius, creator) # new TreeNode
+            rad = radius * (remaining_length/length)**shape # radius of new TreeNode
+            new_node = MTreeNode(position, direction, rad, creator) # new TreeNode
             extremity.children.append(new_node) # Add new TreeNode to extremity's children
             extremity = new_node # replace extremity by new TreeNode
             remaining_length -= 1/resolution
 
-    
+
     def grow(self, lenght, shape_start, shape_end, shape_convexity, resolution, randomness, split_proba, split_angle, split_radius, creator):
         grow_candidates = []
         min_height, max_height = self.stem.get_grow_candidates(grow_candidates, creator) # get all leafs of valid creator
@@ -69,27 +71,52 @@ class MTree:
 
         while len(grow_candidates) > 0: # grow all candidates until there are none (all have grown to their respective length)
             node = grow_candidates.popleft()
-            children_number = 1 if random() > split_proba else 2 # if 1 the branch grows normally, if more than 1 the branch forks into more branches
+            children_number = 1 if random() > split_proba or node.is_branch_origin else 2 # if 1 the branch grows normally, if more than 1 the branch forks into more branches
             tangent = random_tangent(node.direction)
             for i in range(children_number):
                 deviation = randomness if children_number==1 else split_angle # how much the new direction will be changed by tangent
                 direction = node.direction.lerp(tangent * (i-.5)*2, deviation).normalized() # direction of new node
-                position = node.position + direction * branch_length # position of new node
+                if i == 0:
+                    position = node.position + direction * branch_length # position of new node
+                else:
+                    t = (tangent - tangent.project(node.direction)).normalized()
+                    position = node.position + node.direction * branch_length/2 + t*node.radius
                 growth = min(node.growth_goal, node.growth + branch_length) # growth of new node
-                radius = node.growth_radius * node.growth / node.growth_goal # radius of new node
+                radius = node.growth_radius * (1- node.growth / node.growth_goal) # radius of new node
                 if i > 0:
                     radius *= split_radius # forked branches have smaller radii
                 child = MTreeNode(position, direction, radius, creator)
                 child.growth_goal = node.growth_goal
                 child.growth = growth
                 child.growth_radius = node.growth_radius if i == 0 else node.growth_radius * split_radius
+                if i > 0:
+                    child.is_branch_origin = True
                 node.children.append(child)
                 if (growth < node.growth_goal):
                     grow_candidates.append(child) # if child can still grow, add it to the grow candidates
 
    
-    def split(self):
-        pass
+    def split(self, amount, angle, max_split_number, radius, offset, creator):
+        split_candidates = []
+        self.stem.get_split_candidates(split_candidates, creator)
+        n_candidates = len(split_candidates)
+        split_proba = amount/n_candidates
+
+        for node in split_candidates:
+            if split_proba > random():
+                n_children = randint(1,max_split_number)
+                tangent = random_tangent(node.direction)
+                rot = Quaternion(node.direction, 2*pi/n_children)
+                for i in range(n_children):
+                    direction = node.direction.lerp(tangent, angle).normalized()
+                    position = (node.position + node.children[0].position)/2
+                    rad = node.radius * radius
+                    child = MTreeNode(position, direction, rad, creator)
+                    child.is_branch_origin = True
+                    node.children.append(child)
+                    tangent = rot @ tangent
+
+        
     
 
     def add_branches(self):

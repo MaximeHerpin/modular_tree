@@ -12,6 +12,7 @@ class MTreeNode:
         self.growth_goal = 0 # float - How much the node should be grown.
         self.growth_radius = 0 # float - The radius of the node when it first started growing
         self.can_be_splitted = True # bool - if true the node can be splitted (can have more than 1 children)
+        self.is_branch_origin = False
 
     def get_grow_candidates(self, candidates, creator):
         '''
@@ -32,3 +33,11 @@ class MTreeNode:
             max_height = max(max_height, max_h) # max height is now the max between istself and the max height of child
         
         return min_height, max_height
+
+    
+    def get_split_candidates(self, candidates, creator):
+        if len(self.children) == 1 and not self.is_branch_origin and self.creator == creator:
+            candidates.append(self)
+        
+        for child in self.children:
+            child.get_split_candidates(candidates, creator)
