@@ -9,7 +9,7 @@ class MtreeTrunk(Node, BaseNode):
     length = FloatProperty(min=0, default=7) # length of trunk
     radius = FloatProperty(min=.0005, default=.8) # radius of trunk
     resolution = FloatProperty(min=.002, default=1) # how many loops the trunk has
-    shape = FloatProperty(min=0.01, max=.999, default=1) # how the radius decreases with length
+    shape = FloatProperty(min=0.01, default=1) # how the radius decreases with length
     randomness = FloatProperty(default=.1) 
     up_attraction = FloatProperty(default=.7)
 

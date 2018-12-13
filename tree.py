@@ -16,12 +16,6 @@ class MTree:
     def build_mesh_data(self):
         verts = []
         faces = []
-        # extremities = deque([self.stem])
-        # while len(extremities) != 0:
-        #     extremity = extremities.popleft()
-        #     verts.append(extremity.position)
-        #     for child in extremity.children:
-        #         extremities.append(child)
         build_module_rec(self.stem, 16, verts, faces)
         return to_array(verts), faces
     
@@ -47,7 +41,7 @@ class MTree:
             remaining_length -= 1/resolution
 
 
-    def grow(self, lenght, shape_start, shape_end, shape_convexity, resolution, randomness, split_proba, split_angle, split_radius, creator):
+    def grow(self, length, shape_start, shape_end, shape_convexity, resolution, randomness, split_proba, split_angle, split_radius, creator):
         grow_candidates = []
         min_height, max_height = self.stem.get_grow_candidates(grow_candidates, creator) # get all leafs of valid creator
 
@@ -59,12 +53,12 @@ class MTree:
         
         for node in grow_candidates:
             if min_height == max_height:
-                node.growth_goal = lenght
+                node.growth_goal = length
                 node.growth = 0
             else:
                 height = (node.position.y - min_height) / (max_height - min_height) # get height normed between 0 and 1
                 node.growth = 0
-                node.growth_goal = branch_length * shape_length(height) # add length to node growth goal
+                node.growth_goal = length * shape_length(height) # add length to node growth goal
             node.growth_radius = node.radius
 
         grow_candidates = deque(grow_candidates) # convert grow_candidates to deque for performance (lots of adding/removing last element)
@@ -73,6 +67,9 @@ class MTree:
             node = grow_candidates.popleft()
             children_number = 1 if random() > split_proba or node.is_branch_origin else 2 # if 1 the branch grows normally, if more than 1 the branch forks into more branches
             tangent = random_tangent(node.direction)
+            if tangent.z < 0:
+                tangent.z = 0
+                tangent.normalize()
             for i in range(children_number):
                 deviation = randomness if children_number==1 else split_angle # how much the new direction will be changed by tangent
                 direction = node.direction.lerp(tangent * (i-.5)*2, deviation).normalized() # direction of new node
@@ -80,8 +77,9 @@ class MTree:
                     position = node.position + direction * branch_length # position of new node
                 else:
                     t = (tangent - tangent.project(node.direction)).normalized()
-                    position = node.position + node.direction * branch_length/2 + t*node.radius
+                    position = (node.position + node.children[0].position)/2 + t*node.radius
                 growth = min(node.growth_goal, node.growth + branch_length) # growth of new node
+
                 radius = node.growth_radius * (1- node.growth / node.growth_goal) # radius of new node
                 if i > 0:
                     radius *= split_radius # forked branches have smaller radii
@@ -96,9 +94,9 @@ class MTree:
                     grow_candidates.append(child) # if child can still grow, add it to the grow candidates
 
    
-    def split(self, amount, angle, max_split_number, radius, offset, creator):
+    def split(self, amount, angle, max_split_number, radius, min_height, creator):
         split_candidates = []
-        self.stem.get_split_candidates(split_candidates, creator)
+        self.stem.get_split_candidates(split_candidates, creator, min_height)
         n_candidates = len(split_candidates)
         split_proba = amount/n_candidates
 
@@ -110,6 +108,7 @@ class MTree:
                 for i in range(n_children):
                     direction = node.direction.lerp(tangent, angle).normalized()
                     position = (node.position + node.children[0].position)/2
+                    position += (tangent - tangent.project(node.direction)).normalized() * node.radius
                     rad = node.radius * radius
                     child = MTreeNode(position, direction, rad, creator)
                     child.is_branch_origin = True

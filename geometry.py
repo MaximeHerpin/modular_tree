@@ -43,12 +43,14 @@ def build_module_rec(node, resolution, verts, faces, input_loop=[]):
     loop_up = [-1]*resolution # loop for faces in the upper part of the module
     loop_down = [-1]*resolution # loop for faces in the lower part of the module
     for child in node.children[1:]:
+        max_child_res = resolution // (len(node.children) - 1)
+
         child_dir = rot_dir_inv @ child.direction # child direction in y_up space
-        child_dir.z = 0
+        #child_dir.z = 0
         child_dir.normalize()
-        child_height = (child.position - node.position).magnitude
-        child_resolution = get_resolution(node.radius, child.radius, resolution)
-        child_verts = make_circle_2(Vector((0,0,child_height)) + child_dir * node.radius, child_dir, child.radius, Vector((0,0,-1)), child_resolution)
+        child_pos = rot_dir_inv @ (child.position - node.position)
+        child_resolution = get_resolution(node.radius, child.radius, resolution, max_child_res)
+        child_verts = make_circle_2(child_pos, child_dir, child.radius, Vector((0,0,-1)), child_resolution)
         child_loop = [i for i in range(n_verts, n_verts + child_resolution)] # input loop for child
         output_loops.append(child_loop)
         output_resolutions.append(child_resolution)
@@ -62,7 +64,7 @@ def build_module_rec(node, resolution, verts, faces, input_loop=[]):
         module_verts.extend(child_verts)
         n_verts += len(child_verts)
 
-    filling_loop = make_circle(Vector((0,0,extremity_height/2)), Vector((0,0,1)), (node.radius + extremity.radius)/2, resolution)
+    filling_loop = make_circle(extremity_position/2, Vector((0,0,1)), (node.radius + extremity.radius)/2, resolution)
     index = 0
     for i in range(len(filling_loop)):
         if filling_loop_indexes[i]:
@@ -88,16 +90,6 @@ def bridge(l1, l2):
     return faces
 
 
-def rotate_loop(v0, l, loop_verts, p=False):
-    index = find_closest(v0, loop_verts)
-    if p:
-        print(index)
-        print(l)
-    l = l[index:] + l[:index]
-    if p:
-        print(l)
-
-
 def rotate(l, n):
     return l[-n:] + l[:-n]
 
@@ -121,6 +113,7 @@ def projected_angle(direction, v):
 
 def make_circle_2(pos, dir, radius, tangent, resolution):
     angle = 2*pi / resolution
+    tangent = (tangent - tangent.project(dir)).normalized()
     rot = Quaternion(dir, angle) # rotation increment after each loop
     result = []
     v = tangent * radius
@@ -145,8 +138,8 @@ def to_array(vectors):
     return result
 
 
-def get_resolution(base_radius, child_radius, base_resolution):
-    n = int(child_radius / base_radius * base_resolution)
+def get_resolution(base_radius, child_radius, base_resolution, max_resolution):
+    n = min(max_resolution, int(child_radius / base_radius * base_resolution))
     if n % 2 == 1:
         n += 1
     if n % 4 != 0:

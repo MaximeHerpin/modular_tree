@@ -35,9 +35,9 @@ class MTreeNode:
         return min_height, max_height
 
     
-    def get_split_candidates(self, candidates, creator):
-        if len(self.children) == 1 and not self.is_branch_origin and self.creator == creator:
+    def get_split_candidates(self, candidates, creator, min_height):
+        if len(self.children) == 1 and not self.is_branch_origin and self.creator == creator and self.position.z >= min_height:
             candidates.append(self)
         
         for child in self.children:
-            child.get_split_candidates(candidates, creator)
+            child.get_split_candidates(candidates, creator, min_height)
