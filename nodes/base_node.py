@@ -1,5 +1,3 @@
-
-
 class BaseNode:
     @classmethod
     def poll(cls, ntree):

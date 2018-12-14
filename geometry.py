@@ -11,7 +11,8 @@ def random_on_unit_sphere():
     return Vector((random()-.5, random()-.5, random()-.5)).normalized()
 
 
-def build_module_rec(node, resolution, verts, faces, input_loop=[]):
+def build_module_rec(node, resolution, verts, faces, uvs, weights, input_loop=[], uv_height=0):
+    is_origin = False # true if thare are no input loop
     if len(node.children) == 0:
         return # node with no children shall not be drawn
     rot_dir = Vector((0,0,1)).rotation_difference(node.direction) # transformation from y_up space to directio_up space
@@ -19,13 +20,13 @@ def build_module_rec(node, resolution, verts, faces, input_loop=[]):
     module_verts = [] # verts created by the module
     n_verts = len(verts) # number of vertices before adding module
     if (input_loop == []):
+        is_origin = True
         module_verts = make_circle(Vector((0,0,0)), Vector((0,0,1)), node.radius, resolution)
         input_loop = [i for i in range(resolution)]
         n_verts += resolution
     elif node.is_branch_origin:
         input_tangent = rot_dir_inv @ (verts[input_loop[0]] - node.position)
         input_angle_offset = int(input_tangent.xy.angle_signed(Vector((1,0))) / 2/pi * resolution)
-        print(input_angle_offset)
         if input_angle_offset != 0:
             input_loop = rotate(input_loop, input_angle_offset)
     output_loops = [] # input_loop for each child
@@ -42,12 +43,11 @@ def build_module_rec(node, resolution, verts, faces, input_loop=[]):
     filling_loop_indexes = [True]*resolution # False when a vert of the loop is replaces by a children loop
     loop_up = [-1]*resolution # loop for faces in the upper part of the module
     loop_down = [-1]*resolution # loop for faces in the lower part of the module
+    
     for child in node.children[1:]:
-        max_child_res = resolution // (len(node.children) - 1)
-
+        max_child_res = resolution // (len(node.children) - 1) # max resolution of childs
         child_dir = rot_dir_inv @ child.direction # child direction in y_up space
-        #child_dir.z = 0
-        child_dir.normalize()
+        child_dir.normalize() #is this needed ?
         child_pos = rot_dir_inv @ (child.position - node.position)
         child_resolution = get_resolution(node.radius, child.radius, resolution, max_child_res)
         child_verts = make_circle_2(child_pos, child_dir, child.radius, Vector((0,0,-1)), child_resolution)
@@ -75,11 +75,17 @@ def build_module_rec(node, resolution, verts, faces, input_loop=[]):
     filling_loop = [filling_loop[i] for i in range(len(filling_loop)) if filling_loop_indexes[i]]
     module_verts.extend(filling_loop)
     faces.extend(bridge(input_loop, loop_down) + bridge(loop_up, extremity_loop))
-
+    if is_origin:
+        #weights.append((input_loop, 0))
+        weights.append(([i for i in range(resolution, len(module_verts) - resolution)], node.radius))
+    else:
+        weights.append(([i for i in range(len(verts), len(verts) + len(module_verts))], node.radius))
     verts.extend([rot_dir @ v + node.position for v in module_verts])
+    uv_height = uv_loops(input_loop, loop_down, uv_height, uvs, verts, node.radius, len(node.children)==1)
+    uv_height = uv_loops(loop_up, extremity_loop, uv_height, uvs, verts, extremity.radius, len(node.children)==1)
     for i, child in enumerate(node.children): # recursively call function on all children
         pass
-        build_module_rec(child, output_resolutions[i], verts, faces, output_loops[i])
+        build_module_rec(child, output_resolutions[i], verts, faces, uvs, weights, output_loops[i], uv_height)
 
 
 def bridge(l1, l2):
@@ -89,6 +95,22 @@ def bridge(l1, l2):
         faces.append([l2[i], l1[i], l1[(i+1)%n], l2[(i+1)%n]])
     return faces
 
+
+def uv_loops(l1, l2, height_offset, uvs, verts, radius, simple_branch):
+    n = len(l1)
+    h = height_offset
+    max_length = 0
+    if simple_branch:
+        max_length =length = (verts[l2[0]] - verts[l1[0]]).magnitude / 2 / pi / radius
+        
+    for i in range(n):
+        if not simple_branch:
+            length = (verts[l2[i]] - verts[l1[i]]).magnitude / 2 / pi / radius
+            max_length = max(max_length, length)
+        uvs.append([Vector((i/n, h+length)), Vector((i/n, h)),
+                    Vector(((i+1)/n, h)), Vector(((i+1)/n, h+length))])
+    
+    return height_offset + max_length
 
 def rotate(l, n):
     return l[-n:] + l[:-n]

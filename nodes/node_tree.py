@@ -39,6 +39,7 @@ node_categories = [
         NodeItem("MtreeParameters"),
         NodeItem("MtreeGrow"),
         NodeItem("MtreeSplit"),
+        NodeItem("MtreeBranch"),
     ]),
 ]
 classes = [
