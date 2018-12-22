@@ -18,6 +18,7 @@ class MtreeGrow(Node, BaseNode):
     split_angle = FloatProperty(min=0, max=1, default=.3) # angle of a fork
     split_radius = FloatProperty(min=0, max=1, default=.9) # radius of forked branches
     split_flatten = FloatProperty(min=0, max=1, default=.5) # how constraint on the horizontal axis the splits are
+    end_radius = FloatProperty(min=0, max=1, default=0) # the relative radius of vranches at the end of growth
     gravity_strength = FloatProperty(default=.1) # how much branches go towards the floor/sky
 
     def init(self, context):
@@ -26,7 +27,8 @@ class MtreeGrow(Node, BaseNode):
         self.name = MtreeGrow.bl_label
 
     def draw_buttons(self, context, layout):        
-        properties = ["seed", "length", "shape_start", "shape_end", "shape_convexity", "resolution", "randomness", "split_proba", "split_angle", "split_radius", "split_flatten", "gravity_strength"]
+        properties = ["seed", "length", "shape_start", "shape_end", "shape_convexity", "resolution", "randomness",
+                      "split_proba", "split_angle", "split_radius", "split_flatten", "end_radius", "gravity_strength"]
         col = layout.column()
         for i in properties:
             col.prop(self, i)
@@ -34,7 +36,7 @@ class MtreeGrow(Node, BaseNode):
     def execute(self, tree, creator, selection):
         random.seed(self.seed)
         tree.grow(self.length, self.shape_start, self.shape_end, self.shape_convexity, self.resolution,
-                  self.randomness, self.split_proba, self.split_angle, self.split_radius, self.split_flatten, self.gravity_strength, creator, selection)
+                  self.randomness, self.split_proba, self.split_angle, self.split_radius, self.split_flatten, self.end_radius, self.gravity_strength, creator, selection)
         print("grow has been executed")
         links = self.outputs["Tree"].links
         if len(links) > 0:

@@ -25,30 +25,50 @@ class MtreeParameters(Node, BaseNode):
         # TODO : check that there is only one trunk node
         trunk.execute(tree)
         print("-"*50)
-        verts, faces, radii, uvs = tree.build_mesh_data(self.resolution)
         ob = bpy.context.object
-        mesh = bpy.data.meshes.new("test")
-        mesh.from_pydata(verts, [], faces)
+        ob = generate_tree_object(ob, tree, self.resolution)
+
+        leaf_ob = generate_leafs_object(tree, 5000, 0, .2)
+        leaf_ob.parent = ob
         
-        bm = bmesh.new()
-        bm.from_mesh(mesh)
-        bm.faces.ensure_lookup_table()
 
-        bm.loops.layers.uv.new()
-        uv_layer = bm.loops.layers.uv.active
-        for index, face in enumerate(bm.faces):
-            for j, loop in enumerate(face.loops):
-                loop[uv_layer].uv = uvs[index][j]
 
-        bm.to_mesh(mesh)
-        bm.free()
+def generate_tree_object(ob, tree, resolution):
+    verts, faces, radii, uvs = tree.build_mesh_data(resolution)
+    mesh = bpy.data.meshes.new("tree")
+    mesh.from_pydata(verts, [], faces)
+    
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    bm.faces.ensure_lookup_table()
 
-        ob.data = mesh
-        for i in ob.vertex_groups:
-            ob.vertex_groups.remove(i)
-        v_group = ob.vertex_groups.new() # adding radius vertex group
-        for v, w in radii:
-            v_group.add(v, w, "ADD")
+    bm.loops.layers.uv.new()
+    uv_layer = bm.loops.layers.uv.active
+    for index, face in enumerate(bm.faces):
+        for j, loop in enumerate(face.loops):
+            loop[uv_layer].uv = uvs[index][j]
+
+    bm.to_mesh(mesh)
+    bm.free()
+
+    ob.data = mesh
+    for i in ob.vertex_groups:
+        ob.vertex_groups.remove(i)
+    v_group = ob.vertex_groups.new() # adding radius vertex group
+    for v, w in radii:
+        v_group.add(v, w, "ADD")
+    return ob
+
+def generate_leafs_object(tree, number, weight, max_radius, ob=None):
+    mesh = bpy.data.meshes.new("leafs")
+    if ob == None:
+        ob = bpy.data.objects.new('leafs', mesh) 
+        bpy.context.scene.collection.objects.link(ob)
+    
+    verts, faces = tree.get_leaf_emitter_data(number, weight, max_radius)
+    ob.data.from_pydata(verts, [], faces)
+    return ob
+
 
 class ExecuteMtreeNodeTreeOperator(Operator):
 

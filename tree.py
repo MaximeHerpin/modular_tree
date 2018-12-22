@@ -3,7 +3,7 @@ from mathutils import Vector, Quaternion
 from .geometry import random_tangent, build_module_rec
 import numpy as np
 from collections import deque
-from random import random, randint
+from random import random, randint, sample
 from math import pi
 
 class MTree:
@@ -26,7 +26,7 @@ class MTree:
         pass
     
 
-    def add_trunk(self, length, radius, shape, resolution, randomness, axis_attraction, creator):
+    def add_trunk(self, length, radius, end_radius, shape, resolution, randomness, axis_attraction, creator):
         self.stem = MTreeNode(Vector((0,0,0)), Vector((0,0,1)), radius, creator)
         remaining_length = length
         extremity = self.stem # extremity is always the current last node of the trunk
@@ -39,14 +39,14 @@ class MTree:
             direction += course_correction * axis_attraction
             direction.normalize()
             position = extremity.position + extremity.direction / resolution # position of new TreeNode
-            rad = radius * (remaining_length/length)**shape # radius of new TreeNode
+            rad = radius * (remaining_length/length)**shape + (1 - remaining_length/length) * end_radius# radius of new TreeNode
             new_node = MTreeNode(position, direction, rad, creator) # new TreeNode
             extremity.children.append(new_node) # Add new TreeNode to extremity's children
             extremity = new_node # replace extremity by new TreeNode
             remaining_length -= 1/resolution
 
 
-    def grow(self, length, shape_start, shape_end, shape_convexity, resolution, randomness, split_proba, split_angle, split_radius, split_flatten, gravity_strength, creator, selection):
+    def grow(self, length, shape_start, shape_end, shape_convexity, resolution, randomness, split_proba, split_angle, split_radius, split_flatten, end_radius, gravity_strength, creator, selection):
         grow_candidates = []
         min_height, max_height = self.stem.get_grow_candidates(grow_candidates, selection) # get all leafs of valid creator
 
@@ -87,7 +87,7 @@ class MTree:
                     position = (node.position + node.children[0].position)/2 + t*node.radius
                 growth = min(node.growth_goal, node.growth + branch_length) # growth of new node
 
-                radius = node.growth_radius * (1- node.growth / node.growth_goal) # radius of new node
+                radius = node.growth_radius * ((1- node.growth / node.growth_goal) + end_radius * node.growth / node.growth_goal) # radius of new node
                 if i > 0:
                     radius *= split_radius # forked branches have smaller radii
                 child = MTreeNode(position, direction, radius, creator)
@@ -135,7 +135,35 @@ class MTree:
         grow_selection = creator
         grow_creator = creator + 1
         self.split(amount, angle, max_split_number, radius, min_height, split_flatten, split_creator, split_selection)
-        self.grow(length, shape_start, shape_end, shape_convexity, resolution, randomness, split_proba, 0.3, 0.9, split_flatten, gravity_strength, grow_creator, grow_selection)
+        self.grow(length, shape_start, shape_end, shape_convexity, resolution, randomness, split_proba, 0.3, 0.9, split_flatten, 0, gravity_strength, grow_creator, grow_selection)
+
+
+    def get_leaf_emitter_data(self, number, weight, max_radius):
+        leaf_candidates = []
+        self.stem.get_leaf_candidates(leaf_candidates, max_radius)
+
+        if (number > len(leaf_candidates)):
+            add_candidates(leaf_candidates, number//len(leaf_candidates))
+
+        leaf_candidates = sample(leaf_candidates, number)
+        verts = []
+        faces = []
+
+        for position, direction, length, radius, is_end in leaf_candidates:
+            tangent = Vector((0,0,1)).cross(direction).normalized()
+            if not is_end: # only change direction when leaf is not at a branch extremity
+                tangent = (randint(0,1) * 2 - 1) * tangent # randomize sign of tangent
+                direction = direction.lerp(tangent, .5).normalized()
+            x_axis = direction.orthogonal()
+            y_axis = direction.cross(x_axis)
+            v1 = position + x_axis * .01
+            v3 = position + y_axis * .01
+            v2 = position - x_axis * .01
+            n_verts = len(verts)
+            verts.extend([v3, v2, v1])
+            faces.append((n_verts, n_verts+1, n_verts+2))
+        
+        return verts, faces
 
 
 def to_array(vectors):
@@ -144,4 +172,17 @@ def to_array(vectors):
     for i, v in enumerate(vectors):
         result[i] = v.xyz
     return result
-    
+
+
+def add_candidates(leaf_candidates, dupli_number):
+    ''' create new leaf candidates by interpolating existing ones '''
+    new_candidates = []
+
+    for position, direction, length, radius, is_end in leaf_candidates:
+        if is_end: # no new candidate can be created from end_leaf
+            continue
+        for i in range(dupli_number):
+            pos = position + direction*length * (i+1)/(dupli_number+2)
+            new_candidates.append((pos, direction, length, radius, is_end))
+    leaf_candidates.extend(new_candidates)
+

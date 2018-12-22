@@ -41,3 +41,16 @@ class MTreeNode:
         
         for child in self.children:
             child.get_split_candidates(candidates, creator, min_height)
+
+
+    def get_leaf_candidates(self, candidates, max_radius):
+        ''' recursively populates a list with position, direction radius of all modules susceptible to create a leaf'''
+        if self.radius <= max_radius:
+            extremity = len(self.children) == 0
+            direction = self.direction if extremity else (self.children[0].position - self.position)
+            length = direction.magnitude
+            direction /= length
+            candidates.append((self.position, direction, length, self.radius, extremity))
+        
+        for child in self.children:
+            child.get_leaf_candidates(candidates, max_radius)

@@ -10,6 +10,7 @@ class MtreeTrunk(Node, BaseNode):
     seed = IntProperty()
     length = FloatProperty(min=0, default=7) # length of trunk
     radius = FloatProperty(min=.0005, default=.8) # radius of trunk
+    end_radius = FloatProperty(min=0, max=1, default=0) # radius at the end of the trunk
     resolution = FloatProperty(min=.002, default=1) # how many loops the trunk has
     shape = FloatProperty(min=0.01, default=1) # how the radius decreases with length
     randomness = FloatProperty(min=0, max=0.5, default=.1) 
@@ -21,14 +22,14 @@ class MtreeTrunk(Node, BaseNode):
         self.name = MtreeTrunk.bl_label
 
     def draw_buttons(self, context, layout):        
-        properties = ["seed", "length", "radius", "resolution", "shape", "randomness", "axis_attraction"]
+        properties = ["seed", "length", "radius", "end_radius", "resolution", "shape", "randomness", "axis_attraction"]
         col = layout.column()
         for i in properties:
             col.prop(self, i)
     
     def execute(self, tree):
         random.seed(self.seed)
-        tree.add_trunk(self.length, self.radius, self.shape, self.resolution, self.randomness, self.axis_attraction, 0)
+        tree.add_trunk(self.length, self.radius, self.end_radius, self.shape, self.resolution, self.randomness, self.axis_attraction, 0)
         links = self.outputs["Tree"].links
         print("trunk has been executed")
         if len(links) > 0:
