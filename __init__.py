@@ -13,7 +13,7 @@
 
 bl_info = {
     "name": "Mtree",
-    "author": "Maxime Herpin 1",
+    "author": "Maxime Herpin",
     "version": (3, 1, 0),
     "blender": (2, 80, 0),
     "location": "View3D > Tools > Tree > Make Tree",
@@ -39,6 +39,7 @@ import bpy
 from bpy.types import NodeTree, Node, NodeSocket
 import nodeitems_utils
 from nodeitems_utils import NodeCategory, NodeItem
+
 
 
 classes = []

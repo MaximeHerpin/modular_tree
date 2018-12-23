@@ -40,6 +40,7 @@ node_categories = [
         NodeItem("MtreeGrow"),
         NodeItem("MtreeSplit"),
         NodeItem("MtreeBranch"),
+        NodeItem("MtreeTwig")
     ]),
 ]
 classes = [

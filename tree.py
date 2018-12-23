@@ -104,27 +104,26 @@ class MTree:
     def split(self, amount, angle, max_split_number, radius, min_height, flatten, creator, selection):
         split_candidates = []
         self.stem.get_split_candidates(split_candidates, selection, min_height)
-        n_candidates = len(split_candidates)
-        split_proba = amount/n_candidates
-
+        
+        amount = min(amount, len(split_candidates))
+        split_candidates = sample(split_candidates, amount)
         for node in split_candidates:
-            if split_proba > random():
-                n_children = randint(1,max_split_number)
-                tangent = random_tangent(node.direction)
-                flatten_tangent = tangent.copy()
-                flatten_tangent.z = 0
-                tangent = tangent.lerp(flatten_tangent, 1 - abs(node.direction.z) * flatten)
-                tangent.normalize()
-                rot = Quaternion(node.direction, 2*pi/n_children)
-                for i in range(n_children):
-                    direction = node.direction.lerp(tangent, angle).normalized()
-                    position = (node.position + node.children[0].position)/2
-                    position += (tangent - tangent.project(node.direction)).normalized() * node.radius
-                    rad = node.radius * radius
-                    child = MTreeNode(position, direction, rad, creator)
-                    child.is_branch_origin = True
-                    node.children.append(child)
-                    tangent = rot @ tangent
+            n_children = randint(1,max_split_number)
+            tangent = random_tangent(node.direction)
+            flatten_tangent = tangent.copy()
+            flatten_tangent.z = 0
+            tangent = tangent.lerp(flatten_tangent, flatten)
+            tangent.normalize()
+            rot = Quaternion(node.direction, 2*pi/n_children)
+            for i in range(n_children):
+                direction = node.direction.lerp(tangent, angle).normalized()
+                position = (node.position + node.children[0].position)/2
+                position += (tangent - tangent.project(node.direction)).normalized() * node.radius
+                rad = node.radius * radius
+                child = MTreeNode(position, direction, rad, creator)
+                child.is_branch_origin = True
+                node.children.append(child)
+                tangent = rot @ tangent
 
     
     def add_branches(self, amount, angle, max_split_number, radius, min_height, length,
@@ -141,10 +140,9 @@ class MTree:
     def get_leaf_emitter_data(self, number, weight, max_radius):
         leaf_candidates = []
         self.stem.get_leaf_candidates(leaf_candidates, max_radius)
-
         if (number > len(leaf_candidates)):
-            add_candidates(leaf_candidates, number//len(leaf_candidates))
-
+            factor = number // len([i for i in leaf_candidates if not i[-1]]) # remove extremities from factor because they won't participate in candidate addition
+            add_candidates(leaf_candidates, factor)
         leaf_candidates = sample(leaf_candidates, number)
         verts = []
         faces = []
@@ -165,6 +163,15 @@ class MTree:
         
         return verts, faces
 
+
+    def twig(self, radius, length, branch_number, randomness, resolution, gravity_strength, flatten):
+        self.stem = MTreeNode(Vector((0,0,0)), Vector((0,1,0)), radius*.1, 0)
+        self.grow(1, 1, 1, 0, resolution, randomness/2/resolution, 0, .2, 0, 0, 0, .1, 1, 0)
+        self.add_branches(branch_number, .5, 2, .7, -100, length*.7, .5, .5, 0, resolution, randomness/resolution, .1/resolution, flatten, gravity_strength/resolution, 2, 1)
+
+        leaf_candidates = []
+        self.stem.get_leaf_candidates(leaf_candidates, radius)
+        return [i for i in leaf_candidates if i[-1]]
 
 def to_array(vectors):
     n = len(vectors)
