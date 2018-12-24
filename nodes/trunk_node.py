@@ -8,7 +8,7 @@ class MtreeTrunk(Node, BaseNode):
     bl_label = "Trunk Node"
     
     seed = IntProperty(default=1)
-    length = FloatProperty(min=0, default=20) # length of trunk
+    length = FloatProperty(min=0, default=25) # length of trunk
     radius = FloatProperty(min=.0005, default=.5) # radius of trunk
     end_radius = FloatProperty(min=0, max=1, default=0) # radius at the end of the trunk
     resolution = FloatProperty(min=.002, default=1) # how many loops the trunk has
