@@ -15,14 +15,14 @@ class MtreeBranch(Node, BaseNode):
     min_height = FloatProperty(min=0, default=3) # min height at which a split occurs
     
     length = FloatProperty(min=0, default=7) # length of trunk
-    shape_start = FloatProperty(min=0, default=.5) # length at the base of the tree
-    shape_end = FloatProperty(min=0, default=.5) # length at the end of the tree
-    shape_convexity = FloatProperty(default=1) # how curved the length will be in function of the height of the branch
+    shape_start = FloatProperty(min=0, default=1) # length at the base of the tree
+    shape_end = FloatProperty(min=0, default=1) # length at the end of the tree
+    shape_convexity = FloatProperty(default=.3) # how curved the length will be in function of the height of the branch
     resolution = FloatProperty(min=.002, default=1) # how many loops a branch has
-    randomness = FloatProperty(default=.1) # how unregular the branches look
+    randomness = FloatProperty(default=.15) # how unregular the branches look
     split_proba = FloatProperty(min=0, max=1, default=.1) # how likely is a branch to fork
     split_flatten = FloatProperty(min=0, max=1, default=.5) # how constraint on the horizontal axis the splits are
-    gravity_strength = FloatProperty(default=.1) # how much branches go towards the floor/sky
+    gravity_strength = FloatProperty(default=.3) # how much branches go towards the floor/sky
 
 
     def init(self, context):
