@@ -60,7 +60,7 @@ class MtreeTwig(Node, BaseNode):
 
         if self.leaf_type != "custom":
             bpy.ops.wm.append(filename=self.leaf_type, directory=leaf_path)
-            self.leaf_object = bpy.context.scene.objects.get(self.leaf_type)
+            self.leaf_object = bpy.context.view_layer.objects.selected[-1]
 
         tree = MTree()
         leaf_candidates = tree.twig(self.radius, self.length, self.branch_number, self.randomness, self.resolution, self.gravity_strength, self.flatten)
@@ -70,7 +70,7 @@ class MtreeTwig(Node, BaseNode):
         twig_ob = generate_tree_object(twig_ob, tree, 8, "is_twig")
         twig_ob.active_material = bpy.data.materials.get("twig")
         scatter_object(leaf_candidates, twig_ob, self.leaf_object, self.leaf_size)
-        if self.leaf_type != "custom":
+        if self.leaf_type != "custom" and self.leaf_object is not None:
             bpy.data.objects.remove(self.leaf_object, do_unlink=True) # delete leaf object
 
 
@@ -96,8 +96,8 @@ def scatter_object(leaf_candidates, ob, dupli_object, leaf_size):
     collection = bpy.context.scene.collection # get scene collection
     for position, direction, length, radius, is_end in leaf_candidates:
         new_leaf = dupli_object.copy() # copy leaf object
-        
-        dir_rot = Vector((0,1,0)).rotation_difference(direction) # rotation of new leaf
+        new_leaf.data = new_leaf.data.copy()
+        dir_rot = Vector((1,0,0)).rotation_difference(direction) # rotation of new leaf
         
         loc, rot, scale = new_leaf.matrix_world.decompose()
         mat_scale = Matrix() # scale of new leaf
@@ -105,7 +105,8 @@ def scatter_object(leaf_candidates, ob, dupli_object, leaf_size):
         for i in range(3):
             mat_scale[i][i] = scale[i] * random_scale
         new_leaf.matrix_world = (Matrix.Translation(position) @ dir_rot.to_matrix().to_4x4() @ mat_scale)
-
+        c =random()
+        color_vertices(new_leaf, (c,c,c,c))
         leafs.append(new_leaf)
         collection.objects.link(new_leaf)
     
@@ -116,3 +117,15 @@ def scatter_object(leaf_candidates, ob, dupli_object, leaf_size):
     bpy.context.view_layer.objects.active = ob # make twig the active object so that leafs are joined to it
     bpy.ops.object.join() # join leafs to twig
 
+
+def color_vertices(ob, color):
+    """paints all vertices of ob to color"""
+    mesh = ob.data
+    if mesh.vertex_colors:
+        vcol_layer = mesh.vertex_colors.active
+    else:
+        vcol_layer = mesh.vertex_colors.new()
+
+    for poly in mesh.polygons:
+        for loop_index in poly.loop_indices:
+            vcol_layer.data[loop_index].color = color
