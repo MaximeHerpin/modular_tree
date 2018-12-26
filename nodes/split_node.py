@@ -12,7 +12,10 @@ class MtreeSplit(Node, BaseNode):
     split_angle = FloatProperty(min=0, max=1, default=.6) # angle of a fork
     max_split_number = IntProperty(min=0, default=3) # number of forks per split
     radius = FloatProperty(min=0, max=1, default=.6) # radius of split
-    min_height = FloatProperty(min=0, default=3) # min height at which a split occurs
+    min_height = FloatProperty(min=0, default=3, name="start") # min height at which a split occurs
+
+    properties = ["seed", "amount", "split_angle", "max_split_number", "radius", "min_height"]
+
 
     def init(self, context):
         self.outputs.new('TreeSocketType', "Tree")
@@ -20,9 +23,8 @@ class MtreeSplit(Node, BaseNode):
         self.name = MtreeSplit.bl_label
 
     def draw_buttons(self, context, layout):        
-        properties = ["seed", "amount", "split_angle", "max_split_number", "radius", "min_height"]
         col = layout.column()
-        for i in properties:
+        for i in self.properties:
             col.prop(self, i)
     
     def execute(self, tree, creator, selection):
