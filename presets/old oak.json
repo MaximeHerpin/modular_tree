@@ -1,0 +1,76 @@
+{
+    "nodes": [
+        {
+            "bl_idname": "MtreeTrunk",
+            "name": "Trunk Node",
+            "seed": 97,
+            "length": 25.0,
+            "radius": 1.0,
+            "end_radius": 0.0,
+            "resolution": 1.5,
+            "shape": 1.0,
+            "randomness": 0.2199999988079071,
+            "axis_attraction": 0.25
+        },
+        {
+            "bl_idname": "MtreeBranch",
+            "name": "Branch Node",
+            "seed": 83,
+            "amount": 21,
+            "split_angle": 0.6960000395774841,
+            "max_split_number": 4,
+            "radius": 0.3900001049041748,
+            "min_height": 2.0,
+            "length": 7.5,
+            "shape_start": 1.9539999961853027,
+            "shape_end": 0.2800004482269287,
+            "shape_convexity": 0.929999589920044,
+            "resolution": 1.5,
+            "randomness": 0.20000000298023224,
+            "split_proba": 0.12999999523162842,
+            "split_flatten": 0.5,
+            "gravity_strength": 0.20000000298023224,
+            "floor_avoidance": 2.0
+        },
+        {
+            "bl_idname": "MtreeBranch",
+            "name": "Branch Node.001",
+            "seed": 29,
+            "amount": 700,
+            "split_angle": 0.47700005769729614,
+            "max_split_number": 2,
+            "radius": 0.4200001060962677,
+            "min_height": 3.0,
+            "length": 2.0,
+            "shape_start": 1.9539999961853027,
+            "shape_end": 0.2800004482269287,
+            "shape_convexity": 0.929999589920044,
+            "resolution": 4.0,
+            "randomness": 0.18000000715255737,
+            "split_proba": 0.07000000029802322,
+            "split_flatten": 0.5800004005432129,
+            "gravity_strength": -0.08999990671873093,
+            "floor_avoidance": 2.0
+        },
+        {
+            "bl_idname": "MtreeParameters",
+            "name": "Tree paramteters",
+            "resolution": 16,
+            "create_leafs": true,
+            "leaf_amount": 20000,
+            "leaf_max_radius": 0.10000000149011612,
+            "leaf_weight": 0.0,
+            "leaf_size": 0.10000000149011612
+        }
+    ],
+    "links": [
+        {
+            "from_node": "Trunk Node",
+            "to_node": "Branch Node"
+        },
+        {
+            "from_node": "Branch Node",
+            "to_node": "Branch Node.001"
+        }
+    ]
+}

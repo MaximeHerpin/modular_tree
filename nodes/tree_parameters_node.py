@@ -1,6 +1,8 @@
 import bpy
 from bpy.types import Node, Operator
 import bmesh
+from random import randint
+import numpy as np
 from bpy.props import IntProperty, FloatProperty, EnumProperty, BoolProperty, StringProperty, PointerProperty
 from .base_node import BaseNode
 from ..tree import MTree
@@ -16,12 +18,16 @@ class MtreeParameters(Node, BaseNode):
     leaf_dupli_object = PointerProperty(type=bpy.types.Object, name="leaf")
     leaf_size = FloatProperty(min=0, default=.1)
 
+    properties = ["resolution", "create_leafs", "leaf_amount", "leaf_max_radius", "leaf_weight", "leaf_dupli_object", "leaf_size"]
+
     def init(self, context):
         self.name = MtreeParameters.bl_label
 
     def draw_buttons(self, context, layout):
+        op = layout.operator("mtree.randomize_tree", text='randomize tree') # will call RandomizeTreeOperator.execute
+        op.node_group_name = self.id_data.name # set name of node group to operator
         layout.prop(self, "resolution")
-        op = layout.operator("object.mtree_execute_tree", text='execute') # will call ExecuteMtreeNodeTreeOperator.execute
+        op = layout.operator("object.mtree_execute_tree", text='execute tree') # will call ExecuteMtreeNodeTreeOperator.execute
         op.node_group_name = self.id_data.name # set name of node group to operator
 
         box = layout.box()
@@ -75,17 +81,20 @@ def generate_tree_object(ob, tree, resolution, tree_property="is_tree"):
     ''' Create the tree mesh/object '''
     verts, faces, radii, uvs = tree.build_mesh_data(resolution) # tree mesh data
     mesh = bpy.data.meshes.new("tree")
+    material = None # material of tree object
     if ob == None: # if no object is specified, create one        
         ob = bpy.data.objects.new('tree', mesh) 
         bpy.context.scene.collection.objects.link(ob)
         ob[tree_property] = True # create custom object parameter to recognise tree object
-    
     else: # delete old mesh data 
+        material = ob.active_material
         old_mesh = ob.data
         ob.data = mesh
         bpy.data.meshes.remove(old_mesh)
 
     mesh.from_pydata(verts, [], faces)
+    smoothings = np.ones(len(faces), dtype=bool)
+    mesh.polygons.foreach_set("use_smooth", smoothings) # smooth mesh shading
     bm = bmesh.new()
     bm.from_mesh(mesh)
     bm.faces.ensure_lookup_table()
@@ -105,7 +114,8 @@ def generate_tree_object(ob, tree, resolution, tree_property="is_tree"):
     v_group = ob.vertex_groups.new() # adding radius vertex group
     for v, w in radii:
         v_group.add(v, w, "ADD")
-    
+    if material is not None:
+        ob.active_material = material
     return ob
 
 def generate_leafs_object(tree, number, weight, max_radius, ob=None, tree_ob=None):
@@ -169,3 +179,20 @@ class ExecuteMtreeNodeTreeOperator(Operator):
         node = [i for i in bpy.data.node_groups[self.node_group_name].nodes if i.bl_idname == "MtreeParameters"][0]
         node.execute()
         return {'FINISHED'}
+
+class RandomizeTreeOperator(Operator):
+    bl_idname = "mtree.randomize_tree"
+    bl_label = "Randomize Mtree node tree"
+    
+    node_group_name = StringProperty()
+
+    def execute(self, context):
+        parameters_node = [i for i in bpy.data.node_groups[self.node_group_name].nodes if i.bl_idname == "MtreeParameters"][0]
+        for node in [i for i in bpy.data.node_groups[self.node_group_name].nodes if i.bl_idname != "MtreeTwig"]:
+            try:
+                node.seed = randint(0,100)
+            except:
+                pass
+        parameters_node.execute()
+        return {'FINISHED'}
+

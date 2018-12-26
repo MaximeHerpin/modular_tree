@@ -12,7 +12,7 @@ class MtreeBranch(Node, BaseNode):
     split_angle = FloatProperty(min=0, max=1, default=.6) # angle of a fork
     max_split_number = IntProperty(min=0, default=3) # number of forks per split
     radius = FloatProperty(min=0, max=1, default=.6) # radius of split
-    min_height = FloatProperty(min=0, default=3) # min height at which a split occurs
+    min_height = FloatProperty(min=0, default=3, name="start") # min height at which a split occurs
     
     length = FloatProperty(min=0, default=7) # length of trunk
     shape_start = FloatProperty(min=0, default=1) # length at the base of the tree
@@ -23,7 +23,11 @@ class MtreeBranch(Node, BaseNode):
     split_proba = FloatProperty(min=0, max=1, default=.1) # how likely is a branch to fork
     split_flatten = FloatProperty(min=0, max=1, default=.5) # how constraint on the horizontal axis the splits are
     gravity_strength = FloatProperty(default=.3) # how much branches go towards the floor/sky
+    floor_avoidance = FloatProperty(min=0, default=1) # how much the branches avoid the floor 
 
+
+    properties = ["seed", "amount", "split_angle", "max_split_number", "radius", "min_height", "length", "shape_start", "shape_end",
+                  "shape_convexity", "resolution", "randomness", "split_proba", "split_flatten", "gravity_strength", "floor_avoidance"]
 
     def init(self, context):
         self.outputs.new('TreeSocketType', "Tree")
@@ -31,17 +35,15 @@ class MtreeBranch(Node, BaseNode):
         self.name = MtreeBranch.bl_label
 
     def draw_buttons(self, context, layout):        
-        properties = ["seed", "amount", "split_angle", "max_split_number", "radius", "min_height", "length", "shape_start", "shape_end",
-                      "shape_convexity", "resolution", "randomness", "split_proba", "split_flatten", "gravity_strength"]
         col = layout.column()
-        for i in properties:
+        for i in self.properties:
             col.prop(self, i)
     
     def execute(self, tree, creator, selection):
         random.seed(self.seed)
         tree.add_branches(self.amount, self.split_angle, self.max_split_number, self.radius, self.min_height,
                            self.length, self.shape_start, self.shape_end, self.shape_convexity, self.resolution,
-                           self.randomness, self.split_proba, self.split_flatten, self.gravity_strength, creator, selection )
+                           self.randomness, self.split_proba, self.split_flatten, self.gravity_strength, self.floor_avoidance, creator, selection )
         print("add branches has been executed")
         links = self.outputs["Tree"].links
         if len(links) > 0:

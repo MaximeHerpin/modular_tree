@@ -16,15 +16,16 @@ class MtreeTrunk(Node, BaseNode):
     randomness = FloatProperty(min=0, max=0.5, default=.1) 
     axis_attraction = FloatProperty(min=0, max=1, default=.25)
 
+    properties = ["seed", "length", "radius", "end_radius", "resolution", "shape", "randomness", "axis_attraction"]
+    
     def init(self, context):
         self.outputs.new('TreeSocketType', "Tree")
 
         self.name = MtreeTrunk.bl_label
 
     def draw_buttons(self, context, layout):        
-        properties = ["seed", "length", "radius", "end_radius", "resolution", "shape", "randomness", "axis_attraction"]
         col = layout.column()
-        for i in properties:
+        for i in self.properties:
             col.prop(self, i)
     
     def execute(self, tree):
