@@ -34,14 +34,13 @@ class MTreeNode:
         
         return min_height, max_height
 
-    
-    def get_split_candidates(self, candidates, creator, min_height):
-        if len(self.children) == 1 and not self.is_branch_origin and self.creator == creator and self.position.z >= min_height:
+    def get_split_candidates(self, candidates, creator, offset, current_offset=0):
+        if len(self.children) == 1 and not self.is_branch_origin and self.creator == creator and current_offset >= offset:
             candidates.append(self)
         
-        for child in self.children:
-            child.get_split_candidates(candidates, creator, min_height)
-
+        for i, child in enumerate(self.children):
+            current_offset += 0 if i > 0 else (child.position - self.position).length_squared
+            child.get_split_candidates(candidates, creator, offset, current_offset)
 
     def get_leaf_candidates(self, candidates, max_radius):
         ''' recursively populates a list with position, direction radius of all modules susceptible to create a leaf'''
