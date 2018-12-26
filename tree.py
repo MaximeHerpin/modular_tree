@@ -46,7 +46,8 @@ class MTree:
             remaining_length -= 1/resolution
 
 
-    def grow(self, length, shape_start, shape_end, shape_convexity, resolution, randomness, split_proba, split_angle, split_radius, split_flatten, end_radius, gravity_strength, creator, selection):
+    def grow(self, length, shape_start, shape_end, shape_convexity, resolution, randomness, split_proba, split_angle,
+             split_radius, split_flatten, end_radius, gravity_strength, floor_avoidance, creator, selection):
         grow_candidates = []
         min_height, max_height = self.stem.get_grow_candidates(grow_candidates, selection) # get all leafs of valid creator
 
@@ -78,7 +79,11 @@ class MTree:
             for i in range(children_number):
                 deviation = randomness if children_number==1 else split_angle # how much the new direction will be changed by tangent
                 direction = node.direction.lerp(tangent * (i-.5)*2, deviation) # direction of new node
-                direction += Vector((0,0,-1)) * gravity_strength / 10
+                direction += Vector((0,0,-1)) * gravity_strength / 10 # apply gravity
+                floor_avoidance_strength = max(0, (-direction.z * abs(.3/node.position.z))) * floor_avoidance #how much the floor repel the branch
+                if floor_avoidance_strength > .1 * floor_avoidance: # if the branch is too much towards the floor, break it 
+                    break
+                direction += Vector((0,0,1)) * floor_avoidance_strength
                 direction.normalize() 
                 if i == 0:
                     position = node.position + direction * branch_length # position of new node
@@ -103,7 +108,7 @@ class MTree:
    
     def split(self, amount, angle, max_split_number, radius, min_height, flatten, creator, selection):
         split_candidates = []
-        self.stem.get_split_candidates(split_candidates, selection, min_height)
+        self.stem.get_split_candidates(split_candidates, selection, min_height**2)
         
         amount = min(amount, len(split_candidates))
         split_candidates = sample(split_candidates, amount)
@@ -128,13 +133,14 @@ class MTree:
     
     def add_branches(self, amount, angle, max_split_number, radius, min_height, length,
                      shape_start, shape_end, shape_convexity, resolution, randomness,
-                     split_proba, split_flatten, gravity_strength, creator, selection):
+                     split_proba, split_flatten, gravity_strength, floor_avoidance, creator, selection):
         split_creator = creator
         split_selection = selection
         grow_selection = creator
         grow_creator = creator + 1
         self.split(amount, angle, max_split_number, radius, min_height, split_flatten, split_creator, split_selection)
-        self.grow(length, shape_start, shape_end, shape_convexity, resolution, randomness, split_proba, 0.3, 0.9, split_flatten, 0, gravity_strength, grow_creator, grow_selection)
+        self.grow(length, shape_start, shape_end, shape_convexity, resolution, randomness, split_proba, 0.3, 0.9,
+                  split_flatten, 0, gravity_strength, floor_avoidance, grow_creator, grow_selection)
 
 
     def get_leaf_emitter_data(self, number, weight, max_radius):
