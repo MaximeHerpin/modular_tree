@@ -1,0 +1,129 @@
+{
+    "nodes": [
+        {
+            "bl_idname": "MtreeTrunk",
+            "name": "Trunk Node",
+            "outputs_count": 3,
+            "location": [
+                140.0,
+                -80.0
+            ],
+            "seed": 12,
+            "length": 30.0,
+            "radius": 0.5,
+            "end_radius": 0.0,
+            "resolution": 1.8399991989135742,
+            "shape": 1.0,
+            "randomness": 0.1899999976158142,
+            "axis_attraction": 0.25
+        },
+        {
+            "bl_idname": "MtreeBranch",
+            "name": "Branch Node",
+            "outputs_count": 2,
+            "location": [
+                440.0,
+                260.0
+            ],
+            "seed": 29,
+            "amount": 20,
+            "split_angle": 0.8099998235702515,
+            "max_split_number": 3,
+            "radius": 0.4800001084804535,
+            "min_height": 12.0,
+            "length": 5.0,
+            "shape_start": 1.4399998188018799,
+            "shape_end": 0.5,
+            "shape_convexity": 0.06000000238418579,
+            "resolution": 1.0,
+            "randomness": 0.24000000953674316,
+            "split_proba": 0.20000000298023224,
+            "split_flatten": 1.0,
+            "gravity_strength": -0.7499997615814209,
+            "floor_avoidance": 1.0
+        },
+        {
+            "bl_idname": "MtreeBranch",
+            "name": "Branch Node.001",
+            "outputs_count": 1,
+            "location": [
+                440.0,
+                -220.0
+            ],
+            "seed": 13,
+            "amount": 15,
+            "split_angle": 0.6000000238418579,
+            "max_split_number": 3,
+            "radius": 0.09000009298324585,
+            "min_height": 0.5,
+            "length": 2.2300000190734863,
+            "shape_start": 0.29999998211860657,
+            "shape_end": 1.0,
+            "shape_convexity": 0.0,
+            "resolution": 5.440000057220459,
+            "randomness": 0.15000000596046448,
+            "split_proba": 0.10000000149011612,
+            "split_flatten": 0.5,
+            "gravity_strength": 0.30000001192092896,
+            "floor_avoidance": 1.0
+        },
+        {
+            "bl_idname": "MtreeBranch",
+            "name": "Branch Node.002",
+            "outputs_count": 1,
+            "location": [
+                640.0,
+                260.0
+            ],
+            "seed": 43,
+            "amount": 241,
+            "split_angle": 0.2700001001358032,
+            "max_split_number": 2,
+            "radius": 0.6299999952316284,
+            "min_height": 2.0,
+            "length": 3.0,
+            "shape_start": 1.0,
+            "shape_end": 1.0,
+            "shape_convexity": 0.0,
+            "resolution": 2.0,
+            "randomness": 0.24000000953674316,
+            "split_proba": 0.10000000149011612,
+            "split_flatten": 0.949999988079071,
+            "gravity_strength": 0.10000000149011612,
+            "floor_avoidance": 1.0
+        },
+        {
+            "bl_idname": "MtreeParameters",
+            "name": "Tree paramteters",
+            "outputs_count": 0,
+            "location": [
+                840.0,
+                -80.0
+            ],
+            "resolution": 16,
+            "create_leafs": false,
+            "leaf_amount": 3000,
+            "leaf_max_radius": 0.10000000149011612,
+            "leaf_weight": 0.0,
+            "leaf_dupli_object": null,
+            "leaf_size": 0.10000000149011612
+        }
+    ],
+    "links": [
+        {
+            "from_node": "Trunk Node",
+            "to_node": "Branch Node",
+            "output_index": 0
+        },
+        {
+            "from_node": "Trunk Node",
+            "to_node": "Branch Node.001",
+            "output_index": 1
+        },
+        {
+            "from_node": "Branch Node",
+            "to_node": "Branch Node.002",
+            "output_index": 0
+        }
+    ]
+}
