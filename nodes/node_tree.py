@@ -10,8 +10,10 @@ from bpy.props import IntProperty, FloatProperty, EnumProperty, BoolProperty, St
 from .base_node import BaseNode
 
 def get_preset_list(self, context): # used to get all presets
+    folder_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+    folder_path = os.path.join(folder_path, "presets")
     presets_names = []
-    for f in os.listdir("presets"):
+    for f in os.listdir(folder_path):
         if f.endswith(".json"):
             presets_names.append(f[:-5])        
     return [(i, i, "") for i in presets_names]
@@ -28,8 +30,9 @@ class MtreeNodeTree(NodeTree):
 
     def save_as_json(self):
         ''' save node tree information in a json file '''
-        folder_path = "presets/"
-        path = folder_path + self.preset_to_save + ".json"
+        folder_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+        folder_path = os.path.join(folder_path, "presets")
+        path = os.path.join(folder_path , self.preset_to_save + ".json")
         with open(path, 'w') as outfile: # write to preset
             node_tree_data = {} # the disctionary that will be dumped in the preset
             node_tree_data["nodes"] = [] # the list of nodes
@@ -68,8 +71,9 @@ class MtreeNodeTree(NodeTree):
             
     def load_json(self):
         ''' retrieve and replace a node tree data from a json file '''
-        folder_path = "presets/"
-        path = folder_path + self.preset_to_load + ".json"
+        folder_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+        folder_path = os.path.join(folder_path, "presets")
+        path = os.path.join(folder_path , self.preset_to_load + ".json")
         with open(path) as f:
             node_tree_data = json.load(f) # new node tree data
             self.nodes.clear() # remove all nodes of node tree
