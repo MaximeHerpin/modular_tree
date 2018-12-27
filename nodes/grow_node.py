@@ -26,7 +26,7 @@ class MtreeGrow(Node, BaseNode):
                   "split_proba", "split_angle", "split_radius", "split_flatten", "end_radius", "gravity_strength", "floor_avoidance"]
 
     def init(self, context):
-        self.outputs.new('TreeSocketType', "Tree")
+        self.outputs.new('TreeSocketType', "0")
         self.inputs.new('TreeSocketType', "Tree")
         self.name = MtreeGrow.bl_label
 
@@ -40,8 +40,9 @@ class MtreeGrow(Node, BaseNode):
         tree.grow(self.length, self.shape_start, self.shape_end, self.shape_convexity, self.resolution,
                   self.randomness, self.split_proba, self.split_angle, self.split_radius, self.split_flatten,
                   self.end_radius, self.gravity_strength, self.floor_avoidance, creator, selection)
-        print("grow has been executed")
-        links = self.outputs["Tree"].links
-        if len(links) > 0:
-            links[0].to_node.execute(tree, creator+1, creator)
+        for output in self.outputs:
+            ''' here the execute function is called recursively on first ouptut of all nodes, the second output of all nodes, ect'''
+            links = output.links
+            if len(links) > 0:
+                links[0].to_node.execute(tree, creator+1, creator)
             

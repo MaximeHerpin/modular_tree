@@ -30,7 +30,7 @@ class MtreeBranch(Node, BaseNode):
                   "shape_convexity", "resolution", "randomness", "split_proba", "split_flatten", "gravity_strength", "floor_avoidance"]
 
     def init(self, context):
-        self.outputs.new('TreeSocketType', "Tree")
+        self.outputs.new('TreeSocketType', "0")
         self.inputs.new('TreeSocketType', "Tree")
         self.name = MtreeBranch.bl_label
 
@@ -44,8 +44,9 @@ class MtreeBranch(Node, BaseNode):
         tree.add_branches(self.amount, self.split_angle, self.max_split_number, self.radius, self.min_height,
                            self.length, self.shape_start, self.shape_end, self.shape_convexity, self.resolution,
                            self.randomness, self.split_proba, self.split_flatten, self.gravity_strength, self.floor_avoidance, creator, selection )
-        print("add branches has been executed")
-        links = self.outputs["Tree"].links
-        if len(links) > 0:
-            links[0].to_node.execute(tree, creator+2, creator+1)
+        for output in self.outputs:
+            ''' here the execute function is called recursively on first ouptut of all nodes, the second output of all nodes, ect'''
+            links = output.links
+            if len(links) > 0:
+                links[0].to_node.execute(tree, creator+2, creator+1)
             

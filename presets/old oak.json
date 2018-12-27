@@ -3,6 +3,11 @@
         {
             "bl_idname": "MtreeTrunk",
             "name": "Trunk Node",
+            "outputs_count": 2,
+            "location": [
+                200.0,
+                0.0
+            ],
             "seed": 97,
             "length": 25.0,
             "radius": 1.0,
@@ -15,12 +20,17 @@
         {
             "bl_idname": "MtreeBranch",
             "name": "Branch Node",
+            "outputs_count": 2,
+            "location": [
+                400.0,
+                0.0
+            ],
             "seed": 83,
             "amount": 21,
             "split_angle": 0.6960000395774841,
             "max_split_number": 4,
             "radius": 0.3900001049041748,
-            "min_height": 2.0,
+            "min_height": 4.0,
             "length": 7.5,
             "shape_start": 1.9539999961853027,
             "shape_end": 0.2800004482269287,
@@ -35,6 +45,11 @@
         {
             "bl_idname": "MtreeBranch",
             "name": "Branch Node.001",
+            "outputs_count": 1,
+            "location": [
+                600.0,
+                0.0
+            ],
             "seed": 29,
             "amount": 700,
             "split_angle": 0.47700005769729614,
@@ -55,22 +70,30 @@
         {
             "bl_idname": "MtreeParameters",
             "name": "Tree paramteters",
+            "outputs_count": 0,
+            "location": [
+                860.0,
+                0.0
+            ],
             "resolution": 16,
             "create_leafs": true,
             "leaf_amount": 20000,
             "leaf_max_radius": 0.10000000149011612,
             "leaf_weight": 0.0,
+            "leaf_dupli_object": null,
             "leaf_size": 0.10000000149011612
         }
     ],
     "links": [
         {
             "from_node": "Trunk Node",
-            "to_node": "Branch Node"
+            "to_node": "Branch Node",
+            "output_index": 0
         },
         {
             "from_node": "Branch Node",
-            "to_node": "Branch Node.001"
+            "to_node": "Branch Node.001",
+            "output_index": 0
         }
     ]
 }

@@ -39,7 +39,7 @@ class MTreeNode:
             candidates.append(self)
         
         for i, child in enumerate(self.children):
-            current_offset += 0 if i > 0 else (child.position - self.position).length_squared
+            current_offset = 0 if i > 0 else current_offset + (child.position - self.position).length
             child.get_split_candidates(candidates, creator, offset, current_offset)
 
     def get_leaf_candidates(self, candidates, max_radius):

@@ -55,6 +55,8 @@ class MtreeNodeTree(NodeTree):
                 if node.bl_idname != "MtreeTwig": # twig nodes are not saved (mayby they should ?)
                     node_data["bl_idname"] = node.bl_idname
                     node_data["name"] = node.name
+                    node_data["outputs_count"] = len(node.outputs)
+                    node_data["location"] = [i for i in node.location]
                     for prop in node.properties:
                         if type(getattr(node, prop)) != Object:
                             node_data[prop] = getattr(node, prop)            
@@ -64,6 +66,7 @@ class MtreeNodeTree(NodeTree):
                 link_data = {}
                 link_data["from_node"] = link.from_node.name
                 link_data["to_node"] = link.to_node.name
+                link_data["output_index"] = int(link.from_socket.identifier)
                 node_tree_data["links"].append(link_data)
             
             json.dump(node_tree_data, outfile, indent=4)
@@ -83,15 +86,20 @@ class MtreeNodeTree(NodeTree):
                 new_node = self.nodes.new(bl_idname)
                 last_node_location += Vector((200, 0)) # offset last node position, which will be the position of new node 
                 new_node.location = last_node_location
+                
+                outputs_count = node["outputs_count"]
+                for i in range(outputs_count-1): # adding outputs
+                    self.outputs.new('TreeSocketType', str(i))
 
-                for prop in [key for key in node.keys() if key != "bl_idname"]: # enumerating all property names of node except bl_idname
+                for prop in [key for key in node.keys() if key not in {"bl_idname", "outputs_count"}]: # enumerating all property names of node except bl_idname
                     prop_value = node[prop]
                     setattr(new_node, prop, prop_value) # set property value to new node
             
             for link in node_tree_data["links"]:
                 from_node = self.nodes[link["from_node"]]
                 to_node = self.nodes[link["to_node"]]
-                self.links.new(from_node.outputs[0], to_node.inputs[0])
+                output_index = link["output_index"]
+                self.links.new(from_node.outputs[output_index], to_node.inputs[0])
                 
 
 

@@ -109,7 +109,7 @@ class MTree:
    
     def split(self, amount, angle, max_split_number, radius, min_height, flatten, creator, selection):
         split_candidates = []
-        self.stem.get_split_candidates(split_candidates, selection, min_height**2)
+        self.stem.get_split_candidates(split_candidates, selection, min_height)
         
         amount = min(amount, len(split_candidates))
         split_candidates = sample(split_candidates, amount)
@@ -179,6 +179,7 @@ class MTree:
         leaf_candidates = []
         self.stem.get_leaf_candidates(leaf_candidates, radius)
         return [i for i in leaf_candidates if i[-1]]
+
 
 def to_array(vectors):
     n = len(vectors)

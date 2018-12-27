@@ -3,6 +3,11 @@
         {
             "bl_idname": "MtreeTrunk",
             "name": "Trunk Node",
+            "outputs_count": 2,
+            "location": [
+                160.0,
+                0.0
+            ],
             "seed": 1,
             "length": 25.0,
             "radius": 0.5,
@@ -15,13 +20,18 @@
         {
             "bl_idname": "MtreeBranch",
             "name": "Branch Node",
+            "outputs_count": 1,
+            "location": [
+                400.0,
+                0.0
+            ],
             "seed": 0,
             "amount": 20,
             "split_angle": 0.6000000238418579,
             "max_split_number": 3,
             "radius": 0.6000000238418579,
-            "min_height": 3.0,
-            "length": 7.0,
+            "min_height": 5.0,
+            "length": 10.0,
             "shape_start": 1.0,
             "shape_end": 1.0,
             "shape_convexity": 0.30000001192092896,
@@ -35,6 +45,11 @@
         {
             "bl_idname": "MtreeParameters",
             "name": "Tree paramteters",
+            "outputs_count": 0,
+            "location": [
+                660.0,
+                0.0
+            ],
             "resolution": 16,
             "create_leafs": false,
             "leaf_amount": 3000,
@@ -47,7 +62,8 @@
     "links": [
         {
             "from_node": "Trunk Node",
-            "to_node": "Branch Node"
+            "to_node": "Branch Node",
+            "output_index": 0
         }
     ]
 }
