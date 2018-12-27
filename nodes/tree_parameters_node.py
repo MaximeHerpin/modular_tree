@@ -42,8 +42,11 @@ class MtreeParameters(Node, BaseNode):
     def execute(self):
         tree = MTree()
         node_tree = self.id_data
-        trunk = [node for node in node_tree.nodes if node.bl_idname == "MtreeTrunk"][0] # get trunk function
-        # TODO : check that there is only one trunk node
+        try:
+            trunk = [node for node in node_tree.nodes if node.bl_idname == "MtreeTrunk"][0] # get trunk function
+        except IndexError:
+            ShowMessageBox("The tree needs a trunk node in order to execute", "Invalid node tree", "ERROR")
+            return
         trunk.execute(tree)
         print("-"*50)
 
@@ -168,6 +171,12 @@ def create_particle_system(ob, number, dupli_object, size):
         settings.instance_object = dupli_object
         settings.use_rotation_instance = True
 
+def ShowMessageBox(message = "", title = "Message Box", icon = 'INFO'):
+
+    def draw(self, context):
+        self.layout.label(text=message)
+
+    bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
 
 class ExecuteMtreeNodeTreeOperator(Operator):
 
