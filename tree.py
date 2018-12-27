@@ -80,10 +80,11 @@ class MTree:
                 deviation = randomness if children_number==1 else split_angle # how much the new direction will be changed by tangent
                 direction = node.direction.lerp(tangent * (i-.5)*2, deviation) # direction of new node
                 direction += Vector((0,0,-1)) * gravity_strength / 10 # apply gravity
-                floor_avoidance_strength = max(0, (-direction.z * abs(.3/node.position.z))) * floor_avoidance #how much the floor repel the branch
-                if floor_avoidance_strength > .1 * floor_avoidance: # if the branch is too much towards the floor, break it 
-                    break
-                direction += Vector((0,0,1)) * floor_avoidance_strength
+                if floor_avoidance != 0:
+                    floor_avoidance_strength = max(0, (-direction.z * abs(.3/max(0.01, node.position.z)))) * floor_avoidance #how much the floor repel the branch
+                    if floor_avoidance_strength > .1 * (1+floor_avoidance): # if the branch is too much towards the floor, break it 
+                        break
+                    direction += Vector((0,0,1)) * floor_avoidance_strength
                 direction.normalize() 
                 if i == 0:
                     position = node.position + direction * branch_length # position of new node
@@ -172,8 +173,8 @@ class MTree:
 
     def twig(self, radius, length, branch_number, randomness, resolution, gravity_strength, flatten):
         self.stem = MTreeNode(Vector((0,0,0)), Vector((0,1,0)), radius*.1, 0)
-        self.grow(1, 1, 1, 0, resolution, randomness/2/resolution, 0, .2, 0, 0, 0, .1, 1, 0)
-        self.add_branches(branch_number, .5, 2, .7, -100, length*.7, .5, .5, 0, resolution, randomness/resolution, .1/resolution, flatten, gravity_strength/resolution, 2, 1)
+        self.grow(1, 1, 1, 0, resolution, randomness/2/resolution, 0, .2, 0, 0, 0, .1,0,  1, 0)
+        self.add_branches(branch_number, .5, 2, .7, 0, length*.7, .5, .5, 0, resolution, randomness/resolution, .1/resolution, flatten, gravity_strength/resolution, 0, 2, 1)
 
         leaf_candidates = []
         self.stem.get_leaf_candidates(leaf_candidates, radius)
