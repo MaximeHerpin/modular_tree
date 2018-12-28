@@ -53,7 +53,6 @@ class MTreeNode:
         branch_length = self.children[0].set_positions_in_branches(current_distance, distance_to_child)
 
         self.position_in_branch = 0 if branch_length==0 else current_distance / branch_length
-        print(self.position_in_branch)
         return branch_length
         
     def get_split_candidates(self, candidates, creator, offset, current_offset=0):

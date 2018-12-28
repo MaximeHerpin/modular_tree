@@ -49,7 +49,7 @@ class MTree:
     def grow(self, length, shape_start, shape_end, shape_convexity, resolution, randomness, split_proba, split_angle,
              split_radius, split_flatten, end_radius, gravity_strength, floor_avoidance, creator, selection):
         grow_candidates = []
-        min_height, max_height = self.stem.get_grow_candidates(grow_candidates, selection) # get all leafs of valid creator
+        self.stem.get_grow_candidates(grow_candidates, selection) # get all leafs of valid creator
 
         branch_length = 1/resolution # branch length is use multiple times so best to calculate it once
 
@@ -58,13 +58,8 @@ class MTree:
             return -4*shape_convexity*x*(x-1) + x*shape_end + (1-x)*shape_start
         
         for node in grow_candidates:
-            if min_height == max_height:
-                node.growth_goal = length
-                node.growth = 0
-            else:
-                height = (node.position.z - min_height) / (max_height - min_height) # get height normed between 0 and 1
-                node.growth = 0
-                node.growth_goal = max(0.001, length * shape_length(height)) # add length to node growth goal
+            node.growth = 0
+            node.growth_goal = max(0.001, length * shape_length(node.position_in_branch)) # add length to node growth goal
             node.growth_radius = node.radius
 
         grow_candidates = deque(grow_candidates) # convert grow_candidates to deque for performance (lots of adding/removing last element)
@@ -79,7 +74,7 @@ class MTree:
             for i in range(children_number):
                 deviation = randomness if children_number==1 else split_angle # how much the new direction will be changed by tangent
                 direction = node.direction.lerp(tangent * (i-.5)*2, deviation) # direction of new node
-                direction += Vector((0,0,-1)) * gravity_strength / 10 # apply gravity
+                direction += Vector((0,0,-1)) * gravity_strength / 10 / resolution # apply gravity
                 if floor_avoidance != 0:
                     floor_avoidance_strength = max(0, (-direction.z * abs(.3/max(0.01, node.position.z)))) * floor_avoidance #how much the floor repel the branch
                     if floor_avoidance_strength > .1 * (1+floor_avoidance): # if the branch is too much towards the floor, break it 
@@ -109,6 +104,7 @@ class MTree:
    
     def split(self, amount, angle, max_split_number, radius, min_height, flatten, creator, selection):
         split_candidates = []
+        self.stem.set_positions_in_branches()
         self.stem.get_split_candidates(split_candidates, selection, min_height)
         
         amount = min(amount, len(split_candidates))
@@ -122,11 +118,13 @@ class MTree:
             tangent.normalize()
             rot = Quaternion(node.direction, 2*pi/n_children)
             for i in range(n_children):
-                direction = node.direction.lerp(tangent, angle).normalized()
+                t = node.position_in_branch
+                direction = node.direction.lerp(tangent, angle * (1-t/2)).normalized()
                 position = (node.position + node.children[0].position)/2
                 position += (tangent - tangent.project(node.direction)).normalized() * node.radius
                 rad = node.radius * radius
                 child = MTreeNode(position, direction, rad, creator)
+                child.position_in_branch = node.position_in_branch
                 child.is_branch_origin = True
                 node.children.append(child)
                 tangent = rot @ tangent
@@ -135,10 +133,10 @@ class MTree:
     def add_branches(self, amount, angle, max_split_number, radius, min_height, length,
                      shape_start, shape_end, shape_convexity, resolution, randomness,
                      split_proba, split_flatten, gravity_strength, floor_avoidance, creator, selection):
-        split_creator = creator
+        split_creator = creator - 0.5
         split_selection = selection
-        grow_selection = creator
-        grow_creator = creator + 1
+        grow_selection = creator - 0.5
+        grow_creator = creator
         self.split(amount, angle, max_split_number, radius, min_height, split_flatten, split_creator, split_selection)
         self.grow(length, shape_start, shape_end, shape_convexity, resolution, randomness, split_proba, 0.3, 0.9,
                   split_flatten, 0, gravity_strength, floor_avoidance, grow_creator, grow_selection)
