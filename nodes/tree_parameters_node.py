@@ -48,7 +48,6 @@ class MtreeParameters(Node, BaseNode):
             ShowMessageBox("The tree needs a trunk node in order to execute", "Invalid node tree", "ERROR")
             return
         trunk.execute(tree)
-        print("-"*50)
 
         tree_ob, leaf_ob = get_current_object()
         tree_ob = generate_tree_object(tree_ob, tree, self.resolution)

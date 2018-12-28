@@ -12,6 +12,7 @@ class MtreeBranch(Node, BaseNode):
     split_angle = FloatProperty(min=0, max=1.5, default=.6) # angle of a fork
     max_split_number = IntProperty(min=0, default=3) # number of forks per split
     radius = FloatProperty(min=0, max=1, default=.6) # radius of split
+    end_radius = FloatProperty(min=0, max=1, default=0)
     min_height = FloatProperty(min=0, default=3, name="start") # min height at which a split occurs
     
     length = FloatProperty(min=0, default=7) # length of trunk
@@ -26,7 +27,7 @@ class MtreeBranch(Node, BaseNode):
     floor_avoidance = FloatProperty(min=0, default=1) # how much the branches avoid the floor 
 
 
-    properties = ["seed", "amount", "split_angle", "max_split_number", "radius", "min_height", "length", "shape_start", "shape_end",
+    properties = ["seed", "amount", "split_angle", "max_split_number", "radius", "end_radius", "min_height", "length", "shape_start", "shape_end",
                   "shape_convexity", "resolution", "randomness", "split_proba", "split_flatten", "gravity_strength", "floor_avoidance"]
 
     def init(self, context):
@@ -44,7 +45,7 @@ class MtreeBranch(Node, BaseNode):
         creator = self.id_data.nodes.find(self.name) # get index of node in node tree and use it as tree function identifier
         selection = 0 if input_node == None else input_node.id_data.nodes.find(input_node.name)
 
-        tree.add_branches(self.amount, self.split_angle, self.max_split_number, self.radius, self.min_height,
+        tree.add_branches(self.amount, self.split_angle, self.max_split_number, self.radius, self.end_radius, self.min_height,
                            self.length, self.shape_start, self.shape_end, self.shape_convexity, self.resolution,
                            self.randomness, self.split_proba, self.split_flatten, self.gravity_strength, self.floor_avoidance, creator, selection )
         for output in self.outputs:
