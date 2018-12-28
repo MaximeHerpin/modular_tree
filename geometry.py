@@ -1,6 +1,6 @@
 from mathutils import Vector, Quaternion
 from random import random
-from math import pi, sqrt, inf
+from math import pi, sqrt, inf, cos, sin
 import numpy as np
 
 def random_tangent(dir):
@@ -14,7 +14,12 @@ def random_on_unit_sphere():
 def build_module_rec(node, resolution, verts, faces, uvs, weights, input_loop=[], uv_height=0):
     is_origin = False # true if thare are no input loop
     if len(node.children) == 0:
-        return # node with no children shall not be drawn
+        if len(input_loop) > 0:
+            faces.append(input_loop)
+            n = len(input_loop)
+            uvs.append([Vector((cos(i/(n-1)), sin(i/(n-1)))) for i in range(n)])
+        return
+
     rot_dir = Vector((0,0,1)).rotation_difference(node.direction) # transformation from y_up space to directio_up space
     rot_dir_inv = rot_dir.inverted() # inverse transformation
     module_verts = [] # verts created by the module
