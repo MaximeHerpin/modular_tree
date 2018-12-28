@@ -28,47 +28,53 @@ class MtreeNodeTree(NodeTree):
     preset_to_load = EnumProperty(name = "Presets", items = get_preset_list, description = "presets")
     preset_to_save = StringProperty(name="name", default="default tree")
 
-    def save_as_json(self):
+    def save_as_json(self, return_string=False):
         ''' save node tree information in a json file '''
+        node_tree_data = {} # the disctionary that will be dumped in the preset
+        node_tree_data["nodes"] = [] # the list of nodes
+        node_tree_data["links"] = [] # the list of links between the nodes
+
+        nodes = [i for i in self.nodes if i.bl_idname == "MtreeTrunk"] # list of nodes in rigth order (from trunk to tree parameter)
+        extremities = deque(nodes)
+        while len(extremities) > 0:
+            node = extremities.popleft()
+            for output in node.outputs:
+                for link in output.links:
+                    child = link.to_node
+                    if not child in nodes:
+                        extremities.append(child)
+                        nodes.append(child)
+        nodes += [i for i in self.nodes if i.bl_idname == "MtreeParameters"]
+
+        for node in nodes: # populating the node list
+            node_data = {}
+            if node.bl_idname != "MtreeTwig": # twig nodes are not saved (mayby they should ?)
+                node_data["bl_idname"] = node.bl_idname
+                node_data["name"] = node.name
+                node_data["outputs_count"] = len(node.outputs)
+                if not return_string:
+                    node_data["location"] = [i for i in node.location]
+                for prop in node.properties:
+                    if type(getattr(node, prop)) != Object:
+                        node_data[prop] = getattr(node, prop)
+                    else:
+                        node_data[prop] = None
+            node_tree_data["nodes"].append(node_data)
+
+        for link in self.links: # populating the link list
+            link_data = {}
+            link_data["from_node"] = link.from_node.name
+            link_data["to_node"] = link.to_node.name
+            link_data["output_index"] = int(link.from_socket.identifier)
+            node_tree_data["links"].append(link_data)
+        
+        if return_string: # if return string, don't write to a file but return the json string
+            return json.dumps(node_tree_data)
+
         folder_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         folder_path = os.path.join(folder_path, "presets")
         path = os.path.join(folder_path , self.preset_to_save + ".json")
-        with open(path, 'w') as outfile: # write to preset
-            node_tree_data = {} # the disctionary that will be dumped in the preset
-            node_tree_data["nodes"] = [] # the list of nodes
-            node_tree_data["links"] = [] # the list of links between the nodes
-
-            nodes = [i for i in self.nodes if i.bl_idname == "MtreeTrunk"] # list of nodes in rigth order (from trunk to tree parameter)
-            extremities = deque(nodes)
-            while len(extremities) > 0:
-                node = extremities.popleft()
-                for output in node.outputs:
-                    for link in output.links:
-                        child = link.to_node
-                        if not child in nodes:
-                            extremities.append(child)
-                            nodes.append(child)
-            nodes += [i for i in self.nodes if i.bl_idname == "MtreeParameters"]
-
-            for node in nodes: # populating the node list
-                node_data = {}
-                if node.bl_idname != "MtreeTwig": # twig nodes are not saved (mayby they should ?)
-                    node_data["bl_idname"] = node.bl_idname
-                    node_data["name"] = node.name
-                    node_data["outputs_count"] = len(node.outputs)
-                    node_data["location"] = [i for i in node.location]
-                    for prop in node.properties:
-                        if type(getattr(node, prop)) != Object:
-                            node_data[prop] = getattr(node, prop)            
-                node_tree_data["nodes"].append(node_data)
-
-            for link in self.links: # populating the link list
-                link_data = {}
-                link_data["from_node"] = link.from_node.name
-                link_data["to_node"] = link.to_node.name
-                link_data["output_index"] = int(link.from_socket.identifier)
-                node_tree_data["links"].append(link_data)
-            
+        with open(path, 'w') as outfile: # write to preset            
             json.dump(node_tree_data, outfile, indent=4)
         self.preset_to_save = self.preset_to_load # set preset name to the preset just loaded
             

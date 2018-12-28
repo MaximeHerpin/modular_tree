@@ -69,7 +69,8 @@ class MTreeNode:
             extremity = len(self.children) == 0
             direction = self.direction if extremity else (self.children[0].position - self.position)
             length = direction.magnitude
-            direction /= length
+            if length != 0:
+                direction /= length
             candidates.append((self.position, direction, length, self.radius, extremity))
         
         for child in self.children:

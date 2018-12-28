@@ -1,8 +1,10 @@
+from random import randint
+import numpy as np
+import time
+import json
 import bpy
 from bpy.types import Node, Operator
 import bmesh
-from random import randint
-import numpy as np
 from bpy.props import IntProperty, FloatProperty, EnumProperty, BoolProperty, StringProperty, PointerProperty
 from .base_node import BaseNode
 from ..tree import MTree
@@ -17,6 +19,8 @@ class MtreeParameters(Node, BaseNode):
     leaf_weight = FloatProperty(min=-1, max=1, default=0)
     leaf_dupli_object = PointerProperty(type=bpy.types.Object, name="leaf")
     leaf_size = FloatProperty(min=0, default=.1)
+
+    last_execution_info = StringProperty() # this propperty is not be in the properties variable in order to avoid loop
 
     properties = ["resolution", "create_leafs", "leaf_amount", "leaf_max_radius", "leaf_weight", "leaf_dupli_object", "leaf_size"]
 
@@ -40,6 +44,11 @@ class MtreeParameters(Node, BaseNode):
             box.prop(self, "leaf_size")
 
     def execute(self):
+        new_execution_info = self.id_data.save_as_json(return_string = True)
+        change_level = get_tree_changes_level(self.last_execution_info, new_execution_info)
+        print(change_level)
+        self.last_execution_info = new_execution_info
+
         tree = MTree()
         node_tree = self.id_data
         try:
@@ -47,15 +56,24 @@ class MtreeParameters(Node, BaseNode):
         except IndexError:
             ShowMessageBox("The tree needs a trunk node in order to execute", "Invalid node tree", "ERROR")
             return
+        t0 = time.clock()
         trunk.execute(tree)
-
+        t1 = time.clock()
         tree_ob, leaf_ob = get_current_object()
-        tree_ob = generate_tree_object(tree_ob, tree, self.resolution)
+        if change_level == "tree_execution":
+            tree_ob = generate_tree_object(tree_ob, tree, self.resolution)
+        t2 = time.clock()
         if self.create_leafs:
-            leaf_ob = generate_leafs_object(tree, self.leaf_amount, self.leaf_weight, self.leaf_max_radius, leaf_ob, tree_ob)
+            if change_level == "leafs_emitter":
+                leaf_ob = generate_leafs_object(tree, self.leaf_amount, self.leaf_weight, self.leaf_max_radius, leaf_ob, tree_ob)
             create_particle_system(leaf_ob, self.leaf_amount, self.leaf_dupli_object, self.leaf_size)
         elif leaf_ob != None: # if there should not be leafs yet an emitter exists, delete it
             bpy.data.objects.remove(leaf_ob, do_unlink=True) # delete leaf object
+        t3 = time.clock()
+
+        print("tree generation duration : {}".format(t1-t0))
+        print("mesh creation duration : {}".format(t2-t1))
+        print("leafs emitter creation duration : {}".format(t3-t2))
 
 def get_current_object():
     '''' return active object if it is a valid tree and potentially the leaf emitter attached to it '''
@@ -176,6 +194,45 @@ def ShowMessageBox(message = "", title = "Message Box", icon = 'INFO'):
         self.layout.label(text=message)
 
     bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
+
+def get_tree_changes_level(last_execution_info, new_execution_info):
+    ''' compare two execution info and return the level of diference.
+        the level of diference can be:
+        - tree_execution
+        - leafs_emitter
+        - particle_system '''
+    
+    if last_execution_info == "" or new_execution_info == "":
+        return "tree_execution"
+
+    e1 = json.loads(last_execution_info)
+    e2 = json.loads(new_execution_info)
+    n1 = e1["nodes"]
+    n2 = e2["nodes"]
+    
+    if e1.keys() != e2.keys() or len(n1) != len(n2): # if the node tree has changed then the tree mesh must be recreated 
+        return "tree_execution"
+
+    leaf_emitter = False # true if a change of level leaf emitter is detected
+    particle_system = False # true if a change of level particle system is detected
+    for key in range(len(n1)):
+        node_1 = n1[key]
+        node_2 = n2[key]
+        for prop in node_1.keys():
+            if node_1[prop] != node_2[prop]: # if a property has been changed
+                print(prop)
+                if node_1["bl_idname"] != "MtreeParameters": # if the property has been changed in a tree function, the tree mesh must be recreated
+                    return "tree_execution"
+                elif prop == "resolution":
+                    return "tree_execution"
+                elif prop in {"create_leafs", "leaf_max_radius", "leaf_amount"}:
+                    leaf_emitter = True
+                else:
+                    particle_system = True
+    if leaf_emitter:
+        return "leafs_emitter"
+    if particle_system:
+        return "particle_system"
 
 class ExecuteMtreeNodeTreeOperator(Operator):
 
