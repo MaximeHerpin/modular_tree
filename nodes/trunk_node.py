@@ -30,10 +30,12 @@ class MtreeTrunk(Node, BaseNode):
     
     def execute(self, tree):
         random.seed(self.seed)
-        tree.add_trunk(self.length, self.radius, self.end_radius, self.shape, self.resolution, self.randomness, self.axis_attraction, 0)
+        creator = self.id_data.nodes.find(self.name) # get index of node in node tree and use it as tree function identifier
+
+        tree.add_trunk(self.length, self.radius, self.end_radius, self.shape, self.resolution, self.randomness, self.axis_attraction, creator)
         for output in self.outputs:
             ''' here the execute function is called recursively on first ouptut of all nodes, the second output of all nodes, ect'''
             links = output.links
             if len(links) > 0:
-                links[0].to_node.execute(tree, 1, 0)
+                links[0].to_node.execute(tree, self)
             

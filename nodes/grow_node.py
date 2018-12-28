@@ -35,8 +35,11 @@ class MtreeGrow(Node, BaseNode):
         for i in self.properties:
             col.prop(self, i)
     
-    def execute(self, tree, creator, selection):
+    def execute(self, tree, input_node):
         random.seed(self.seed)
+        creator = self.id_data.nodes.find(self.name) # get index of node in node tree and use it as tree function identifier
+        selection = 0 if input_node == None else input_node.id_data.nodes.find(input_node.name)
+
         tree.grow(self.length, self.shape_start, self.shape_end, self.shape_convexity, self.resolution,
                   self.randomness, self.split_proba, self.split_angle, self.split_radius, self.split_flatten,
                   self.end_radius, self.gravity_strength, self.floor_avoidance, creator, selection)
@@ -44,5 +47,5 @@ class MtreeGrow(Node, BaseNode):
             ''' here the execute function is called recursively on first ouptut of all nodes, the second output of all nodes, ect'''
             links = output.links
             if len(links) > 0:
-                links[0].to_node.execute(tree, creator+1, creator)
+                links[0].to_node.execute(tree, self)
             
