@@ -172,7 +172,7 @@ class MTree:
     def twig(self, radius, length, branch_number, randomness, resolution, gravity_strength, flatten):
         self.stem = MTreeNode(Vector((0,0,0)), Vector((0,1,0)), radius*.1, 0)
         self.grow(1, 1, 1, 0, resolution, randomness/2/resolution, 0, .2, 0, 0, 0, .1,0,  1, 0)
-        self.add_branches(branch_number, .5, 2, .7, 0, length*.7, .5, .5, 0, resolution, randomness/resolution, .1/resolution, flatten, gravity_strength/resolution, 0, 2, 1)
+        self.add_branches(branch_number, .5, 2, .7, .1, 0, length*.7, .5, .5, 0, resolution, randomness/resolution, .1/resolution, flatten, gravity_strength/resolution, 0, 2, 1)
 
         leaf_candidates = []
         self.stem.get_leaf_candidates(leaf_candidates, radius)
