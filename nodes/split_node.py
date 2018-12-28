@@ -27,12 +27,15 @@ class MtreeSplit(Node, BaseNode):
         for i in self.properties:
             col.prop(self, i)
     
-    def execute(self, tree, creator, selection):
+    def execute(self, tree, input_node):
         random.seed(self.seed)
+        creator = self.id_data.nodes.find(self.name) # get index of node in node tree and use it as tree function identifier
+        selection = 0 if input_node == None else input_node.id_data.nodes.find(input_node.name)
+
         tree.split(self.amount, self.split_angle, self.max_split_number, self.radius, self.min_height, 0, creator, selection)
         for output in self.outputs:
             ''' here the execute function is called recursively on first ouptut of all nodes, the second output of all nodes, ect'''
             links = output.links
             if len(links) > 0:
-                links[0].to_node.execute(tree, creator+1, creator)
+                links[0].to_node.execute(tree, self)
             
