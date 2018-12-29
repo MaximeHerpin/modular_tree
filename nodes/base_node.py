@@ -31,6 +31,5 @@ class BaseNode:
                 self.outputs.new('TreeSocketType', str(output_used))
 
     def property_changed(self, context):
-        print("working")
         self.id_data.update()
     

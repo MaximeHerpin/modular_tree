@@ -10,10 +10,6 @@ from .base_node import BaseNode
 from ..tree import MTree
 
 
-def test_function(self, context):
-    print("coucou")
-
-
 class MtreeParameters(Node, BaseNode):
     def test_function2(self, context):
         print("coucou")
@@ -22,6 +18,10 @@ class MtreeParameters(Node, BaseNode):
     bl_label = "Tree paramteters"
     
     auto_update = BoolProperty(update = BaseNode.property_changed)
+    mesh_type = bpy.props.EnumProperty(
+        items=[('final', 'Final', ''), ('preview', 'Preview', '')],
+        name="output",
+        default="preview", update = BaseNode.property_changed)
     resolution = IntProperty(min=0, default=16, update = BaseNode.property_changed)
     create_leafs = BoolProperty(default = False, update = BaseNode.property_changed)
     leaf_amount = IntProperty(min=1, default=3000, update = BaseNode.property_changed)
@@ -32,7 +32,7 @@ class MtreeParameters(Node, BaseNode):
 
     last_execution_info = StringProperty() # this propperty is not be in the properties variable in order to avoid loop
 
-    properties = ["resolution", "create_leafs", "leaf_amount", "leaf_max_radius", "leaf_weight", "leaf_dupli_object", "leaf_size"]
+    properties = ["resolution", "create_leafs", "leaf_amount", "leaf_max_radius", "leaf_weight", "leaf_dupli_object", "leaf_size", "mesh_type"]
 
     def init(self, context):
         self.name = MtreeParameters.bl_label
@@ -42,7 +42,7 @@ class MtreeParameters(Node, BaseNode):
         change_level = get_tree_changes_level(self.last_execution_info, new_execution_info) # will return a string indicating at which level of the tree a change has been made
 
         self.last_execution_info = new_execution_info
-        tree_ob, leaf_ob = get_current_object()
+        tree_ob, leaf_ob = get_current_object("MESH" if self.mesh_type == "final" else "CURVE")
         if tree_ob is None:
             change_level = "tree_execution"
 
@@ -64,10 +64,13 @@ class MtreeParameters(Node, BaseNode):
             trunk.execute(tree)
         t1 = time.clock()
         if change_level == "tree_execution":
-            tree_ob = generate_tree_object(tree_ob, tree, self.resolution)
+            if self.mesh_type == "final":
+                tree_ob = generate_tree_object(tree_ob, tree, self.resolution)
+            else:
+                tree_ob = generate_curve_object(tree_ob, tree)
         t2 = time.clock()
         if self.create_leafs:
-            if change_level == "leafs_emitter":
+            if change_level in {"tree_execution", "leafs_emitter"}:
                 leaf_ob = generate_leafs_object(tree, self.leaf_amount, self.leaf_weight, self.leaf_max_radius, leaf_ob, tree_ob)
             create_particle_system(leaf_ob, self.leaf_amount, self.leaf_dupli_object, self.leaf_size)
         elif leaf_ob != None: # if there should not be leafs yet an emitter exists, delete it
@@ -78,11 +81,11 @@ class MtreeParameters(Node, BaseNode):
         print("mesh creation duration : {}".format(t2-t1))
         print("leafs emitter creation duration : {}".format(t3-t2))
     
-
     def draw_buttons(self, context, layout):
         layout.prop(self, "auto_update")
         op = layout.operator("mtree.randomize_tree", text='randomize tree') # will call RandomizeTreeOperator.execute
         op.node_group_name = self.id_data.name # set name of node group to operator
+        layout.prop(self, "mesh_type")
         layout.prop(self, "resolution")
         op = layout.operator("object.mtree_execute_tree", text='execute tree') # will call ExecuteMtreeNodeTreeOperator.execute
         op.node_group_name = self.id_data.name # set name of node group to operator
@@ -97,7 +100,7 @@ class MtreeParameters(Node, BaseNode):
             box.prop(self, "leaf_size")
 
 
-def get_current_object():
+def get_current_object(tree_ob_type):
     '''' return active object if it is a valid tree and potentially the leaf emitter attached to it '''
     ob = bpy.context.object
     if ob is None:
@@ -105,23 +108,30 @@ def get_current_object():
     tree_ob = None
     leaf_ob = None
     if ob.get("is_tree") is not None: # if true then the active object is a tree
-        tree_ob = ob
+        if ob.type == tree_ob_type: # check if the object is of correct type
+            tree_ob = ob
         for child in ob.children: # looking if the tree has a leaf emitter
             if child.get("is_leaf") is not None: # if true then the child is a leaf emitter
                 leaf_ob = child
                 break
+        if ob.type != tree_ob_type: # if types are mismatched, delete ob
+            bpy.data.objects.remove(ob, do_unlink=True)
     
-    if ob.get("is_leaf"): # if true then the active object is a leaf emitter
+    elif ob.get("is_leaf"): # if true then the active object is a leaf emitter
         leaf_ob = ob
         parent = ob.parent
         if parent is not None and parent.get("is_tree"): # if parent is a tree (it should be)
             tree_ob = parent
     
+    
     return tree_ob, leaf_ob
 
 def generate_tree_object(ob, tree, resolution, tree_property="is_tree"):
     ''' Create the tree mesh/object '''
+    t0 = time.clock()
     verts, faces, radii, uvs = tree.build_mesh_data(resolution) # tree mesh data
+    dt = time.clock() - t0
+    print("mesh data creation : {}".format(dt))
     mesh = bpy.data.meshes.new("tree")
     material = None # material of tree object
     if ob == None: # if no object is specified, create one        
@@ -131,6 +141,7 @@ def generate_tree_object(ob, tree, resolution, tree_property="is_tree"):
     else: # delete old mesh data 
         material = ob.active_material
         old_mesh = ob.data
+        ob.parent_type = "OBJECT" 
         ob.data = mesh
         bpy.data.meshes.remove(old_mesh)
 
@@ -158,6 +169,36 @@ def generate_tree_object(ob, tree, resolution, tree_property="is_tree"):
         v_group.add(v, w, "ADD")
     if material is not None:
         ob.active_material = material
+    return ob
+
+def generate_curve_object(ob, tree):
+    ''' create the tree object as a curve '''
+    
+    if ob == None: # if no object is specified, create one
+        curve_data = bpy.data.curves.new('Tree', type='CURVE')
+        curve_data.dimensions = '3D'
+        curve_data.bevel_depth = 1
+        curve_data.bevel_resolution = 0
+        curve_data.fill_mode = 'FULL'
+        ob = bpy.data.objects.new('Tree', curve_data)      
+        bpy.context.scene.collection.objects.link(ob)
+        ob["is_tree"] = True # create custom object parameter to recognise tree object
+    else: # delete old mesh data 
+        material = ob.active_material
+        curve_data = ob.data
+        curve_data.splines.clear()
+    
+    positions = [[]]
+    radii = [[]]
+    tree.stem.get_branches(positions, radii)
+    for i in range(len(positions)):
+        polyline = curve_data.splines.new('POLY')
+        co = positions[i]
+        radius = radii[i]
+        polyline.points.add(len(radius)-1)
+        polyline.points.foreach_set("co", co)
+        polyline.points.foreach_set("radius", radius)
+    
     return ob
 
 def generate_leafs_object(tree, number, weight, max_radius, ob=None, tree_ob=None):
@@ -249,7 +290,7 @@ def get_tree_changes_level(last_execution_info, new_execution_info):
                 print(prop)
                 if node_1["bl_idname"] != "MtreeParameters": # if the property has been changed in a tree function, the tree mesh must be recreated
                     return "tree_execution"
-                elif prop == "resolution":
+                elif prop in {"mesh_type", "resolution"}:
                     return "tree_execution"
                 elif prop in {"create_leafs", "leaf_max_radius", "leaf_amount"}:
                     leaf_emitter = True

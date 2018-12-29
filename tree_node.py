@@ -75,3 +75,16 @@ class MTreeNode:
         
         for child in self.children:
             child.get_leaf_candidates(candidates, max_radius)
+
+
+    def get_branches(self, positions, radii):
+        ''' populate list of list of points of each branch '''
+        
+        positions[-1].extend([self.position.x, self.position.y, self.position.z, 0]) # add position to last branch
+        radii[-1].append(self.radius) # add radius to last branch
+
+        for i, child in enumerate(self.children):
+            if i > 0: # if child is begining of new branch
+                positions.append([]) # add empty branch for position
+                radii.append([]) # add empty branch for radius
+            child.get_branches(positions, radii)

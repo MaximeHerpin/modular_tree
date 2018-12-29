@@ -58,7 +58,7 @@ class MtreeNodeTree(NodeTree):
                     if type(getattr(node, prop)) != Object:
                         node_data[prop] = getattr(node, prop)
                     else:
-                        node_data[prop] = None
+                        node_data[prop] = True
             node_tree_data["nodes"].append(node_data)
 
         for link in self.links: # populating the link list
