@@ -1,3 +1,5 @@
+from bpy.types import Node
+
 class BaseNode:
     @classmethod
     def poll(cls, ntree):
@@ -28,5 +30,7 @@ class BaseNode:
             elif output_number - output_used == 0: # adding one output when a link has just been created
                 self.outputs.new('TreeSocketType', str(output_used))
 
-
+    def property_changed(self, context):
+        print("working")
+        self.id_data.update()
     

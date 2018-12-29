@@ -9,16 +9,26 @@ from bpy.props import IntProperty, FloatProperty, EnumProperty, BoolProperty, St
 from .base_node import BaseNode
 from ..tree import MTree
 
+
+def test_function(self, context):
+    print("coucou")
+
+
 class MtreeParameters(Node, BaseNode):
+    def test_function2(self, context):
+        print("coucou")
+
+
     bl_label = "Tree paramteters"
     
-    resolution = IntProperty(min=0, default=16)
-    create_leafs = BoolProperty(default = False)
-    leaf_amount = IntProperty(min=1, default=3000)
-    leaf_max_radius = FloatProperty(min=0, default=.1)
-    leaf_weight = FloatProperty(min=-1, max=1, default=0)
-    leaf_dupli_object = PointerProperty(type=bpy.types.Object, name="leaf")
-    leaf_size = FloatProperty(min=0, default=.1)
+    auto_update = BoolProperty(update = BaseNode.property_changed)
+    resolution = IntProperty(min=0, default=16, update = BaseNode.property_changed)
+    create_leafs = BoolProperty(default = False, update = BaseNode.property_changed)
+    leaf_amount = IntProperty(min=1, default=3000, update = BaseNode.property_changed)
+    leaf_max_radius = FloatProperty(min=0, default=.1, update = BaseNode.property_changed)
+    leaf_weight = FloatProperty(min=-1, max=1, default=0, update = BaseNode.property_changed)
+    leaf_dupli_object = PointerProperty(type=bpy.types.Object, name="leaf", update = BaseNode.property_changed)
+    leaf_size = FloatProperty(min=0, default=.1, update = BaseNode.property_changed)
 
     last_execution_info = StringProperty() # this propperty is not be in the properties variable in order to avoid loop
 
@@ -27,7 +37,50 @@ class MtreeParameters(Node, BaseNode):
     def init(self, context):
         self.name = MtreeParameters.bl_label
 
+    def execute(self):
+        new_execution_info = self.id_data.save_as_json(return_string = True) # get string of all parameters organised in a dictionary
+        change_level = get_tree_changes_level(self.last_execution_info, new_execution_info) # will return a string indicating at which level of the tree a change has been made
+
+        self.last_execution_info = new_execution_info
+        tree_ob, leaf_ob = get_current_object()
+        if tree_ob is None:
+            change_level = "tree_execution"
+
+        if change_level is None: # if there has been no changes, end the function execution
+            return
+        if self.auto_update and tree_ob is None: # if auto_update is on, the active object shouldn't change. If the active object changes, stop auto execution
+            self.auto_update = False
+            return
+
+        tree = MTree()
+        node_tree = self.id_data
+        try:
+            trunk = [node for node in node_tree.nodes if node.bl_idname == "MtreeTrunk"][0] # get trunk function
+        except IndexError:
+            ShowMessageBox("The tree needs a trunk node in order to execute", "Invalid node tree", "ERROR")
+            return
+        t0 = time.clock()
+        if change_level != "particle_system":
+            trunk.execute(tree)
+        t1 = time.clock()
+        if change_level == "tree_execution":
+            tree_ob = generate_tree_object(tree_ob, tree, self.resolution)
+        t2 = time.clock()
+        if self.create_leafs:
+            if change_level == "leafs_emitter":
+                leaf_ob = generate_leafs_object(tree, self.leaf_amount, self.leaf_weight, self.leaf_max_radius, leaf_ob, tree_ob)
+            create_particle_system(leaf_ob, self.leaf_amount, self.leaf_dupli_object, self.leaf_size)
+        elif leaf_ob != None: # if there should not be leafs yet an emitter exists, delete it
+            bpy.data.objects.remove(leaf_ob, do_unlink=True) # delete leaf object
+        t3 = time.clock()
+
+        print("tree generation duration : {}".format(t1-t0))
+        print("mesh creation duration : {}".format(t2-t1))
+        print("leafs emitter creation duration : {}".format(t3-t2))
+    
+
     def draw_buttons(self, context, layout):
+        layout.prop(self, "auto_update")
         op = layout.operator("mtree.randomize_tree", text='randomize tree') # will call RandomizeTreeOperator.execute
         op.node_group_name = self.id_data.name # set name of node group to operator
         layout.prop(self, "resolution")
@@ -43,37 +96,6 @@ class MtreeParameters(Node, BaseNode):
             box.prop(self, "leaf_dupli_object")
             box.prop(self, "leaf_size")
 
-    def execute(self):
-        new_execution_info = self.id_data.save_as_json(return_string = True)
-        change_level = get_tree_changes_level(self.last_execution_info, new_execution_info)
-        print(change_level)
-        self.last_execution_info = new_execution_info
-
-        tree = MTree()
-        node_tree = self.id_data
-        try:
-            trunk = [node for node in node_tree.nodes if node.bl_idname == "MtreeTrunk"][0] # get trunk function
-        except IndexError:
-            ShowMessageBox("The tree needs a trunk node in order to execute", "Invalid node tree", "ERROR")
-            return
-        t0 = time.clock()
-        trunk.execute(tree)
-        t1 = time.clock()
-        tree_ob, leaf_ob = get_current_object()
-        if change_level == "tree_execution":
-            tree_ob = generate_tree_object(tree_ob, tree, self.resolution)
-        t2 = time.clock()
-        if self.create_leafs:
-            if change_level == "leafs_emitter":
-                leaf_ob = generate_leafs_object(tree, self.leaf_amount, self.leaf_weight, self.leaf_max_radius, leaf_ob, tree_ob)
-            create_particle_system(leaf_ob, self.leaf_amount, self.leaf_dupli_object, self.leaf_size)
-        elif leaf_ob != None: # if there should not be leafs yet an emitter exists, delete it
-            bpy.data.objects.remove(leaf_ob, do_unlink=True) # delete leaf object
-        t3 = time.clock()
-
-        print("tree generation duration : {}".format(t1-t0))
-        print("mesh creation duration : {}".format(t2-t1))
-        print("leafs emitter creation duration : {}".format(t3-t2))
 
 def get_current_object():
     '''' return active object if it is a valid tree and potentially the leaf emitter attached to it '''
@@ -204,6 +226,10 @@ def get_tree_changes_level(last_execution_info, new_execution_info):
     
     if last_execution_info == "" or new_execution_info == "":
         return "tree_execution"
+    
+    if last_execution_info == new_execution_info:
+        print("same")
+        return None
 
     e1 = json.loads(last_execution_info)
     e2 = json.loads(new_execution_info)

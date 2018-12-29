@@ -107,7 +107,12 @@ class MtreeNodeTree(NodeTree):
                 output_index = link["output_index"]
                 self.links.new(from_node.outputs[output_index], to_node.inputs[0])
                 
-
+    def update(self):
+        try:
+            tree_parameters_node = [i for i in self.nodes if i.bl_idname == "MtreeParameters"][0]
+            if tree_parameters_node.auto_update:
+                tree_parameters_node.execute()
+        except: pass
 
 class TreeSocket(NodeSocket):
     """Tree socket type"""
