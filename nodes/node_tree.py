@@ -138,6 +138,7 @@ node_categories = [
     # identifier, label, items list
     MyNodeCategory('NODES', "Nodes", items=[
         NodeItem("MtreeTrunk"),
+        NodeItem("MtreeRoots"),
         NodeItem("MtreeParameters"),
         NodeItem("MtreeGrow"),
         NodeItem("MtreeSplit"),

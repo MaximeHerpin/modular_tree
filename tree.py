@@ -28,6 +28,7 @@ class MTree:
 
     def add_trunk(self, length, radius, end_radius, shape, resolution, randomness, axis_attraction, creator):
         self.stem = MTreeNode(Vector((0,0,0)), Vector((0,0,1)), radius, creator)
+        self.stem.is_branch_origin = True
         remaining_length = length
         extremity = self.stem # extremity is always the current last node of the trunk
         while remaining_length > 0:
@@ -76,7 +77,11 @@ class MTree:
                 direction = node.direction.lerp(tangent * (i-.5)*2, deviation) # direction of new node
                 direction += Vector((0,0,-1)) * gravity_strength / 10 / resolution # apply gravity
                 if floor_avoidance != 0:
-                    floor_avoidance_strength = max(0, (-direction.z * abs(.3/max(0.01, node.position.z)))) * floor_avoidance #how much the floor repel the branch
+                    below_ground = -1 if floor_avoidance < 0 else 1 # if -1 then the branches must stay below ground, if 1 they must stay above ground
+                    distance_from_floor = max(.01, abs(node.position.z))
+                    direction_toward_ground = max(0, - direction.z * below_ground) # get how much the branch is going towards the floor
+                    floor_avoidance_strength = direction_toward_ground * .3 / distance_from_floor * floor_avoidance
+
                     if floor_avoidance_strength > .1 * (1+floor_avoidance): # if the branch is too much towards the floor, break it 
                         break
                     direction += Vector((0,0,1)) * floor_avoidance_strength
@@ -140,6 +145,16 @@ class MTree:
         self.split(amount, angle, max_split_number, radius, min_height, split_flatten, split_creator, split_selection)
         self.grow(length, shape_start, shape_end, shape_convexity, resolution, randomness, split_proba, 0.3, 0.9,
                   split_flatten, end_radius, gravity_strength, floor_avoidance, grow_creator, grow_selection)
+
+    def roots(self, length, resolution, split_proba, randomness, creator):
+        if len(self.stem.children) == 0: # roots can only be added on a trunk on non 0 length
+            return
+        
+        roots_origin = MTreeNode(self.stem.position, -self.stem.direction, self.stem.radius, -1)
+        roots_origin.is_branch_origin = True
+        self.stem.children.append(roots_origin) # stem is set as branch origin, so it cannot be splitted by split function. second children of stem will then always be root origin
+
+        self.grow(length, 1, 1, 0, resolution, randomness, split_proba, .5, .6, 0, 0, -.1, -1, creator, -1)
 
 
     def get_leaf_emitter_data(self, number, weight, max_radius):

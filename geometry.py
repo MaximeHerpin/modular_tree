@@ -29,7 +29,7 @@ def build_module_rec(node, resolution, verts, faces, uvs, weights, input_loop=[]
         module_verts = make_circle(Vector((0,0,0)), Vector((0,0,1)), node.radius, resolution)
         input_loop = [i for i in range(resolution)]
         n_verts += resolution
-    elif node.is_branch_origin:
+    else:
         input_tangent = rot_dir_inv @ (verts[input_loop[0]] - node.position)
         input_angle_offset = int(input_tangent.xy.angle_signed(Vector((1,0))) / 2/pi * resolution)
         if input_angle_offset != 0:
@@ -50,6 +50,8 @@ def build_module_rec(node, resolution, verts, faces, uvs, weights, input_loop=[]
     loop_down = [-1]*resolution # loop for faces in the lower part of the module
     
     for child in node.children[1:]:
+        if is_origin: # if true then this child is the roots origin
+            break
         max_child_res = resolution // (len(node.children) - 1) # max resolution of childs
         child_dir = rot_dir_inv @ child.direction # child direction in y_up space
         child_dir.normalize() #is this needed ?
@@ -89,8 +91,10 @@ def build_module_rec(node, resolution, verts, faces, uvs, weights, input_loop=[]
     uv_height = uv_loops(input_loop, loop_down, uv_height, uvs, verts, node.radius, len(node.children)==1)
     uv_height = uv_loops(loop_up, extremity_loop, uv_height, uvs, verts, extremity.radius, len(node.children)==1)
     for i, child in enumerate(node.children): # recursively call function on all children
-        pass
-        build_module_rec(child, output_resolutions[i], verts, faces, uvs, weights, output_loops[i], uv_height)
+        if is_origin and i == 1: # if true then this child is the roots origin
+            build_module_rec(child, resolution, verts, faces, uvs, weights, list(reversed(input_loop)), uv_height)
+        else:
+            build_module_rec(child, output_resolutions[i], verts, faces, uvs, weights, output_loops[i], uv_height)
 
 
 def bridge(l1, l2):
