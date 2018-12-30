@@ -14,6 +14,7 @@ class MTreeNode:
         self.can_be_splitted = True # bool - if true the node can be splitted (can have more than 1 children)
         self.position_in_branch = 0 # float - 0 when node is at the begining of a branch, 1 when it is at the end
         self.is_branch_origin = False
+        self.can_spawn_leaf = True
 
     def get_grow_candidates(self, candidates, creator):
         '''
@@ -34,7 +35,6 @@ class MTreeNode:
             max_height = max(max_height, max_h) # max height is now the max between istself and the max height of child
         
         return min_height, max_height
-
 
     def set_positions_in_branches(self, current_distance=0, distance_from_parent=0):
         ''' set each node position_in_branch property to it's correct value
@@ -65,7 +65,7 @@ class MTreeNode:
 
     def get_leaf_candidates(self, candidates, max_radius):
         ''' recursively populates a list with position, direction radius of all modules susceptible to create a leaf'''
-        if self.radius <= max_radius:
+        if self.radius <= max_radius and self.can_spawn_leaf:
             extremity = len(self.children) == 0
             direction = self.direction if extremity else (self.children[0].position - self.position)
             length = direction.magnitude

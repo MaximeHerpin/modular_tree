@@ -48,7 +48,7 @@ class MTree:
 
 
     def grow(self, length, shape_start, shape_end, shape_convexity, resolution, randomness, split_proba, split_angle,
-             split_radius, split_flatten, end_radius, gravity_strength, floor_avoidance, creator, selection):
+             split_radius, split_flatten, end_radius, gravity_strength, floor_avoidance, can_spawn_leaf, creator, selection):
         grow_candidates = []
         self.stem.get_grow_candidates(grow_candidates, selection) # get all leafs of valid creator
 
@@ -100,6 +100,7 @@ class MTree:
                 child.growth_goal = node.growth_goal
                 child.growth = growth
                 child.growth_radius = node.growth_radius if i == 0 else node.growth_radius * split_radius
+                child.can_spawn_leaf = can_spawn_leaf
                 if i > 0:
                     child.is_branch_origin = True
                 node.children.append(child)
@@ -131,20 +132,21 @@ class MTree:
                 child = MTreeNode(position, direction, rad, creator)
                 child.position_in_branch = node.position_in_branch
                 child.is_branch_origin = True
+                child.can_spawn_leaf = False
                 node.children.append(child)
                 tangent = rot @ tangent
 
     
     def add_branches(self, amount, angle, max_split_number, radius, end_radius, min_height, length,
                      shape_start, shape_end, shape_convexity, resolution, randomness,
-                     split_proba, split_flatten, gravity_strength, floor_avoidance, creator, selection):
+                     split_proba, split_flatten, gravity_strength, floor_avoidance, can_spawn_leaf, creator, selection):
         split_creator = creator - 0.5
         split_selection = selection
         grow_selection = creator - 0.5
         grow_creator = creator
         self.split(amount, angle, max_split_number, radius, min_height, split_flatten, split_creator, split_selection)
         self.grow(length, shape_start, shape_end, shape_convexity, resolution, randomness, split_proba, 0.3, 0.9,
-                  split_flatten, end_radius, gravity_strength, floor_avoidance, grow_creator, grow_selection)
+                  split_flatten, end_radius, gravity_strength, floor_avoidance, can_spawn_leaf, grow_creator, grow_selection)
 
     def roots(self, length, resolution, split_proba, randomness, creator):
         if len(self.stem.children) == 0: # roots can only be added on a trunk on non 0 length
@@ -154,7 +156,7 @@ class MTree:
         roots_origin.is_branch_origin = True
         self.stem.children.append(roots_origin) # stem is set as branch origin, so it cannot be splitted by split function. second children of stem will then always be root origin
 
-        self.grow(length, 1, 1, 0, resolution, randomness, split_proba, .5, .6, 0, 0, -.1, -1, creator, -1)
+        self.grow(length, 1, 1, 0, resolution, randomness, split_proba, .5, .6, 0, 0, -.1, -1, False, creator, -1)
 
 
     def get_leaf_emitter_data(self, number, weight, max_radius):
@@ -186,8 +188,8 @@ class MTree:
 
     def twig(self, radius, length, branch_number, randomness, resolution, gravity_strength, flatten):
         self.stem = MTreeNode(Vector((0,0,0)), Vector((0,1,0)), radius*.1, 0)
-        self.grow(1, 1, 1, 0, resolution, randomness/2/resolution, 0, .2, 0, 0, 0, .1,0,  1, 0)
-        self.add_branches(branch_number, .5, 2, .7, .1, 0, length*.7, .5, .5, 0, resolution, randomness/resolution, .1/resolution, flatten, gravity_strength/resolution, 0, 2, 1)
+        self.grow(1, 1, 1, 0, resolution, randomness/2/resolution, 0, .2, 0, 0, 0, .1,0, True, 1, 0)
+        self.add_branches(branch_number, .5, 2, .7, .1, 0, length*.7, .5, .5, 0, resolution, randomness/resolution, .1/resolution, flatten, gravity_strength/resolution, 0, True, 2, 1)
 
         leaf_candidates = []
         self.stem.get_leaf_candidates(leaf_candidates, radius)

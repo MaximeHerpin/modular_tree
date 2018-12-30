@@ -19,11 +19,12 @@ class MtreeGrow(Node, BaseNode):
     split_radius = FloatProperty(min=0, max=1, default=.9, update = BaseNode.property_changed) # radius of forked branches
     split_flatten = FloatProperty(min=0, max=1, default=.5, update = BaseNode.property_changed) # how constraint on the horizontal axis the splits are
     end_radius = FloatProperty(min=0, max=1, default=0, update = BaseNode.property_changed) # the relative radius of vranches at the end of growth
+    can_spawn_leafs = BoolProperty(default=True, update = BaseNode.property_changed)
     gravity_strength = FloatProperty(default=.1, update = BaseNode.property_changed) # how much branches go towards the floor/sky
     floor_avoidance = FloatProperty(min=0, default=1, update = BaseNode.property_changed) # how much the branches avoid the floor
 
     properties = ["seed", "length", "shape_start", "shape_end", "shape_convexity", "resolution", "randomness",
-                  "split_proba", "split_angle", "split_radius", "split_flatten", "end_radius", "gravity_strength", "floor_avoidance"]
+                  "split_proba", "split_angle", "split_radius", "split_flatten", "end_radius", "can_spawn_leafs", "gravity_strength", "floor_avoidance"]
 
     def init(self, context):
         self.outputs.new('TreeSocketType', "0")
@@ -42,7 +43,7 @@ class MtreeGrow(Node, BaseNode):
 
         tree.grow(self.length, self.shape_start, self.shape_end, self.shape_convexity, self.resolution,
                   self.randomness, self.split_proba, self.split_angle, self.split_radius, self.split_flatten,
-                  self.end_radius, self.gravity_strength, self.floor_avoidance, creator, selection)
+                  self.end_radius, self.gravity_strength, self.floor_avoidance, self.can_spawn_leafs, creator, selection)
         for output in self.outputs:
             ''' here the execute function is called recursively on first ouptut of all nodes, the second output of all nodes, ect'''
             links = output.links
