@@ -12,7 +12,7 @@ class MtreeSplit(Node, BaseNode):
     split_angle = FloatProperty(min=0, max=1.5, default=.6, update = BaseNode.property_changed) # angle of a fork
     max_split_number = IntProperty(min=0, default=3, update = BaseNode.property_changed) # number of forks per split
     radius = FloatProperty(min=0, max=1, default=.6, update = BaseNode.property_changed) # radius of split
-    min_height = FloatProperty(min=0, default=3, name="start", update = BaseNode.property_changed) # min height at which a split occurs
+    min_height = FloatProperty(min=0, max=1, default=.999, name="start", update = BaseNode.property_changed) # min height at which a split occurs
 
     properties = ["seed", "amount", "split_angle", "max_split_number", "radius", "min_height"]
 
