@@ -8,12 +8,13 @@ class MtreeBranch(Node, BaseNode):
     bl_label = "Branch Node"
 
     seed = IntProperty(update = BaseNode.property_changed)
+    advanced_settings = BoolProperty(default=False, update = BaseNode.property_changed) # show advanced properties
     amount = IntProperty(min=0, default=20, update = BaseNode.property_changed) # number of splits
     split_angle = FloatProperty(min=0, max=1.5, default=.6, update = BaseNode.property_changed) # angle of a fork
     max_split_number = IntProperty(min=0, default=3, update = BaseNode.property_changed) # number of forks per split
     radius = FloatProperty(min=0, max=1, default=.6, update = BaseNode.property_changed) # radius of split
     end_radius = FloatProperty(min=0, max=1, default=0, update = BaseNode.property_changed)
-    min_height = FloatProperty(min=0, default=3, name="start", update = BaseNode.property_changed) # min height at which a split occurs
+    min_height = FloatProperty(min=0, max=.999, default=.1, name="start", update = BaseNode.property_changed) # min height at which a split occurs
     
     length = FloatProperty(min=0, default=7, update = BaseNode.property_changed) # length of trunk
     shape_start = FloatProperty(min=0, default=1, update = BaseNode.property_changed) # length at the base of the tree
@@ -29,18 +30,24 @@ class MtreeBranch(Node, BaseNode):
 
 
     properties = ["seed", "amount", "split_angle", "max_split_number", "radius", "end_radius", "min_height", "length", "shape_start", "shape_end",
-                  "shape_convexity", "resolution", "randomness", "split_proba", "split_flatten", "can_spawn_leafs", "gravity_strength", "floor_avoidance"]
+                  "shape_convexity", "resolution", "randomness", "split_proba", "split_flatten", "gravity_strength", "floor_avoidance", "can_spawn_leafs"]
 
     def init(self, context):
         self.outputs.new('TreeSocketType', "0")
         self.inputs.new('TreeSocketType', "Tree")
         self.name = MtreeBranch.bl_label
 
-    def draw_buttons(self, context, layout):        
-        col = layout.column()
-        for i in self.properties:
-            col.prop(self, i)
-    
+    def draw_buttons(self, context, layout):
+        layout.prop(self, "advanced_settings")
+        if self.advanced_settings:     
+            for i in self.properties:
+                layout.prop(self, i)
+        else:
+            props = ["seed", "amount", "split_angle", "radius", "min_height", "length", "shape_convexity", "resolution", "randomness", "split_proba",
+                     "gravity_strength", "floor_avoidance", "can_spawn_leafs"]
+            for i in props:
+                layout.prop(self, i)
+
     def execute(self, tree, input_node):
         random.seed(self.seed)
         creator = self.id_data.nodes.find(self.name) # get index of node in node tree and use it as tree function identifier
