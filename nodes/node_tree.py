@@ -106,6 +106,7 @@ class MtreeNodeTree(NodeTree):
                 to_node = self.nodes[link["to_node"]]
                 output_index = link["output_index"]
                 self.links.new(from_node.outputs[output_index], to_node.inputs[0])
+        self.preset_to_save = self.preset_to_load
                 
     def update(self):
         try:
@@ -125,7 +126,6 @@ class TreeSocket(NodeSocket):
 
     def draw_color(self, context, node):
         return .125, .571, .125, 1
-
 
 class MyNodeCategory(NodeCategory):
     @classmethod
@@ -165,10 +165,34 @@ class MtreeSaveLoadPreset(Operator):
             node_tree.save_as_json() # save preset as json
         return {'FINISHED'}
 
+class AppendMaterials(Operator):
+    """Import Bark materials"""
+    bl_idname = "mtree.append_bark_materials"
+    bl_label = "Import Bark Materials"
+    bl_options = {"REGISTER", "UNDO"}
+
+
+    def draw(self, context):
+        pass
+
+    def execute(self, context):
+        addon_path = os.path.join( os.path.dirname( __file__ ), '..' )
+        material_path = addon_path + "/resources/materials.blend\\Material\\"
+
+        if bpy.data.materials.get("birch") is None:
+            bpy.ops.wm.append(filename="birch", directory=material_path)
+        if bpy.data.materials.get("oak") is None:
+            bpy.ops.wm.append(filename="oak", directory=material_path)
+        if bpy.data.materials.get("Pine") is None:
+            bpy.ops.wm.append(filename="Pine", directory=material_path)
+        if bpy.data.materials.get("Redwood") is None:
+            bpy.ops.wm.append(filename="Redwood", directory=material_path)
+
+        return {'FINISHED'}
 
 class MtreePanel(bpy.types.Panel):
     bl_idname = "mtree_settings_panel"
-    bl_label = "Mtree Settings"
+    bl_label = "Mtree"
     bl_space_type = "NODE_EDITOR"
     bl_region_type = "UI"
     bl_category = "Mtree"
@@ -198,6 +222,10 @@ class MtreePanel(bpy.types.Panel):
         op.node_group_name = tree.name #set node group name as curent node tree name
         op.load = False # set action to save
 
+        box = layout.box()
+        box.label(text="materials")
+        box.operator("mtree.append_bark_materials", text="append materials")
+
     @classmethod
     def getTree(cls):
         return bpy.context.space_data.edit_tree
@@ -207,8 +235,6 @@ classes = [
     TreeSocket,
     MtreePanel,
     MtreeSaveLoadPreset,
+    AppendMaterials,
 ]
-
-
-
 
