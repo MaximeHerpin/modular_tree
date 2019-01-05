@@ -8,12 +8,12 @@
                 140.0,
                 -80.0
             ],
-            "seed": 12,
+            "seed": 73,
             "length": 27.0,
-            "radius": 0.5,
+            "radius": 0.4399999976158142,
             "end_radius": 0.0,
             "resolution": 3.0,
-            "shape": 1.0,
+            "shape": 1.0299999713897705,
             "randomness": 0.3700000047683716,
             "axis_attraction": 0.25
         },
@@ -25,23 +25,24 @@
                 440.0,
                 260.0
             ],
-            "seed": 29,
-            "amount": 28,
-            "split_angle": 1.199999451637268,
+            "seed": 86,
+            "amount": 12,
+            "split_angle": 0.968999445438385,
             "max_split_number": 3,
             "radius": 0.4800001084804535,
             "end_radius": 0.0,
-            "min_height": 11.729999542236328,
-            "length": 5.0,
-            "shape_start": 2.5299999713897705,
-            "shape_end": 0.49000000953674316,
-            "shape_convexity": -0.35999998450279236,
+            "min_height": 0.406000018119812,
+            "length": 7.309999942779541,
+            "shape_start": 1.0,
+            "shape_end": 0.5,
+            "shape_convexity": 0.24300003051757812,
             "resolution": 2.0,
-            "randomness": 0.24000000953674316,
-            "split_proba": 0.3799999952316284,
-            "split_flatten": 1.0,
-            "gravity_strength": -1.9200003147125244,
-            "floor_avoidance": 1.0
+            "randomness": 0.2580000162124634,
+            "split_proba": 0.17299997806549072,
+            "split_flatten": 0.6909999847412109,
+            "gravity_strength": -1.140000343322754,
+            "floor_avoidance": 1.0,
+            "can_spawn_leafs": true
         },
         {
             "bl_idname": "MtreeBranch",
@@ -51,13 +52,13 @@
                 440.0,
                 -220.0
             ],
-            "seed": 14,
+            "seed": 73,
             "amount": 15,
             "split_angle": 0.6000000238418579,
             "max_split_number": 2,
             "radius": 0.09000009298324585,
             "end_radius": 0.47999998927116394,
-            "min_height": 0.5,
+            "min_height": 0.0,
             "length": 2.2300000190734863,
             "shape_start": 0.29999998211860657,
             "shape_end": 1.0,
@@ -67,7 +68,8 @@
             "split_proba": 0.10000000149011612,
             "split_flatten": 0.5,
             "gravity_strength": 0.30000001192092896,
-            "floor_avoidance": 1.0
+            "floor_avoidance": 1.0,
+            "can_spawn_leafs": true
         },
         {
             "bl_idname": "MtreeBranch",
@@ -77,23 +79,24 @@
                 640.0,
                 260.0
             ],
-            "seed": 44,
+            "seed": 63,
             "amount": 241,
             "split_angle": 0.2700001001358032,
-            "max_split_number": 2,
+            "max_split_number": 1,
             "radius": 0.6299999952316284,
             "end_radius": 0.0,
-            "min_height": 2.0,
-            "length": 3.0,
+            "min_height": 0.6100003719329834,
+            "length": 2.2200000286102295,
             "shape_start": 1.0,
             "shape_end": 1.0,
             "shape_convexity": 0.0,
             "resolution": 2.0,
-            "randomness": 0.36000001430511475,
-            "split_proba": 0.10000000149011612,
+            "randomness": 0.33000001311302185,
+            "split_proba": 0.2199999988079071,
             "split_flatten": 0.949999988079071,
-            "gravity_strength": 0.10000000149011612,
-            "floor_avoidance": 1.0
+            "gravity_strength": -0.5899999141693115,
+            "floor_avoidance": 1.0,
+            "can_spawn_leafs": true
         },
         {
             "bl_idname": "MtreeParameters",
@@ -109,7 +112,8 @@
             "leaf_max_radius": 0.10000000149011612,
             "leaf_weight": 0.0,
             "leaf_dupli_object": null,
-            "leaf_size": 0.10000000149011612
+            "leaf_size": 0.10000000149011612,
+            "mesh_type": "preview"
         }
     ],
     "links": [

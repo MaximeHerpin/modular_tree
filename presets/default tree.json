@@ -10,7 +10,7 @@
             ],
             "seed": 1,
             "length": 25.0,
-            "radius": 0.5,
+            "radius": 0.4999999701976776,
             "end_radius": 0.0,
             "resolution": 1.0,
             "shape": 1.0,
@@ -30,7 +30,8 @@
             "split_angle": 0.6000000238418579,
             "max_split_number": 3,
             "radius": 0.6000000238418579,
-            "min_height": 5.0,
+            "end_radius": 0.0,
+            "min_height": 0.22599998116493225,
             "length": 10.0,
             "shape_start": 1.0,
             "shape_end": 1.0,
@@ -40,7 +41,8 @@
             "split_proba": 0.10000000149011612,
             "split_flatten": 0.5,
             "gravity_strength": 0.30000001192092896,
-            "floor_avoidance": 1.0
+            "floor_avoidance": 1.0,
+            "can_spawn_leafs": true
         },
         {
             "bl_idname": "MtreeParameters",
@@ -56,7 +58,8 @@
             "leaf_max_radius": 0.10000000149011612,
             "leaf_weight": 0.0,
             "leaf_dupli_object": null,
-            "leaf_size": 0.10000000149011612
+            "leaf_size": 0.10000000149011612,
+            "mesh_type": "preview"
         }
     ],
     "links": [
