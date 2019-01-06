@@ -26,13 +26,16 @@ class MtreeParameters(Node, BaseNode):
     create_leafs = BoolProperty(default = False, update = BaseNode.property_changed)
     leaf_amount = IntProperty(min=1, default=3000, update = BaseNode.property_changed)
     leaf_max_radius = FloatProperty(min=0, default=.1, update = BaseNode.property_changed)
-    leaf_weight = FloatProperty(min=-1, max=1, default=0, update = BaseNode.property_changed)
     leaf_dupli_object = PointerProperty(type=bpy.types.Object, name="leaf", update = BaseNode.property_changed)
     leaf_size = FloatProperty(min=0, default=.1, update = BaseNode.property_changed)
+    leaf_extremity_only = BoolProperty(name="extremities only", default=False, update = BaseNode.property_changed)
+    leaf_spread = FloatProperty(min=0, max=1, default=.2, update = BaseNode.property_changed)
+    leaf_flatten = FloatProperty(min=0, max=1, default=.2, update = BaseNode.property_changed)
+    leaf_weight = FloatProperty(min=-1, max=1, default=0, update = BaseNode.property_changed)
 
     last_execution_info = StringProperty() # this propperty is not be in the properties variable in order to avoid loop
 
-    properties = ["resolution", "create_leafs", "leaf_amount", "leaf_max_radius", "leaf_weight", "leaf_dupli_object", "leaf_size", "mesh_type"]
+    properties = ["resolution", "create_leafs", "leaf_amount", "leaf_max_radius", "leaf_weight", "leaf_dupli_object", "leaf_size", "leaf_extremity_only", "leaf_flatten", "leaf_spread", "mesh_type"]
 
     def init(self, context):
         self.name = MtreeParameters.bl_label
@@ -71,7 +74,7 @@ class MtreeParameters(Node, BaseNode):
         t2 = time.clock()
         if self.create_leafs:
             if change_level in {"tree_execution", "leafs_emitter"}:
-                leaf_ob = generate_leafs_object(tree, self.leaf_amount, self.leaf_weight, self.leaf_max_radius, leaf_ob, tree_ob)
+                leaf_ob = generate_leafs_object(tree, self.leaf_amount, self.leaf_weight, self.leaf_max_radius, self.leaf_spread, self.leaf_flatten, self.leaf_extremity_only, leaf_ob, tree_ob)
             create_particle_system(leaf_ob, self.leaf_amount, self.leaf_dupli_object, self.leaf_size)
         elif leaf_ob != None: # if there should not be leafs yet an emitter exists, delete it
             bpy.data.objects.remove(leaf_ob, do_unlink=True) # delete leaf object
@@ -95,9 +98,13 @@ class MtreeParameters(Node, BaseNode):
         if self.create_leafs:
             box.prop(self, "leaf_amount")
             box.prop(self, "leaf_max_radius")
-            box.prop(self, "leaf_weight")
             box.prop(self, "leaf_dupli_object")
             box.prop(self, "leaf_size")
+            box.prop(self, "leaf_extremity_only")
+            if not self.leaf_extremity_only:
+                box.prop(self, "leaf_weight")
+                box.prop(self, "leaf_spread")
+                box.prop(self, "leaf_flatten")
 
 
 def get_current_object(tree_ob_type):
@@ -201,7 +208,7 @@ def generate_curve_object(ob, tree):
     
     return ob
 
-def generate_leafs_object(tree, number, weight, max_radius, ob=None, tree_ob=None):
+def generate_leafs_object(tree, number, weight, max_radius, spread, flatten, extremity_only, ob=None, tree_ob=None):
     ''' Create the particle system emitter object used for the leafs '''
     mesh = bpy.data.meshes.new("leafs")
     if ob == None: # if no object is specified, create one        
@@ -214,7 +221,7 @@ def generate_leafs_object(tree, number, weight, max_radius, ob=None, tree_ob=Non
         ob.data = mesh
         bpy.data.meshes.remove(old_mesh)
         
-    verts, faces = tree.get_leaf_emitter_data(number, weight, max_radius) # emitter mesh data
+    verts, faces = tree.get_leaf_emitter_data(number, weight, max_radius, spread, flatten, extremity_only) # emitter mesh data
     mesh.from_pydata(verts, [], faces) # fill object mesh with new data
     ob.parent = tree_ob # make sure leafe emitter is child of tree object
     return ob
@@ -292,7 +299,7 @@ def get_tree_changes_level(last_execution_info, new_execution_info):
                     return "tree_execution"
                 elif prop in {"mesh_type", "resolution"}:
                     return "tree_execution"
-                elif prop in {"create_leafs", "leaf_max_radius", "leaf_amount"}:
+                elif prop in {"create_leafs", "leaf_max_radius", "leaf_amount", "leaf_weight", "leaf_spread", "leaf_flatten", "leaf_extremity_only"}:
                     leaf_emitter = True
                 else:
                     particle_system = True

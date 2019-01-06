@@ -148,6 +148,7 @@ class MTree:
         self.grow(length, shape_start, shape_end, shape_convexity, resolution, randomness, split_proba, 0.3, 0.9,
                   split_flatten, end_radius, gravity_strength, floor_avoidance, can_spawn_leaf, grow_creator, grow_selection)
 
+
     def roots(self, length, resolution, split_proba, randomness, creator):
         if len(self.stem.children) == 0: # roots can only be added on a trunk on non 0 length
             return
@@ -159,13 +160,16 @@ class MTree:
         self.grow(length, 1, 1, 0, resolution, randomness, split_proba, .5, .6, 0, 0, -.1, -1, False, creator, -1)
 
 
-    def get_leaf_emitter_data(self, number, weight, max_radius):
+    def get_leaf_emitter_data(self, number, weight, max_radius, spread, flatten, extremity_only):
         leaf_candidates = []
         self.stem.get_leaf_candidates(leaf_candidates, max_radius)
-        if (number > len(leaf_candidates)):
-            factor = number // len([i for i in leaf_candidates if not i[-1]]) # remove extremities from factor because they won't participate in candidate addition
-            add_candidates(leaf_candidates, factor)
-        leaf_candidates = sample(leaf_candidates, number)
+        if not extremity_only:
+            if (number > len(leaf_candidates)):
+                factor = number // len([i for i in leaf_candidates if not i[-1]]) # remove extremities from factor because they won't participate in candidate addition
+                add_candidates(leaf_candidates, factor)
+            leaf_candidates = sample(leaf_candidates, number)
+        else:
+            leaf_candidates = [i for i in leaf_candidates if i[-1]]
         verts = []
         faces = []
 
@@ -173,7 +177,10 @@ class MTree:
             tangent = Vector((0,0,1)).cross(direction).normalized()
             if not is_end: # only change direction when leaf is not at a branch extremity
                 tangent = (randint(0,1) * 2 - 1) * tangent # randomize sign of tangent
-                direction = direction.lerp(tangent, .5).normalized()
+                direction = direction.lerp(tangent, spread)
+                direction.z *= (1-flatten)
+                direction.z -= weight
+                direction.normalize()
             x_axis = direction.orthogonal()
             y_axis = direction.cross(x_axis)
             v1 = position + x_axis * .01
@@ -187,7 +194,7 @@ class MTree:
 
 
     def twig(self, radius, length, branch_number, randomness, resolution, gravity_strength, flatten):
-        self.stem = MTreeNode(Vector((0,0,0)), Vector((0,1,0)), radius*.1, 0)
+        self.stem = MTreeNode(Vector((0,0,0)), Vector((1,0,0)), radius*.1, 0)
         self.grow(1, 1, 1, 0, resolution, randomness/2/resolution, 0, .2, 0, 0, 0, .1,0, True, 1, 0)
         self.add_branches(branch_number, .5, 2, .7, .1, 0, length*.7, .5, .5, 0, resolution, randomness/resolution, .1/resolution, flatten, gravity_strength/resolution, 0, True, 2, 1)
 
