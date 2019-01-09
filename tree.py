@@ -108,10 +108,10 @@ class MTree:
                     grow_candidates.append(child) # if child can still grow, add it to the grow candidates
 
    
-    def split(self, amount, angle, max_split_number, radius, min_height, flatten, creator, selection):
+    def split(self, amount, angle, max_split_number, radius, start, end, flatten, creator, selection):
         split_candidates = []
         self.stem.set_positions_in_branches()
-        self.stem.get_split_candidates(split_candidates, selection, min_height)
+        self.stem.get_split_candidates(split_candidates, selection, start, end)
         
         amount = min(amount, len(split_candidates))
         split_candidates = sample(split_candidates, amount)

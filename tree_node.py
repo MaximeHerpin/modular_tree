@@ -55,13 +55,16 @@ class MTreeNode:
         self.position_in_branch = 0 if branch_length==0 else current_distance / branch_length
         return branch_length
         
-    def get_split_candidates(self, candidates, creator, offset):
-        if len(self.children) == 1 and not self.is_branch_origin and self.creator == creator and self.position_in_branch >= offset:
-            self.position_in_branch = (self.position_in_branch - offset) / (1-offset) # transform the position in branch so that a position at offset is 0
+    def get_split_candidates(self, candidates, creator, start, end):
+        if len(self.children) == 1 and not self.is_branch_origin and self.creator == creator and end >= self.position_in_branch >= start:
+            if end <= start:
+                self.position_in_branch = 0
+            else:
+                self.position_in_branch = (self.position_in_branch - start) / (end-start) # transform the position in branch so that a position at offset is 0
             candidates.append(self)
         
         for child in self.children:
-            child.get_split_candidates(candidates, creator, offset)
+            child.get_split_candidates(candidates, creator, start, end)
 
     def get_leaf_candidates(self, candidates, max_radius):
         ''' recursively populates a list with position, direction radius of all modules susceptible to create a leaf'''
