@@ -137,14 +137,14 @@ class MTree:
                 tangent = rot @ tangent
 
     
-    def add_branches(self, amount, angle, max_split_number, radius, end_radius, min_height, length,
+    def add_branches(self, amount, angle, max_split_number, radius, end_radius, start, length,
                      shape_start, shape_end, shape_convexity, resolution, randomness,
                      split_proba, split_flatten, gravity_strength, floor_avoidance, can_spawn_leaf, creator, selection):
         split_creator = creator - 0.5
         split_selection = selection
         grow_selection = creator - 0.5
         grow_creator = creator
-        self.split(amount, angle, max_split_number, radius, min_height, split_flatten, split_creator, split_selection)
+        self.split(amount, angle, max_split_number, radius, start, 1, split_flatten, split_creator, split_selection)
         self.grow(length, shape_start, shape_end, shape_convexity, resolution, randomness, split_proba, 0.3, 0.9,
                   split_flatten, end_radius, gravity_strength, floor_avoidance, can_spawn_leaf, grow_creator, grow_selection)
 
