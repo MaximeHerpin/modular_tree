@@ -94,6 +94,7 @@ def scatter_object(leaf_candidates, ob, dupli_object, leaf_size):
         return
     leafs = [] # container for all created leafs
     collection = bpy.context.scene.collection # get scene collection
+    ob_transform = ob.matrix_world
     for position, direction, length, radius, is_end in leaf_candidates:
         new_leaf = dupli_object.copy() # copy leaf object
         new_leaf.data = new_leaf.data.copy()
@@ -104,7 +105,7 @@ def scatter_object(leaf_candidates, ob, dupli_object, leaf_size):
         random_scale = 1 + ((random()-.5) * .4)
         for i in range(3):
             mat_scale[i][i] = scale[i] * random_scale
-        new_leaf.matrix_world = (Matrix.Translation(position) @ dir_rot.to_matrix().to_4x4() @ mat_scale)
+        new_leaf.matrix_world = ob_transform @ ((Matrix.Translation(position) @ dir_rot.to_matrix().to_4x4() @ mat_scale))
         c =random()
         color_vertices(new_leaf, (c,c,c,c))
         leafs.append(new_leaf)
