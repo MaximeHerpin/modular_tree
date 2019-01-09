@@ -15,7 +15,7 @@ class MtreeParameters(Node, BaseNode):
         print("coucou")
 
 
-    bl_label = "Tree paramteters"
+    bl_label = "Tree parameters"
     
     auto_update = BoolProperty(update = BaseNode.property_changed)
     mesh_type = bpy.props.EnumProperty(
