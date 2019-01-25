@@ -111,6 +111,7 @@ class MtreeNodeTree(NodeTree):
     def update(self):
         try:
             tree_parameters_node = [i for i in self.nodes if i.bl_idname == "MtreeParameters"][0]
+            tree_parameters_node.has_changed = True
             if tree_parameters_node.auto_update:
                 tree_parameters_node.execute()
         except: pass

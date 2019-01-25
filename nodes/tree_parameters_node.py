@@ -11,10 +11,6 @@ from ..tree import MTree
 
 
 class MtreeParameters(Node, BaseNode):
-    def test_function2(self, context):
-        print("coucou")
-
-
     bl_label = "Tree parameters"
     
     auto_update = BoolProperty(update = BaseNode.property_changed)
@@ -33,6 +29,9 @@ class MtreeParameters(Node, BaseNode):
     leaf_flatten = FloatProperty(min=0, max=1, default=.2, update = BaseNode.property_changed)
     leaf_weight = FloatProperty(min=-1, max=1, default=0, update = BaseNode.property_changed)
 
+    has_changed = BoolProperty(default = True) # has there been a change in the node tree or any of its parameters
+    active_tree_object = PointerProperty(type=bpy.types.Object) # referece to last tree made, used when updating
+
     last_execution_info = StringProperty() # this propperty is not be in the properties variable in order to avoid loop
 
     properties = ["resolution", "create_leafs", "leaf_amount", "leaf_max_radius", "leaf_weight", "leaf_dupli_object", "leaf_size", "leaf_extremity_only", "leaf_flatten", "leaf_spread", "mesh_type"]
@@ -43,10 +42,14 @@ class MtreeParameters(Node, BaseNode):
     def execute(self):
         new_execution_info = self.id_data.save_as_json(return_string = True) # get string of all parameters organised in a dictionary
         change_level = get_tree_changes_level(self.last_execution_info, new_execution_info) # will return a string indicating at which level of the tree a change has been made
-
         self.last_execution_info = new_execution_info
-        tree_ob, leaf_ob = get_current_object("MESH" if self.mesh_type == "final" else "CURVE")
-        if tree_ob is None:
+       
+        if self.active_tree_object is not None and len(self.active_tree_object.users_scene) == 0: # if active tree has been deleted
+            self.active_tree_object = None
+            change_level = "tree_execution"
+
+        tree_ob, leaf_ob = get_current_object("MESH" if self.mesh_type == "final" else "CURVE", active_tree=self.active_tree_object)
+        if self.active_tree_object is None and (tree_ob is None or not tree_ob.select_get()):
             change_level = "tree_execution"
 
         if change_level is None: # if there has been no changes, end the function execution
@@ -71,6 +74,7 @@ class MtreeParameters(Node, BaseNode):
                 tree_ob = generate_tree_object(tree_ob, tree, self.resolution)
             else:
                 tree_ob = generate_curve_object(tree_ob, tree)
+            self.active_tree_object = tree_ob
         t2 = time.clock()
         if self.create_leafs:
             if change_level in {"tree_execution", "leafs_emitter"}:
@@ -79,19 +83,37 @@ class MtreeParameters(Node, BaseNode):
         elif leaf_ob != None: # if there should not be leafs yet an emitter exists, delete it
             bpy.data.objects.remove(leaf_ob, do_unlink=True) # delete leaf object
         t3 = time.clock()
-
+        self.has_changed = False
         print("tree generation duration : {}".format(t1-t0))
         print("mesh creation duration : {}".format(t2-t1))
         print("leafs emitter creation duration : {}".format(t3-t2))
     
     def draw_buttons(self, context, layout):
-        layout.prop(self, "auto_update")
-        op = layout.operator("mtree.randomize_tree", text='randomize tree') # will call RandomizeTreeOperator.execute
-        op.node_group_name = self.id_data.name # set name of node group to operator
+        active_tree = self.active_tree_object is not None and len(self.active_tree_object.users_scene) > 0 # true if active tree exists
+        if self.active_tree_object is not None and not active_tree: # if active object has been deleted
+            need_update = True
+        else:
+            need_update = self.has_changed
+        if active_tree: # if a tree object is locked
+            split = layout.split(factor=0.8)
+            split.label(text="active: {}".format(self.active_tree_object.name))
+            op = split.operator("mtree.reset_active_tree_object", text='x')
+            op.node_group_name = self.id_data.name
+        if self.auto_update or active_tree:
+            layout.prop(self, "auto_update")
+
+        if need_update and not self.auto_update: # if tree needs to be updated
+            ob = bpy.context.object
+            if active_tree or ob is not None and ob.select_get() and ob.get("is_tree") is not None: # if a known tree is selected 
+                prop_text = "Update Tree"
+            else:
+                prop_text = "Create Tree"
+            op = layout.operator("object.mtree_execute_tree", text=prop_text) # will call ExecuteMtreeNodeTreeOperator.execute
+            op.node_group_name = self.id_data.name # set name of node group to operator
+        
+
         layout.prop(self, "mesh_type")
         layout.prop(self, "resolution")
-        op = layout.operator("object.mtree_execute_tree", text='execute tree') # will call ExecuteMtreeNodeTreeOperator.execute
-        op.node_group_name = self.id_data.name # set name of node group to operator
 
         box = layout.box()
         box.prop(self, "create_leafs")
@@ -107,15 +129,23 @@ class MtreeParameters(Node, BaseNode):
                 box.prop(self, "leaf_flatten")
 
 
-def get_current_object(tree_ob_type):
+
+        op = layout.operator("mtree.randomize_tree", text='randomize tree') # will call RandomizeTreeOperator.execute
+        op.node_group_name = self.id_data.name # set name of node group to operator
+
+def get_current_object(tree_ob_type, active_tree):
     '''' return active object if it is a valid tree and potentially the leaf emitter attached to it '''
     ob = bpy.context.object
-    if ob is None:
-        return None, None
+    if active_tree is None: # if there is no active tree
+        if ob is None or not ob.select_get(): # if ob is not selected or non existent
+            return None, None
+    else:
+        ob = active_tree
+            
     tree_ob = None
     leaf_ob = None
     if ob.get("is_tree") is not None: # if true then the active object is a tree
-        if ob.type == tree_ob_type: # check if the object is of correct type
+        if tree_ob is None and ob.type == tree_ob_type: # check if the object is of correct type
             tree_ob = ob
         for child in ob.children: # looking if the tree has a leaf emitter
             if child.get("is_leaf") is not None: # if true then the child is a leaf emitter
@@ -309,7 +339,7 @@ def get_tree_changes_level(last_execution_info, new_execution_info):
         return "particle_system"
 
 class ExecuteMtreeNodeTreeOperator(Operator):
-
+    """Execute or update tree"""
     bl_idname = "object.mtree_execute_tree"
     bl_label = "Execute Mtree node tree"
     node_group_name = StringProperty()
@@ -320,6 +350,7 @@ class ExecuteMtreeNodeTreeOperator(Operator):
         return {'FINISHED'}
 
 class RandomizeTreeOperator(Operator):
+    """Randomize all tree seeds"""
     bl_idname = "mtree.randomize_tree"
     bl_label = "Randomize Mtree node tree"
     
@@ -335,3 +366,15 @@ class RandomizeTreeOperator(Operator):
         parameters_node.execute()
         return {'FINISHED'}
 
+class ResetActiveTreeObject(Operator):
+    """stop tracking tree"""
+    bl_idname = "mtree.reset_active_tree_object"
+    bl_label = "Reset Active Tree Object"
+    
+    node_group_name = StringProperty()
+
+    def execute(self, context):
+        parameters_node = [i for i in bpy.data.node_groups[self.node_group_name].nodes if i.bl_idname == "MtreeParameters"][0]
+        parameters_node.active_tree_object = None
+        parameters_node.has_changed = True
+        return {'FINISHED'}
