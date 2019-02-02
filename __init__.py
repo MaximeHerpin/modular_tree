@@ -24,12 +24,9 @@ bl_info = {
 
 import os
 from .nodes import nodes_classes
-# from . import addon_updater_ops
-# from .nodes import node_classes_to_register, node_categories, get_last_memory_match, get_tree_parameters_rec, get_change_level
-# from .wind import ModalWindOperator, FastWind
+from . import addon_updater_ops
 # from .toolbar_functions import TrunkDisplacement, Twigoperator
 # from .color_ramp_sampler import ColorRampSampler,ColorRampPanel
-
 
 import bpy
 from bpy.types import Operator
@@ -40,52 +37,53 @@ from bpy.types import NodeTree, Node, NodeSocket
 import nodeitems_utils
 from nodeitems_utils import NodeCategory, NodeItem
 
+from .wind import FastWind
+from .grease_pencil import ConnectStrokes
 
 
-classes = []
-classes += nodes_classes # node types
 
-# class Preferences(bpy.types.AddonPreferences):
+classes = [FastWind, ConnectStrokes]
+classes += nodes_classes
 
-#     bl_idname = __package__
+class Preferences(bpy.types.AddonPreferences):
+    bl_idname = __package__
+    auto_check_update = bpy.props.BoolProperty(
+        name="Auto-check for Update",
+        description="If enabled, auto-check for updates using an interval",
+        default=True,
+    )
+    updater_intrval_months = bpy.props.IntProperty(
+        name='Months',
+        description="Number of months between checking for updates",
+        default=0,
+        min=0
+    )
+    updater_intrval_days = bpy.props.IntProperty(
+        name='Days',
+        description="Number of days between checking for updates",
+        default=7,
+        min=0,
+    )
+    updater_intrval_hours = bpy.props.IntProperty(
+        name='Hours',
+        description="Number of hours between checking for updates",
+        default=0,
+        min=0,
+        max=23
+    )
+    updater_intrval_minutes = bpy.props.IntProperty(
+        name='Minutes',
+        description="Number of minutes between checking for updates",
+        default=0,
+        min=0,
+        max=59
+    )
 
-#     auto_check_update = bpy.props.BoolProperty(
-#         name="Auto-check for Update",
-#         description="If enabled, auto-check for updates using an interval",
-#         default=True,
-#     )
-#     updater_intrval_months = bpy.props.IntProperty(
-#         name='Months',
-#         description="Number of months between checking for updates",
-#         default=0,
-#         min=0
-#     )
-#     updater_intrval_days = bpy.props.IntProperty(
-#         name='Days',
-#         description="Number of days between checking for updates",
-#         default=7,
-#         min=0,
-#     )
-#     updater_intrval_hours = bpy.props.IntProperty(
-#         name='Hours',
-#         description="Number of hours between checking for updates",
-#         default=0,
-#         min=0,
-#         max=23
-#     )
-#     updater_intrval_minutes = bpy.props.IntProperty(
-#         name='Minutes',
-#         description="Number of minutes between checking for updates",
-#         default=0,
-#         min=0,
-#         max=59
-#     )
+    def draw(self, context):
+        layout = self.layout
+        addon_updater_ops.update_settings_ui(self, context)
 
-#     def draw(self, context):
-#         layout = self.layout
-#         addon_updater_ops.update_settings_ui(self, context)
-
-
+classes += [Preferences]
 # class WindPanel(bpy.types.Panel):
 #     bl_label = "Modular tree wind"
 #     bl_idname = "mod_tree.wind_panel"
@@ -102,144 +100,10 @@ classes += nodes_classes # node types
 #         row.operator("mod_tree.fast_wind", icon="FORCE_WIND")
 
 
-# class DetailsPanel(bpy.types.Panel):
-#     bl_label = "Tree tools"
-#     bl_idname = "mod_tree.details_panel"
-#     bl_space_type = 'VIEW_3D'
-#     bl_region_type = 'TOOLS'
-#     bl_context = "objectmode"
-#     bl_category = 'Tree'
-
-#     def draw(self, context):
-#         layout = self.layout
-#         layout.operator("mod_tree.bark_materials")
-#         layout.operator("mod_tree.trunk_displace", icon="MOD_DISPLACE")
-#         layout.operator("mod_tree.twig")
-
-
-# class ModalModularTreedOperator(Operator):
-#     """real time tree tweaking"""
-#     bl_idname = "object.modal_tree_operator"
-#     bl_label = "Modal Tree Operator"
-#     _timer = None
-
-#     node = None
-#     tree = None
-
-#     def modal(self, context, event):
-#         if event.type in {'ESC'}:
-#             self.cancel(context)
-#             self.node.auto_update = False
-#             return {'CANCELLED'}
-
-#         if event.type == 'TIMER':
-
-#             new_memory = get_tree_parameters_rec("", self.node, None)
-#             # level = get_last_memory_match(new_memory, self.node.memory)
-#             level = get_change_level(new_memory, self.node.memory)
-#             if level != "unchanged":
-#                 print(level)
-#                 delete_old_tree(level)
-#                 self.node.memory = new_memory
-#                 self.tree = self.node.execute(level, self.tree)
-#                 if self.tree is None:
-#                     self.report({'ERROR'}, "Invalid Node Tree")
-#                     self.node.auto_update = False
-#                     return {'CANCELLED'}
-
-#         return {'PASS_THROUGH'}
-
-#     def execute(self, context):
-#         wm = context.window_manager
-#         self.node = bpy.context.active_node.id_data.nodes.get("BuildTree")
-#         self._timer = wm.event_timer_add(0.1, context.window)
-#         wm.modal_handler_add(self)
-#         self.node.auto_update = True
-#         delete_old_tree(level="gen")
-#         self.tree = self.node.execute()
-#         # self.node = bpy.context.active_node.id_data.nodes.get("BuildTree")
-#         return {'RUNNING_MODAL'}
-
-#     def cancel(self, context):
-#         wm = context.window_manager
-#         self.node.auto_update = False
-#         wm.event_timer_remove(self._timer)
-
-
-# class MakeTreeFromNodes(Operator):
-#     """makes a tree from a node group"""
-#     bl_idname = "mod_tree.tree_from_nodes"
-#     bl_label = " Make Tree"
-#     bl_options = {"REGISTER", "UNDO"}
-
-#     node_group_name = StringProperty()
-#     node_name = StringProperty()
-
-#     def draw(self, context):
-#         pass
-
-#     def execute(self, context):
-#         delete_old_tree()
-#         # node = bpy.data.node_groups.get("NodeTree.002").nodes.get("BuildTree")
-#         node = context.active_node.id_data.nodes.get("BuildTree")
-#         tree = node.execute()
-#         if tree is None:
-#             self.report({'ERROR'}, "Invalid Node Tree")
-#             node.auto_update = False
-#             return {'CANCELLED'}
-
-
-#         # bpy.ops.object.subdivision_set(level=1)
-
-#         return {'FINISHED'}
-
-
-# class VisualizeWithCurves(Operator):
-#     """makes a tree from a node group"""
-#     bl_idname = "mod_tree.visualize"
-#     bl_label = " visualize Tree"
-#     bl_options = {"REGISTER", "UNDO"}
-
-#     node_group_name = StringProperty()
-#     node_name = StringProperty()
-
-#     def draw(self, context):
-#         pass
-
-#     def execute(self, context):
-#         bpy.ops.object.delete(use_global=False)
-#         print("tree")
-#         print(self.node_name)
-#         print(self.node_group_name)
-#         node = bpy.data.node_groups.get("NodeTree.002").nodes.get("BuildTree")
-#         node.execute()
-
-#         # bpy.ops.object.subdivision_set(level=1)
-
-#         return {'FINISHED'}
-
-
-# def delete_old_tree(level="gen"):
-#     obj = bpy.context.object
-#     bpy.ops.object.select_all(action='DESELECT')
-#     if obj is not None:# and obj.select: #and obj.get("is_tree") is not None:
-#         print(obj.select)
-#         if level == "gen":
-#             print("selecting")
-#             obj.select = True
-#         if obj.get("amt") is not None and level in {"amt", "gen"}:
-#             amt = bpy.context.scene.objects.get(obj.get("amt"))
-#             if amt is not None:
-#                 amt.select = True
-#         if obj.get("emitter") is not None and level in {"emitter", "gen"}:
-#             emitter = bpy.context.scene.objects.get(obj.get("emitter"))
-#             if emitter is not None:
-#                 emitter.select = True
-#     bpy.ops.object.delete(use_global=False)
-
-#from nodes.node_tree import classes, Mtree_node_categories
 
 def register():
+    addon_updater_ops.register(bl_info)
+
     from bpy.utils import register_class
     from .nodes.node_tree import node_categories
     for cls in classes:
@@ -249,6 +113,7 @@ def register():
 
 
 def unregister():
+    addon_updater_ops.unregister()
     nodeitems_utils.unregister_node_categories('CUSTOM_NODES')
 
     from bpy.utils import unregister_class
