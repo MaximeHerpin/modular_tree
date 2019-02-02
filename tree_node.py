@@ -15,6 +15,7 @@ class MTreeNode:
         self.position_in_branch = 0 # float - 0 when node is at the begining of a branch, 1 when it is at the end
         self.is_branch_origin = False
         self.can_spawn_leaf = True
+        self.bone_name = None # string - name of bone the branch is bound to, if any.
 
     def get_grow_candidates(self, candidates, creator):
         '''
@@ -79,7 +80,6 @@ class MTreeNode:
         for child in self.children:
             child.get_leaf_candidates(candidates, max_radius)
 
-
     def get_branches(self, positions, radii):
         ''' populate list of list of points of each branch '''
         
@@ -91,3 +91,32 @@ class MTreeNode:
                 positions.append([]) # add empty branch for position
                 radii.append([]) # add empty branch for radius
             child.get_branches(positions, radii)
+
+    def get_armature_data(self, min_radius, bone_index, armature_data, parent_index):
+        ''' armature data is list of list of (position_head, position_tail, radius_head, radius_tail, parent bone index) of each node. bone_index is a list of one int'''
+        
+        if self.radius > min_radius and len(self.children) > 0: # if radius is greater than max radius, add data to armature data
+            child = self.children[0]
+            armature_data[-1].append((self.position, child.position, self.radius, child.radius, parent_index))
+            bone_name = "bone_" + str(bone_index[0])
+            index = bone_index[0]
+            bone_index[0] += 1
+        else:
+            bone_name = "bone_" + str(parent_index)
+            index = parent_index
+
+        self.bone_name = bone_name
+
+        for i, child in enumerate(self.children):
+            if i > 0 and child.radius > min_radius:
+                armature_data.append([])
+            child.get_armature_data(min_radius, bone_index, armature_data, index)
+            
+    def recalculate_radius(self, base_radius):
+        ''' used when creating tree from grease pencil, rescales the radius of each branch according to its parent radius'''
+        self.radius *= base_radius
+        for i, child in enumerate(self.children):
+            if i == 0:
+                child.recalculate_radius(base_radius)
+            else:
+                child.recalculate_radius(self.radius * .9)

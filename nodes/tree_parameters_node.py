@@ -29,12 +29,16 @@ class MtreeParameters(Node, BaseNode):
     leaf_flatten = FloatProperty(min=0, max=1, default=.2, update = BaseNode.property_changed)
     leaf_weight = FloatProperty(min=-1, max=1, default=0, update = BaseNode.property_changed)
 
+    create_armature = BoolProperty(default=False, update = BaseNode.property_changed)
+    armature_min_radius = FloatProperty(min=0, max=1, default=.08, update = BaseNode.property_changed)
+
     has_changed = BoolProperty(default = True) # has there been a change in the node tree or any of its parameters
     active_tree_object = PointerProperty(type=bpy.types.Object) # referece to last tree made, used when updating
 
     last_execution_info = StringProperty() # this propperty is not be in the properties variable in order to avoid loop
 
-    properties = ["resolution", "create_leafs", "leaf_amount", "leaf_max_radius", "leaf_weight", "leaf_dupli_object", "leaf_size", "leaf_extremity_only", "leaf_flatten", "leaf_spread", "mesh_type"]
+    properties = ["resolution", "create_leafs", "leaf_amount", "leaf_max_radius", "leaf_weight", "leaf_dupli_object", "leaf_size",
+                  "leaf_extremity_only", "leaf_flatten", "leaf_spread", "mesh_type", "create_armature", "armature_min_radius"]
 
     def init(self, context):
         self.name = MtreeParameters.bl_label
@@ -48,8 +52,11 @@ class MtreeParameters(Node, BaseNode):
             self.active_tree_object = None
             change_level = "tree_execution"
 
-        tree_ob, leaf_ob = get_current_object("MESH" if self.mesh_type == "final" else "CURVE", active_tree=self.active_tree_object)
+        tree_ob, leaf_ob, armature_ob = get_current_object("MESH" if self.mesh_type == "final" else "CURVE", active_tree=self.active_tree_object)
         if self.active_tree_object is None and (tree_ob is None or not tree_ob.select_get()):
+            change_level = "tree_execution"
+        
+        if self.has_changed:
             change_level = "tree_execution"
 
         if change_level is None: # if there has been no changes, end the function execution
@@ -69,12 +76,21 @@ class MtreeParameters(Node, BaseNode):
         if change_level != "particle_system":
             trunk.execute(tree)
         t1 = time.clock()
+
+        if self.create_armature:
+            armature_ob = create_armature(self.armature_min_radius, tree, armature_ob)
+        elif armature_ob is not None:
+            bpy.data.objects.remove(armature_ob, do_unlink=True)
+
         if change_level == "tree_execution":
             if self.mesh_type == "final":
                 tree_ob = generate_tree_object(tree_ob, tree, self.resolution)
             else:
                 tree_ob = generate_curve_object(tree_ob, tree)
             self.active_tree_object = tree_ob
+            if self.create_armature:
+                arm = tree_ob.modifiers.new("armature", type='ARMATURE')
+                arm.object = armature_ob
         t2 = time.clock()
         if self.create_leafs:
             if change_level in {"tree_execution", "leafs_emitter"}:
@@ -127,8 +143,11 @@ class MtreeParameters(Node, BaseNode):
                 box.prop(self, "leaf_weight")
                 box.prop(self, "leaf_spread")
                 box.prop(self, "leaf_flatten")
-
-
+        
+        box = layout.box()
+        box.prop(self, "create_armature")
+        if self.create_armature:
+            box.prop(self, "armature_min_radius")
 
         op = layout.operator("mtree.randomize_tree", text='randomize tree') # will call RandomizeTreeOperator.execute
         op.node_group_name = self.id_data.name # set name of node group to operator
@@ -138,12 +157,13 @@ def get_current_object(tree_ob_type, active_tree):
     ob = bpy.context.object
     if active_tree is None: # if there is no active tree
         if ob is None or not ob.select_get(): # if ob is not selected or non existent
-            return None, None
+            return None, None, None
     else:
         ob = active_tree
             
     tree_ob = None
     leaf_ob = None
+    armature_ob = None
     if ob.get("is_tree") is not None: # if true then the active object is a tree
         if tree_ob is None and ob.type == tree_ob_type: # check if the object is of correct type
             tree_ob = ob
@@ -151,6 +171,10 @@ def get_current_object(tree_ob_type, active_tree):
             if child.get("is_leaf") is not None: # if true then the child is a leaf emitter
                 leaf_ob = child
                 break
+        if ob.parent is not None and ob.parent.type == 'ARMATURE':
+            print("found paretn")
+            armature_ob = ob.parent
+
         if ob.type != tree_ob_type: # if types are mismatched, delete ob
             bpy.data.objects.remove(ob, do_unlink=True)
     
@@ -159,14 +183,16 @@ def get_current_object(tree_ob_type, active_tree):
         parent = ob.parent
         if parent is not None and parent.get("is_tree"): # if parent is a tree (it should be)
             tree_ob = parent
+            if tree_ob.parent is not None and tree_ob.parent.type == 'ARMATURE':
+                armature_ob = tree_ob.parent
     
     
-    return tree_ob, leaf_ob
+    return tree_ob, leaf_ob, armature_ob
 
 def generate_tree_object(ob, tree, resolution, tree_property="is_tree"):
     ''' Create the tree mesh/object '''
     t0 = time.clock()
-    verts, faces, radii, uvs = tree.build_mesh_data(resolution) # tree mesh data
+    verts, faces, radii, uvs, bone_weights = tree.build_mesh_data(resolution) # tree mesh data
     dt = time.clock() - t0
     print("mesh data creation : {}".format(dt))
     mesh = bpy.data.meshes.new("tree")
@@ -204,6 +230,11 @@ def generate_tree_object(ob, tree, resolution, tree_property="is_tree"):
     v_group = ob.vertex_groups.new() # adding radius vertex group
     for v, w in radii:
         v_group.add(v, w, "ADD")
+
+    for bone_name in bone_weights.keys():
+        v_group = ob.vertex_groups.new(name=bone_name)
+        v_group.add(bone_weights[bone_name], 1, "REPLACE")
+
     if material is not None:
         ob.active_material = material
     return ob
@@ -259,14 +290,23 @@ def generate_leafs_object(tree, number, weight, max_radius, spread, flatten, ext
 def create_particle_system(ob, number, dupli_object, size):
     """ Creates a particle system for the leafs emitter"""
     leaf = None #particle system
+    replace_all_settings = True
     for modifier in ob.modifiers: # check if object has already the particle system created
         if modifier.type == "PARTICLE_SYSTEM":
             leaf = modifier
+            replace_all_settings = False
     if leaf is None: # true when the particle system is not already in object
         leaf = ob.modifiers.new("leafs", 'PARTICLE_SYSTEM')
 
     settings = leaf.particle_system.settings
-    settings.name = "leaf"
+    if replace_all_settings: # these settings will not be overriden
+        settings.name = "leaf"
+        settings.rotation_mode = 'NOR'
+        bpy.data.particles["leaf"].phase_factor = -.1
+        settings.phase_factor_random = 0.2
+        settings.factor_random = 0.2
+        settings.rotation_factor_random = 0.2
+        settings.size_random = 0.25
     settings.type = "HAIR"
     settings.count = number
     settings.use_advanced_hair = True
@@ -275,13 +315,7 @@ def create_particle_system(ob, number, dupli_object, size):
     settings.use_even_distribution = False
     settings.userjit = 1
     settings.use_rotations = True
-    settings.rotation_mode = 'NOR'
-    bpy.data.particles["leaf"].phase_factor = -.1
-    settings.phase_factor_random = 0.2
-    settings.factor_random = 0.2
-    settings.rotation_factor_random = 0.2
     settings.particle_size = size
-    settings.size_random = 0.25
     ob.show_instancer_for_render = False
     settings.render_type = "OBJECT"
     if dupli_object is not None:
@@ -327,7 +361,7 @@ def get_tree_changes_level(last_execution_info, new_execution_info):
                 print(prop)
                 if node_1["bl_idname"] != "MtreeParameters": # if the property has been changed in a tree function, the tree mesh must be recreated
                     return "tree_execution"
-                elif prop in {"mesh_type", "resolution"}:
+                elif prop in {"mesh_type", "resolution", "create_armature", "armature_min_radius"}:
                     return "tree_execution"
                 elif prop in {"create_leafs", "leaf_max_radius", "leaf_amount", "leaf_weight", "leaf_spread", "leaf_flatten", "leaf_extremity_only"}:
                     leaf_emitter = True
@@ -337,6 +371,44 @@ def get_tree_changes_level(last_execution_info, new_execution_info):
         return "leafs_emitter"
     if particle_system:
         return "particle_system"
+
+def create_armature(min_radius, tree, armature_ob):
+    armature_data = tree.get_armature_data(min_radius) # armature_data is list of list of (position, radius)
+    
+    if armature_ob is None:
+        amt = bpy.data.armatures.new('tree_armature')
+        armature_ob = bpy.data.objects.new('tree_rig', amt)
+        #armature_ob.show_x_ray = True
+        bpy.context.scene.collection.objects.link(armature_ob)
+    amt = armature_ob.data
+    amt.display_type = 'WIRE'
+    armature_ob.show_in_front = True
+    area = bpy.context.area.type
+    bpy.context.area.type = 'VIEW_3D'
+    bpy.context.view_layer.objects.active = armature_ob
+    bpy.ops.object.mode_set(mode='EDIT')
+    bone_index = 0
+    bones = []
+    for branch in armature_data:
+        first_bone = True
+        for pos_head, pos_tail, rad_head, rad_tail, parent_index in branch:
+            bone = amt.edit_bones.new("bone_" + str(bone_index))
+            bones.append(bone)
+            bone.head = pos_head
+            bone.head_radius = rad_head
+            bone.tail = pos_tail
+            bone.tail_radius =  rad_tail
+            bone.parent = bones[parent_index]
+            if first_bone:
+                first_bone = False
+            else:
+                bone.use_connect = True
+            bone_index += 1
+    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.context.area.type = area
+    #add_f_curve_modifiers(armature_ob, 2, .2)
+    return armature_ob
+
 
 class ExecuteMtreeNodeTreeOperator(Operator):
     """Execute or update tree"""

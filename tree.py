@@ -1,6 +1,7 @@
 from .tree_node import MTreeNode
 from mathutils import Vector, Quaternion
-from .geometry import random_tangent, build_module_rec
+from .geometry import random_tangent, build_module_rec, to_array
+from .grease_pencil import process_gp_layer
 import numpy as np
 from collections import deque
 from random import random, randint, sample
@@ -18,8 +19,9 @@ class MTree:
         faces = []
         weights = []
         uvs = []
-        build_module_rec(self.stem, resolution, verts, faces, uvs, weights)
-        return to_array(verts), faces, weights, uvs
+        bone_weights = dict()
+        build_module_rec(self.stem, resolution, verts, faces, uvs, weights, bone_weights)
+        return to_array(verts), faces, weights, uvs, bone_weights
     
 
     def create_object(self):
@@ -203,12 +205,45 @@ class MTree:
         return [i for i in leaf_candidates if i[-1]]
 
 
-def to_array(vectors):
-    n = len(vectors)
-    result = np.zeros((n, 3))
-    for i, v in enumerate(vectors):
-        result[i] = v.xyz
-    return result
+    def get_armature_data(self, min_radius):
+        bone_index = [0]
+        armature_data = [[]]
+        parent_index = 0
+        self.stem.get_armature_data(min_radius, bone_index, armature_data, parent_index)
+        return armature_data
+
+
+    def build_tree_from_grease_pencil(self, point_dist, radius, creator):
+        strokes, splits = process_gp_layer(point_dist)
+        nodes = []
+
+        for i, s in enumerate(strokes):
+            nodes.append([])
+            last_node = None
+            origin_radius = 1
+            n = len(s)
+            if n < 2: break
+            for j, p in enumerate(s):
+                radius_multiplier = 1 - j/(n-1)
+                if j < n-1:
+                    direction = (s[j+1] - p).normalized()
+                else:
+                    direction = (p - last_node.position).normalized()
+                new_node = MTreeNode(p, direction, origin_radius * radius_multiplier, creator)
+                if last_node is not None:
+                    last_node.children.append(new_node)
+                last_node = new_node
+                nodes[-1].append(new_node)
+        
+        for parent_index, node_index, child_index in splits:
+            nodes[parent_index][node_index].children.append(nodes[child_index][0].children[0])
+            print(len(nodes))
+            print(parent_index)
+        
+        self.stem = nodes[0][0]
+        self.stem.recalculate_radius(radius)
+
+
 
 
 def add_candidates(leaf_candidates, dupli_number):

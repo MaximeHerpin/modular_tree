@@ -11,7 +11,7 @@ def random_on_unit_sphere():
     return Vector((random()-.5, random()-.5, random()-.5)).normalized()
 
 
-def build_module_rec(node, resolution, verts, faces, uvs, weights, input_loop=[], uv_height=0):
+def build_module_rec(node, resolution, verts, faces, uvs, weights, bone_weights, input_loop=[], uv_height=0):
     is_origin = False # true if thare are no input loop
     if len(node.children) == 0:
         if len(input_loop) > 0:
@@ -87,14 +87,20 @@ def build_module_rec(node, resolution, verts, faces, uvs, weights, input_loop=[]
         weights.append(([i for i in range(resolution, len(module_verts) - resolution)], node.radius))
     else:
         weights.append(([i for i in range(len(verts), len(verts) + len(module_verts))], node.radius))
+    if node.bone_name is not None:
+        if node.bone_name in bone_weights:
+            bone_weights[node.bone_name].extend([i for i in range(len(verts), len(verts) + len(module_verts))])
+        else:
+            bone_weights[node.bone_name] = [i for i in range(len(verts), len(verts) + len(module_verts))]
+    
     verts.extend([rot_dir @ v + node.position for v in module_verts])
     uv_height = uv_loops(input_loop, loop_down, uv_height, uvs, verts, node.radius, len(node.children)==1)
     uv_height = uv_loops(loop_up, extremity_loop, uv_height, uvs, verts, extremity.radius, len(node.children)==1)
     for i, child in enumerate(node.children): # recursively call function on all children
         if is_origin and i == 1: # if true then this child is the roots origin
-            build_module_rec(child, resolution, verts, faces, uvs, weights, list(reversed(input_loop)), uv_height)
+            build_module_rec(child, resolution, verts, faces, uvs, weights, list(reversed(input_loop)), bone_weights, uv_height)
         else:
-            build_module_rec(child, output_resolutions[i], verts, faces, uvs, weights, output_loops[i], uv_height)
+            build_module_rec(child, output_resolutions[i], verts, faces, uvs, weights, bone_weights, output_loops[i], uv_height)
 
 
 def bridge(l1, l2):
@@ -106,6 +112,7 @@ def bridge(l1, l2):
 
 
 def uv_loops(l1, l2, height_offset, uvs, verts, radius, simple_branch):
+    radius = max(.001, radius)
     n = len(l1)
     h = height_offset
     max_length = 0
@@ -120,6 +127,7 @@ def uv_loops(l1, l2, height_offset, uvs, verts, radius, simple_branch):
                     Vector(((i+1)/n, h)), Vector(((i+1)/n, h+length))])
     
     return height_offset + max_length
+
 
 def rotate(l, n):
     return l[-n:] + l[:-n]
