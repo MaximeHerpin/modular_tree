@@ -80,17 +80,18 @@ class MTreeNode:
         for child in self.children:
             child.get_leaf_candidates(candidates, max_radius)
 
-    def get_branches(self, positions, radii):
+    def get_branches(self, positions, radii, first_branch = False, parent_pos = None):
         ''' populate list of list of points of each branch '''
         
-        positions[-1].extend([self.position.x, self.position.y, self.position.z, 0]) # add position to last branch
+        pos = parent_pos if first_branch else self.position
+        positions[-1].extend([pos.x, pos.y, pos.z, 0]) # add position to last branch
         radii[-1].append(self.radius) # add radius to last branch
 
         for i, child in enumerate(self.children):
             if i > 0: # if child is begining of new branch
                 positions.append([]) # add empty branch for position
                 radii.append([]) # add empty branch for radius
-            child.get_branches(positions, radii)
+            child.get_branches(positions, radii, i>0, self.position)
 
     def get_armature_data(self, min_radius, bone_index, armature_data, parent_index):
         ''' armature data is list of list of (position_head, position_tail, radius_head, radius_tail, parent bone index) of each node. bone_index is a list of one int'''
