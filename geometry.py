@@ -24,7 +24,7 @@ def build_module_rec(node, resolution, verts, faces, uvs, weights, bone_weights,
     rot_dir_inv = rot_dir.inverted() # inverse transformation
     module_verts = [] # verts created by the module
     n_verts = len(verts) # number of vertices before adding module
-    if (input_loop == []):
+    if len(input_loop) == 0:
         is_origin = True
         module_verts = make_circle(Vector((0,0,0)), Vector((0,0,1)), node.radius, resolution)
         input_loop = [i for i in range(resolution)]
@@ -98,7 +98,7 @@ def build_module_rec(node, resolution, verts, faces, uvs, weights, bone_weights,
     uv_height = uv_loops(loop_up, extremity_loop, uv_height, uvs, verts, extremity.radius, len(node.children)==1)
     for i, child in enumerate(node.children): # recursively call function on all children
         if is_origin and i == 1: # if true then this child is the roots origin
-            build_module_rec(child, resolution, verts, faces, uvs, weights, list(reversed(input_loop)), bone_weights, uv_height)
+            build_module_rec(child, resolution, verts, faces, uvs, weights, bone_weights, list(reversed(input_loop)), uv_height)
         else:
             build_module_rec(child, output_resolutions[i], verts, faces, uvs, weights, bone_weights, output_loops[i], uv_height)
 
