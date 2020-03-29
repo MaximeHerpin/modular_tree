@@ -72,10 +72,10 @@ class MtreeParameters(Node, BaseNode):
         except IndexError:
             ShowMessageBox("The tree needs a trunk node in order to execute", "Invalid node tree", "ERROR")
             return
-        t0 = time.clock()
+        t0 = time.perf_counter()
         if change_level != "particle_system":
             trunk.execute(tree)
-        t1 = time.clock()
+        t1 = time.perf_counter()
 
         if self.create_armature:
             armature_ob = create_armature(self.armature_min_radius, tree, armature_ob)
@@ -91,14 +91,14 @@ class MtreeParameters(Node, BaseNode):
             if self.create_armature:
                 arm = tree_ob.modifiers.new("armature", type='ARMATURE')
                 arm.object = armature_ob
-        t2 = time.clock()
+        t2 = time.perf_counter()
         if self.create_leafs:
             if change_level in {"tree_execution", "leafs_emitter"}:
                 leaf_ob = generate_leafs_object(tree, self.leaf_amount, self.leaf_weight, self.leaf_max_radius, self.leaf_spread, self.leaf_flatten, self.leaf_extremity_only, leaf_ob, tree_ob)
             create_particle_system(leaf_ob, self.leaf_amount, self.leaf_dupli_object, self.leaf_size)
         elif leaf_ob != None: # if there should not be leafs yet an emitter exists, delete it
             bpy.data.objects.remove(leaf_ob, do_unlink=True) # delete leaf object
-        t3 = time.clock()
+        t3 = time.perf_counter()
         self.has_changed = False
         print("tree generation duration : {}".format(t1-t0))
         print("mesh creation duration : {}".format(t2-t1))
@@ -191,9 +191,9 @@ def get_current_object(tree_ob_type, active_tree):
 
 def generate_tree_object(ob, tree, resolution, tree_property="is_tree"):
     ''' Create the tree mesh/object '''
-    t0 = time.clock()
+    t0 = time.perf_counter()
     verts, faces, radii, uvs, bone_weights = tree.build_mesh_data(resolution) # tree mesh data
-    dt = time.clock() - t0
+    dt = time.perf_counter() - t0
     print("mesh data creation : {}".format(dt))
     mesh = bpy.data.meshes.new("tree")
     material = None # material of tree object
