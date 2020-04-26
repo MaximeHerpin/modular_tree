@@ -1,0 +1,6 @@
+setup.py
+m_tree.egg-info/PKG-INFO
+m_tree.egg-info/SOURCES.txt
+m_tree.egg-info/dependency_links.txt
+m_tree.egg-info/not-zip-safe
+m_tree.egg-info/top_level.txt
