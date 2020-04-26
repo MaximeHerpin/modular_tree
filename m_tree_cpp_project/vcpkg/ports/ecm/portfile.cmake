@@ -1,0 +1,29 @@
+vcpkg_from_github(
+    OUT_SOURCE_PATH SOURCE_PATH
+    REPO KDE/extra-cmake-modules
+    REF v5.64.0
+    SHA512 849718414912051b7b25bf0787448c03f94afc61d240cdec2b83ea181899d4784361492cab01927e68452798e98b964215e56689fd9e43f608a31d239cdbd7f2
+    HEAD_REF master
+)
+
+vcpkg_configure_cmake(
+    SOURCE_PATH ${SOURCE_PATH}
+    PREFER_NINJA
+    OPTIONS
+        -DBUILD_HTML_DOCS=OFF
+        -DBUILD_MAN_DOCS=OFF
+        -DBUILD_QTHELP_DOCS=OFF
+        -DBUILD_TESTING=OFF
+)
+
+vcpkg_install_cmake()
+
+# Remove debug files
+file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug)
+
+file(COPY ${CURRENT_PORT_DIR}/usage DESTINATION ${CURRENT_PACKAGES_DIR}/share/ecm)
+# Handle copyright
+file(INSTALL ${SOURCE_PATH}/COPYING-CMAKE-SCRIPTS DESTINATION ${CURRENT_PACKAGES_DIR}/share/${PORT} RENAME copyright)
+
+# Allow empty include directory
+set(VCPKG_POLICY_EMPTY_INCLUDE_FOLDER enabled)

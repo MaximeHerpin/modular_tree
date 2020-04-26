@@ -1,0 +1,74 @@
+vcpkg_fail_port_install(ON_TARGET "UWP")
+
+vcpkg_from_github(
+    OUT_SOURCE_PATH SOURCE_PATH
+    REPO kcat/openal-soft
+    REF openal-soft-1.20.0
+    SHA512 d106bf8f96b32a61fadc0ee54882ce5041e4cbc35bf573296a210c83815b6c7be056ee3ed7617196dda5f89f2acd7163375f14b0cf24934faa0eda1fdb4f82a9
+    HEAD_REF master
+    PATCHES
+        dont-export-symbols-in-static-build.patch
+        fix-arm-builds.patch
+)
+
+if(VCPKG_LIBRARY_LINKAGE STREQUAL "dynamic")
+    set(OPENAL_LIBTYPE "SHARED")
+else()
+    set(OPENAL_LIBTYPE "STATIC")
+endif()
+
+if(VCPKG_TARGET_IS_LINUX)
+    set(ALSOFT_REQUIRE_WINDOWS OFF)
+    set(ALSOFT_REQUIRE_LINUX ON)
+endif()
+
+if(VCPKG_TARGET_IS_WINDOWS)
+    set(ALSOFT_REQUIRE_WINDOWS ON)
+    set(ALSOFT_REQUIRE_LINUX OFF)
+endif()
+
+vcpkg_configure_cmake(
+    SOURCE_PATH ${SOURCE_PATH}
+    OPTIONS
+        -DLIBTYPE=${OPENAL_LIBTYPE}
+        -DALSOFT_UTILS=OFF
+        -DALSOFT_NO_CONFIG_UTIL=ON
+        -DALSOFT_EXAMPLES=OFF
+        -DALSOFT_TESTS=OFF
+        -DALSOFT_CONFIG=OFF
+        -DALSOFT_HRTF_DEFS=OFF
+        -DALSOFT_AMBDEC_PRESETS=OFF
+        -DALSOFT_BACKEND_ALSA=${ALSOFT_REQUIRE_LINUX}
+        -DALSOFT_BACKEND_OSS=OFF
+        -DALSOFT_BACKEND_SOLARIS=OFF
+        -DALSOFT_BACKEND_SNDIO=OFF
+        -DALSOFT_BACKEND_QSA=OFF
+        -DALSOFT_BACKEND_PORTAUDIO=OFF
+        -DALSOFT_BACKEND_PULSEAUDIO=OFF
+        -DALSOFT_BACKEND_COREAUDIO=OFF
+        -DALSOFT_BACKEND_JACK=OFF
+        -DALSOFT_BACKEND_OPENSL=OFF
+        -DALSOFT_BACKEND_WAVE=ON
+        -DALSOFT_REQUIRE_WINMM=${ALSOFT_REQUIRE_WINDOWS}
+        -DALSOFT_REQUIRE_DSOUND=${ALSOFT_REQUIRE_WINDOWS}
+        -DALSOFT_REQUIRE_MMDEVAPI=${ALSOFT_REQUIRE_WINDOWS}
+        -DALSOFT_CPUEXT_NEON=OFF
+)
+
+vcpkg_install_cmake()
+vcpkg_fixup_cmake_targets(CONFIG_PATH lib/cmake/OpenAL)
+
+foreach(HEADER al.h alc.h)
+    file(READ ${CURRENT_PACKAGES_DIR}/include/AL/${HEADER} AL_H)
+    if(VCPKG_LIBRARY_LINKAGE STREQUAL "static")
+        string(REPLACE "defined(AL_LIBTYPE_STATIC)" "1" AL_H "${AL_H}")
+    else()
+        string(REPLACE "defined(AL_LIBTYPE_STATIC)" "0" AL_H "${AL_H}")
+    endif()
+    file(WRITE ${CURRENT_PACKAGES_DIR}/include/AL/${HEADER} "${AL_H}")
+endforeach()
+
+file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/include)
+file(INSTALL ${SOURCE_PATH}/COPYING DESTINATION ${CURRENT_PACKAGES_DIR}/share/${PORT} RENAME copyright)
+
+vcpkg_copy_pdbs()
