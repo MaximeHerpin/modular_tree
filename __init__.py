@@ -109,12 +109,12 @@ def register():
     for cls in classes:
         register_class(cls)
 
-    nodeitems_utils.register_node_categories('CUSTOM_NODES', node_categories)
+    nodeitems_utils.register_node_categories('MTREE_NODES', node_categories)
 
 
 def unregister():
     addon_updater_ops.unregister()
-    nodeitems_utils.unregister_node_categories('CUSTOM_NODES')
+    nodeitems_utils.unregister_node_categories('MTREE_NODES')
 
     from bpy.utils import unregister_class
     for cls in reversed(classes):
