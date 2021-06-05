@@ -9,6 +9,11 @@ from setuptools.command.build_ext import build_ext
 from distutils.version import LooseVersion
 
 
+VCPKG_PATH = os.path.join(os.path.dirname(__file__), r"./dependencies/vcpkg/")
+
+PACKAGES = ["eigen3"]
+
+
 class CMakeExtension(Extension):
     def __init__(self, name, sourcedir=''):
         Extension.__init__(self, name, sources=[])
@@ -28,8 +33,19 @@ class CMakeBuild(build_ext):
             if cmake_version < '3.1.0':
                 raise RuntimeError("CMake >= 3.1.0 is required on Windows")
 
+        self.install_vcpkg_dependencies()
+
         for ext in self.extensions:
             self.build_extension(ext)
+
+    
+    def install_vcpkg_dependencies(self):
+        extension = ".bat" if platform.system() == "Windows" else ".sh"
+        subprocess.run(f"bootstrap-vcpkg{extension}", cwd=VCPKG_PATH, shell=True)
+
+        triplet = ":x64-windows" if platform.system() == "Windows" else "x64-linux"
+        for package in PACKAGES:
+            subprocess.run(["vcpkg", "install", package+triplet], cwd=VCPKG_PATH, shell=True)
 
     def build_extension(self, ext):
         extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))

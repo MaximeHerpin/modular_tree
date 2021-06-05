@@ -4,11 +4,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(CMAKE_TOOLCHAIN_FILE ./vcpkg/scripts/buildsystems/vcpkg.cmake CACHE STRING "")
+set(CMAKE_TOOLCHAIN_FILE ./dependencies/vcpkg/scripts/buildsystems/vcpkg.cmake CACHE STRING "")
 project(m_tree)
 
 find_package(Eigen3 CONFIG REQUIRED)
-add_subdirectory(pybind11)
+add_subdirectory(dependencies/pybind11)
 
 file(GLOB_RECURSE sources
     "./Source/*.hpp"

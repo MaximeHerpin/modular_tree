@@ -36,3 +36,4 @@ m_tree/m_tree.egg-info/
 *.pyd
 *.pdb
 **/.vscode/
+m_tree.egg-info/
