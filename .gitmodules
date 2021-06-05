@@ -1,0 +1,6 @@
+[submodule "m_tree/dependencies/vcpkg"]
+	path = m_tree/dependencies/vcpkg
+	url = https://github.com/microsoft/vcpkg.git
+[submodule "m_tree/dependencies/pybind11"]
+	path = m_tree/dependencies/pybind11
+	url = https://github.com/pybind/pybind11.git
