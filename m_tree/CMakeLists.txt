@@ -4,16 +4,16 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(CMAKE_TOOLCHAIN_FILE ./dependencies/vcpkg/scripts/buildsystems/vcpkg.cmake CACHE STRING "")
+
+set(CMAKE_TOOLCHAIN_FILE ./dependencies/vcpkg/scripts/buildsystems/vcpkg.cmake)
+
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/binaries)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/binaries)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/binaries)
+
 project(m_tree)
 
-find_package(Eigen3 CONFIG REQUIRED)
-add_subdirectory(dependencies/pybind11)
 
-file(GLOB_RECURSE sources
-    "./Source/*.hpp"
-    "./Source/*.cpp"
-)
+add_subdirectory(./source)
+add_subdirectory(./python_bindings)
 
-pybind11_add_module(m_tree ${sources})
-target_link_libraries(m_tree PRIVATE Eigen3::Eigen)
