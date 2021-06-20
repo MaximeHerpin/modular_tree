@@ -5,7 +5,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_TOOLCHAIN_FILE ../dependencies/vcpkg/scripts/buildsystems/vcpkg.cmake CACHE STRING "")
-project(m_tree_python)
 
 add_subdirectory(../dependencies/pybind11 [EXCLUDE_FROM_ALL])
 
@@ -14,5 +13,5 @@ file(GLOB_RECURSE sources
     "./*.cpp"
 )
 
-pybind11_add_module(m_tree_python ${sources})
-target_link_libraries(m_tree_python PRIVATE m_tree-lib)
+pybind11_add_module(m_tree ${sources})
+target_link_libraries(m_tree PRIVATE m_tree-lib)
