@@ -1,7 +1,7 @@
 #include <iostream>
 #include <queue>
 #include "BasicMesher.hpp"
-#include "../Utilities/GeometryUtilities.hpp"
+#include "source/utilities/GeometryUtilities.hpp"
 
 
 namespace Mtree

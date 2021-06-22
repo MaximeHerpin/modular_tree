@@ -25,6 +25,13 @@ namespace Mtree { namespace Geometry
 
 	void project_on_plane(Vector3& v, const Vector3& plane_normal);
 
+	Vector3 projected_on_plane(const Vector3& v, const Vector3& plane_normal)
+	{
+		auto result = v;
+		projected_on_plane(result, plane_normal);
+		return result;
+	}
+
 	Vector3 lerp(Vector3 a, Vector3 b, float t);
 
 	float lerp(float a, float b, float t);

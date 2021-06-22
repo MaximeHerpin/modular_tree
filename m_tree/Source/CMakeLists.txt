@@ -14,3 +14,5 @@ file(GLOB_RECURSE sources
 add_library(m_tree-lib STATIC ${sources})
 target_include_directories(m_tree-lib PUBLIC ${PROJECT_SOURCE_DIR})
 target_link_libraries(m_tree-lib PUBLIC Eigen3::Eigen)
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${sources})

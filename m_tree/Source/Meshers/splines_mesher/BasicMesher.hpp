@@ -1,5 +1,5 @@
 #pragma once
-#include "../BaseTypes/TreeMesher.hpp"
+#include "../base_types/TreeMesher.hpp"
 
 namespace Mtree
 {

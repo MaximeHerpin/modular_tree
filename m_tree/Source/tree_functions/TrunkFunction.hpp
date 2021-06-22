@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include "../BaseTypes/TreeFunction.hpp"
+#include "./base_types/TreeFunction.hpp"
 
 namespace Mtree
 {

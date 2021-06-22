@@ -1,7 +1,7 @@
 #pragma once
 #include<vector>
 #include "Node.hpp"
-#include "TreeFunction.hpp"
+#include "source/tree_functions/base_types/TreeFunction.hpp"
 
 namespace Mtree
 {

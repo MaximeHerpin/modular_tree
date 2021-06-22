@@ -1,6 +1,6 @@
 #pragma once
-#include "Mesh.hpp"
-#include "Tree.hpp"
+#include "source/mesh/Mesh.hpp"
+#include "source/tree/Tree.hpp"
 
 namespace Mtree
 {

@@ -3,8 +3,8 @@
 #include <vector>
 #include <math.h>
 #include <Eigen/Geometry>
-#include "../Utilities/GeometryUtilities.hpp"
-#include "../BaseTypes/TreeFunction.hpp"
+#include "../utilities/GeometryUtilities.hpp"
+#include "./base_types/TreeFunction.hpp"
 #include "GrowthFunction.hpp"
 
 namespace Mtree

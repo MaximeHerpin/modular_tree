@@ -2,8 +2,5 @@
 
 namespace Mtree
 {
-	class Node
-	{
 
-	};
 }

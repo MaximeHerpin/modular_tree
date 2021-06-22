@@ -5,12 +5,12 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 
-#include "../source/BaseTypes/Mesh.hpp"
-#include "../source/BaseTypes/Tree.hpp"
-#include "../source/TreeFunctions/TrunkFunction.hpp"
-#include "../source/TreeFunctions/BranchFunction.hpp"
-#include "../source/TreeFunctions/GrowthFunction.hpp"
-#include "../source/Meshers/BasicMesher.hpp"
+#include "../source/mesh/Mesh.hpp"
+#include "../source/tree/Tree.hpp"
+#include "../source/tree_functions/TrunkFunction.hpp"
+#include "../source/tree_functions/BranchFunction.hpp"
+#include "../source/tree_functions/GrowthFunction.hpp"
+#include "../source/meshers/splines_mesher/BasicMesher.hpp"
 
 
 using namespace Mtree;

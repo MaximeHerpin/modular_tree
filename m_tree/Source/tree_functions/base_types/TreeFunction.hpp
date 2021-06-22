@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
-#include "Node.hpp"
-#include "../Utilities/RandomGenerator.hpp"
+#include "source/tree/Node.hpp"
+#include "source/utilities/RandomGenerator.hpp"
 
 namespace Mtree
 {

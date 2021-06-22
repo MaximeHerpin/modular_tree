@@ -14,12 +14,13 @@ namespace Mtree
 	public:
 		std::vector<std::shared_ptr<NodeChild>> children;
 		Vector3 direction;
+		Vector3 tangent;
 		float length;
 		float radius;
 		int creator_id = 0;
 		std::unique_ptr<GrowthInfo> growthInfo = nullptr;
 
-		Node(Vector3 direction, float length, float radius, int creator_id);
+		Node(Vector3 direction, Vector3 parent_tangent, float length, float radius, int creator_id);
 	};
 
 	struct NodeChild 

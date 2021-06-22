@@ -1,9 +1,9 @@
 #pragma once
 #include <vector>
 #include <queue>
-#include "../BaseTypes/TreeFunction.hpp"
-#include "../Utilities/NodeUtilities.hpp"
-#include "../Utilities/GeometryUtilities.hpp"
+#include "./base_types/TreeFunction.hpp"
+#include "source/utilities/NodeUtilities.hpp"
+#include "source/utilities/GeometryUtilities.hpp"
 
 
 namespace Mtree
