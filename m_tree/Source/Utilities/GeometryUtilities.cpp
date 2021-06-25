@@ -84,5 +84,12 @@ namespace Mtree {
 			Vector3 offset = v.dot(plane_normal) * plane_normal;
 			v -= offset;
 		}
+		
+		Vector3 projected_on_plane(const Vector3& v, const Vector3& plane_normal)
+		{
+			auto result = v;
+			project_on_plane(result, plane_normal);
+			return result;
+		}
 	}
 }

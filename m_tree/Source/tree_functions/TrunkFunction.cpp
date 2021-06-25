@@ -7,7 +7,8 @@ namespace Mtree
 		rand_gen.set_seed(seed);
 
 		float segment_length = 1 / (resolution + .001);
-		Node firstNode{ Vector3{0,0,1}, segment_length, start_radius, id };
+		Vector3 stem_direction = Vector3{ 0,0,1 };
+		Node firstNode{ stem_direction, Geometry::get_orthogonal_vector(stem_direction), segment_length, start_radius, id };
 		Node* current_node = &firstNode;
 		int node_count = resolution * length;
 		for (size_t i = 0; i < node_count; i++)
@@ -21,7 +22,7 @@ namespace Mtree
 			direction += Vector3(0,0,up_attraction / (resolution + .001f));
 			direction.normalize();
 			float position_in_parent = 1;
-			NodeChild child{ Node{direction, segment_length, radius, id}, position_in_parent };
+			NodeChild child{ Node{direction, firstNode.tangent, segment_length, radius, id}, position_in_parent };
 			current_node->children.push_back(std::make_shared<NodeChild>(std::move(child)));
 			current_node = &current_node->children.back()->node;
 		}

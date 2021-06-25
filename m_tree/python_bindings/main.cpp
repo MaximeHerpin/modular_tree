@@ -5,12 +5,13 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 
-#include "../source/mesh/Mesh.hpp"
-#include "../source/tree/Tree.hpp"
-#include "../source/tree_functions/TrunkFunction.hpp"
-#include "../source/tree_functions/BranchFunction.hpp"
-#include "../source/tree_functions/GrowthFunction.hpp"
-#include "../source/meshers/splines_mesher/BasicMesher.hpp"
+#include "source/mesh/Mesh.hpp"
+#include "source/tree/Tree.hpp"
+#include "source/tree_functions/TrunkFunction.hpp"
+#include "source/tree_functions/BranchFunction.hpp"
+#include "source/tree_functions/GrowthFunction.hpp"
+#include "source/meshers/splines_mesher/BasicMesher.hpp"
+#include "source/meshers/manifold_mesher/ManifoldMesher.hpp"
 
 
 using namespace Mtree;
@@ -126,6 +127,11 @@ PYBIND11_MODULE(m_tree, m) {
     py::class_<BasicMesher>(m, "BasicMesher")
         .def(py::init<>())
         .def("mesh_tree", &BasicMesher::mesh_tree);
+    
+    py::class_<ManifoldMesher>(m, "ManifoldMesher")
+        .def(py::init<>())
+        .def_readwrite("radial_n_points", &ManifoldMesher::radial_resolution)
+        .def("mesh_tree", &ManifoldMesher::mesh_tree);
 
 
 #ifdef VERSION_INFO

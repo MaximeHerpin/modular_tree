@@ -16,4 +16,5 @@ project(m_tree)
 
 add_subdirectory(./source)
 add_subdirectory(./python_bindings)
+add_subdirectory(./tests)
 

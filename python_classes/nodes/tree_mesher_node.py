@@ -29,7 +29,8 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         self.output_object(cpp_mesh)
     
     def mesh_tree(self, tree):
-        mesher = m_tree.BasicMesher()
+        mesher = m_tree.ManifoldMesher()
+        mesher.radial_n_points = 32
         mesh_data = mesher.mesh_tree(tree)
         return mesh_data
 

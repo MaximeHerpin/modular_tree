@@ -60,7 +60,7 @@ namespace Mtree
 		float child_radius = info.origin_radius * Geometry::lerp(start_radius, end_radius, factor_in_branch);
 		float child_length = std::min(1/resolution, info.desired_length - info.current_length);
 		
-		NodeChild child{ Node{child_direction, child_length, child_radius, id}, 1 };
+		NodeChild child{ Node{child_direction, node.tangent, child_length, child_radius, id}, 1 };
 		node.children.push_back(std::make_shared<NodeChild>(std::move(child)));
 		auto& child_node = node.children.back()->node;
 
@@ -80,7 +80,7 @@ namespace Mtree
 			child_direction.normalize();
 			child_radius = node.radius * split_radius;
 			
-			NodeChild child{ Node{child_direction, child_length, child_radius, id}, rand_gen.get_0_1() };
+			NodeChild child{ Node{child_direction, node.tangent, child_length, child_radius, id}, rand_gen.get_0_1() };
 			node.children.push_back(std::make_shared<NodeChild>(std::move(child)));
 			auto& child_node = node.children.back()->node;
 
@@ -177,7 +177,7 @@ namespace Mtree
 				 		child_direction.normalize();
 				 		float child_radius = node.radius * start_radius;
 
-						NodeChild child{Node{child_direction, 1/(resolution+0.001f), child_radius, id}, position_in_parent};
+						NodeChild child{Node{child_direction, node.tangent, 1/(resolution+0.001f), child_radius, id}, position_in_parent};
 						node.children.push_back(std::make_shared<NodeChild>(std::move(child)));
 						auto& child_node = node.children.back()->node;
 						child_node.growthInfo = std::make_unique<BranchGrowthInfo>(length, node.radius, child_node.length);
