@@ -19,11 +19,11 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         tree.set_trunk_function(trunk_function)
         t0 = time.time()
         tree.execute_functions()
-        print("executing_functions:", time.time() - t0)
+        print("executing_functions:", (time.time() - t0) * 1000)
         t0 = time.time()
         
         cpp_mesh = self.mesh_tree(tree)
-        print("generating:", time.time() - t0)
+        print("generating:", (time.time() - t0)*1000)
 
         # self.test_time(cpp_mesh)
         self.output_object(cpp_mesh)
@@ -48,13 +48,16 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
    
     def fill_blender_mesh(self, mesh, cpp_mesh):
         t0 = time.time()
-        verts = cpp_mesh.get_vertices_numpy()
-        faces = cpp_mesh.get_polygons_numpy()
-        print("readback", time.time() - t0)
+        verts = cpp_mesh.get_vertices()
+        faces = cpp_mesh.get_polygons()
+        radii = cpp_mesh.get_float_attribute("radius")
+        print("readback", (time.time() - t0)*1000)
         t0 = time.time()
 
         mesh.vertices.add(len(verts)//3)
         mesh.vertices.foreach_set("co", verts)
+        mesh.attributes.new(name='radius', type='FLOAT', domain='POINT')
+        mesh.attributes['radius'].data.foreach_set('value', radii)
         
         mesh.loops.add(len(faces))
         mesh.loops.foreach_set("vertex_index", faces)
@@ -69,7 +72,7 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         # uv_layer = mesh.uv_layers.new()
         # uv_layer.data.foreach_set("uv", uv_data.flatten())
         mesh.update(calc_edges=True)    
-        print("filling mesh:", time.time() - t0)
+        print("filling mesh:", (time.time() - t0)*1000)
 
     def draw(self, context, layout):
         valid_tree = self.get_tree_validity()

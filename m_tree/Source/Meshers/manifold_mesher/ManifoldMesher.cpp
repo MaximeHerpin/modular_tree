@@ -1,7 +1,9 @@
 #include <iostream>
+#include <algorithm>
 #include "source/utilities/GeometryUtilities.hpp"
 #include "source/utilities/NodeUtilities.hpp"
 #include "ManifoldMesher.hpp"
+#include "smoothing.hpp"
 
 namespace Mtree
 {
@@ -10,12 +12,15 @@ namespace Mtree
 	Mesh ManifoldMesher::mesh_tree(Tree& tree)
     {
         Mesh mesh;
+        auto& smooth_attr = mesh.add_attribute<float>(AttributeNames::smooth_amount);
+        auto& radius_attr = mesh.add_attribute<float>(AttributeNames::radius);
         for (auto& stem : tree.get_stems())
         {
             int start_index = mesh.vertices.size();
             add_circle(stem.position, stem.node, 0, radial_resolution, mesh);
             mesh_node_rec(stem.node, stem.position, radial_resolution, start_index, mesh);
         }
+        MeshProcessing::Smoothing::smooth_mesh(mesh, 4, 1, &smooth_attr.data);
 
         int max = 0;
         for (auto& polygon : mesh.polygons)
@@ -28,7 +33,6 @@ namespace Mtree
                 }
             }
         }
-
         std::cout<<"max_index: "<< max << " , vertices_size: " << mesh.vertices.size() << std::endl;
         return mesh;
     }
@@ -64,7 +68,8 @@ namespace Mtree
                     auto& child = *node.children[i];
                     float child_twist = get_child_twist(child.node, node);
                     Vector3 child_pos = get_side_child_position(node, child, node_position);
-                    int child_radial_n = create_child_circle(base_start_index, radial_n_points, children_ranges[i - 1], child_twist, child_pos, child.node.radius, mesh, child_circle_index);
+                    float smooth_amount = get_smooth_amount(child.node.radius, node.length);
+                    int child_radial_n = add_child_circle(base_start_index, radial_n_points, children_ranges[i - 1], child_twist, smooth_amount, child_pos, child.node.radius, mesh, child_circle_index);
                     mesh_node_rec(node.children[i]->node, child_pos, child_radial_n, child_circle_index, mesh);
                 }
             }
@@ -79,12 +84,17 @@ namespace Mtree
         Vector3 up = node.tangent.cross(node.direction);
         Vector3 circle_position = node_position + node.length * factor * node.direction;
         float radius = Geometry::lerp(node.radius, node.children[0]->node.radius, factor);
+        auto& smooth_attr = *static_cast<Attribute<float>*> (mesh.attributes[AttributeNames::smooth_amount].get());
+        auto& radius_attr = *static_cast<Attribute<float>*> (mesh.attributes[AttributeNames::radius].get());
+        float smooth_amount = get_smooth_amount(radius, node.length);
         for (int i = 0; i < radial_n_points; i++)
         {
             float angle = (float)i / radial_n_points * 2 * M_PI;
             Vector3 point = cos(angle) * right + sin(angle) * up;
             point = point * radius + circle_position;
-            mesh.vertices.push_back(point);
+            int index = mesh.add_vertex(point);
+            smooth_attr.data[index] = smooth_amount;
+            radius_attr.data[index] = radius;
         }
         return return_index;
     }
@@ -158,7 +168,7 @@ namespace Mtree
         return false;
     }
         
-    int ManifoldMesher::create_child_circle(const int rim_circle_index, const int rim_circle_n_points, const IndexRange child_range, const float child_twist, const Vector3& child_position, const float child_radius, Mesh& mesh, int& child_circle_index) const
+    int ManifoldMesher::add_child_circle(const int rim_circle_index, const int rim_circle_n_points, const IndexRange child_range, const float child_twist, const float smooth_amount, const Vector3& child_position, const float child_radius, Mesh& mesh, int& child_circle_index) const
     {
         int base_radial_n = 2 * ((child_range.max_index - child_range.min_index + rim_circle_n_points)% rim_circle_n_points + 1); // number of vertices in child circle
         child_circle_index = mesh.vertices.size();
@@ -171,7 +181,6 @@ namespace Mtree
         child_base_indices.resize(base_radial_n);
 
         Vector3 child_base_center{0,0,0};
-
         for (int i = 0; i < base_radial_n/2; i++)
         {
             int lower_index = (child_range.min_index + i) % rim_circle_n_points + rim_circle_index;
@@ -188,12 +197,16 @@ namespace Mtree
         }
         child_base_center /= child_base_indices.size();
         
+        auto& smooth_attr = *static_cast<Attribute<float>*> (mesh.attributes[AttributeNames::smooth_amount].get());
+        auto& radius_attr = *static_cast<Attribute<float>*> (mesh.attributes[AttributeNames::radius].get());
         for (int i = 0; i < base_radial_n; i++)
         {
             int index = (i+offset)%base_radial_n;
             Vector3 vertex = mesh.vertices[child_base_indices[index]];
             vertex = (vertex - child_base_center).normalized() * child_radius + child_position;
-            mesh.vertices.push_back(vertex);
+            int added_vertex_index = mesh.add_vertex(vertex);
+            smooth_attr.data[added_vertex_index] = smooth_amount;
+            radius_attr.data[added_vertex_index] = child_radius;
 
             mesh.polygons.push_back({
                 child_base_indices[index],
@@ -220,5 +233,10 @@ namespace Mtree
     {
         Vector3 tangent = Geometry::projected_on_plane(child.node.direction, parent.direction).normalized();
         return node_position + parent.direction * parent.length * child.position_in_parent + tangent * parent.radius;
+    }
+    
+    float ManifoldMesher::get_smooth_amount(const float radius, const float node_length) const
+    {
+        return std::min(1.f, radius / node_length);
     }
 }

@@ -1,7 +1,9 @@
 #pragma once
 #include <vector>
 #include <array>
+#include <map>
 #include <Eigen/Core>
+#include "Attribute.hpp"
 
 // #include<pybind11/pybind11.h>
 // #include<pybind11/numpy.h>
@@ -20,11 +22,19 @@ namespace Mtree
 		std::vector<Vector3> normals;
 		std::vector<Vector2> uvs;
 		std::vector<std::vector<int>> polygons;
+		std::map<std::string, std::shared_ptr<AbstractAttribute>> attributes;
 
 		Mesh() {};
 		Mesh(std::vector<Vector3>&& vertices) { this->vertices = std::move(vertices); }
-
 		std::vector<std::vector<float>> get_vertices();
 		std::vector<std::vector<int>> get_polygons() { return this->polygons; };
+		int add_vertex(const Vector3& position);
+		template <class T>
+		Attribute<T>& add_attribute(std::string name)
+		{
+			auto attribute = std::make_shared<Attribute<T>>(name);
+			attributes[name] = attribute;
+			return *attribute;
+		};
 	};
 }

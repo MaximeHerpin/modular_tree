@@ -1,4 +1,5 @@
 #include <iostream>
+#include <exception>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -86,9 +87,7 @@ PYBIND11_MODULE(m_tree, m) {
         .def("execute_functions", &Tree::execute_functions);
 
     py::class_<Mesh>(m, "Mesh")
-        .def("get_vertices", &Mesh::get_vertices)
-        .def("get_polygons", &Mesh::get_polygons)
-        .def("get_vertices_numpy", [](const Mesh& mesh)
+        .def("get_vertices", [](const Mesh& mesh)
             {
         	    py::array_t<float> result(mesh.vertices.size() * 3);
 			    py::buffer_info buff = result.request();
@@ -104,8 +103,24 @@ PYBIND11_MODULE(m_tree, m) {
 
 			    return result;
             })
+        .def("get_float_attribute", [](const Mesh& mesh, std::string name)
+            {
+                if (mesh.attributes.count(name) == 0)
+                {
+                    throw std::invalid_argument("attribute " + name + " doesn't exist");
+                }
+                auto& attribute = *static_cast<Attribute<float>*>(mesh.attributes.at(name).get());
+                py::array_t<float> result(mesh.vertices.size());
+                py::buffer_info buff = result.request();
 
-        .def("get_polygons_numpy", [](const Mesh& mesh) 
+                float* ptr = (float*)buff.ptr;
+                for (int i = 0; i < mesh.vertices.size(); i++)
+                {
+                    ptr[i] = attribute.data[i];
+                }
+                return result;
+            })
+        .def("get_polygons", [](const Mesh& mesh) 
             {
                 py::array_t<int> result(mesh.polygons.size() * 4);
              	py::buffer_info buff = result.request();
