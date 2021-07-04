@@ -13,6 +13,6 @@ jobs:
         with:
           python-version: 3.7
       - name: build
-        run: build_mtree.bat
+        run: ./build_mtree.bat
 
 
