@@ -14,5 +14,11 @@ jobs:
           python-version: 3.7
       - name: build
         run: ./build_mtree.bat
-
+      - name: package addon
+        run: python ./github/scripts/setup_addon.py
+      - name: upload zipped addon
+        uses: actions/upload-artifact@v2
+        with:
+          name: blender addon
+          path: tmp/*.zip
 

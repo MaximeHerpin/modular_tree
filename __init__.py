@@ -12,14 +12,14 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from . import python_classes
-
+from .version import VERSION
 
 bl_info = {
     "name" : "Modular Tree",
     "author" : "Maxime",
-    "description" : "",
+    "description" : "create trees",
     "blender" : (2, 83, 0),
-    "version" : (0, 0, 1),
+    "version" : VERSION,
     "location" : "",
     "warning" : "",
     "category" : "Generic"
