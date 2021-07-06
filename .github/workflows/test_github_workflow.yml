@@ -15,7 +15,7 @@ jobs:
       - name: build
         run: ./build_mtree.bat
       - name: package addon
-        run: python ./github/scripts/setup_addon.py
+        run: python .github/scripts/setup_addon.py
       - name: upload zipped addon
         uses: actions/upload-artifact@v2
         with:
