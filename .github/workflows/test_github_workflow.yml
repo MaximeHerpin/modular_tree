@@ -30,6 +30,7 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: Release a${{ github.ref }}
+          body: this is a body
           draft: true
           prerelease: true
 
