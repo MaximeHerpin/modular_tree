@@ -31,20 +31,18 @@ jobs:
           name: modular_tree_${{ matrix.name }}
           path: tmp/*.zip
   
-  
-  # release:
-  #   needs: build
-  #   runs-on: linux-latest
-  #   steps:
-  #    - name: Create Release
-  #       id: create_release
-  #       uses: actions/create-release@latest
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       with:
-  #         tag_name: ${{ github.ref }}
-  #         release_name: Release a${{ github.ref }}
-  #         body: this is a body
-  #         draft: true
-  #         prerelease: true
+  release:
+    needs: build
+    runs-on: linux-latest
+    steps:
+      - name: Download build artifacts
+          uses: actions/download-artifact@v2
+        with:
+          path: ./build_artefacts
+      - name: Update release
+        uses: johnwbyrd/update-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: true
+          files: ./build_artefacts/*.zip
 
