@@ -44,5 +44,5 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
-          files: ./build_artefacts/*.zip
+          files: ./build_artefacts/modular_tree_windows.zip ./build_artefacts/modular_tree_linux.zip
 
