@@ -7,8 +7,10 @@ jobs:
         include:
           - os: windows-latest
             extension: bat
+            name: windows
           - os: ubuntu-latest
             extension: sh
+            name: linux
     runs-on: ${{ matrix.os }}
     steps:
       - name: checkout
@@ -26,7 +28,7 @@ jobs:
       - name: upload zipped addon
         uses: actions/upload-artifact@v2
         with:
-          name: blender addon
+          name: modular_tree_${{ matrix.name }}
           path: tmp/*.zip
   
   
