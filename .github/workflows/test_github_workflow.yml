@@ -40,7 +40,7 @@ jobs:
         with:
           path: ./build_artefacts
       - name: Update release
-        uses: johnwbyrd/update-release@latest
+        uses: johnwbyrd/update-release@v1.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
