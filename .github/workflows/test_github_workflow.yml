@@ -1,8 +1,15 @@
 name: test_github_actions
 on: [push]
 jobs:
-  check-bats-version:
-    runs-on: windows-latest
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            extension: bat
+          - os: linix-latest
+            extension: sh
+    runs-on: ${{ matrix.os }}
     steps:
       - name: checkout
         uses: actions/checkout@v2
@@ -13,7 +20,7 @@ jobs:
         with:
           python-version: 3.7
       - name: build
-        run: ./build_mtree.bat
+        run: ./build_mtree.${{ matrix.extension }}
       - name: package addon
         run: python .github/scripts/setup_addon.py
       - name: upload zipped addon
@@ -21,16 +28,21 @@ jobs:
         with:
           name: blender addon
           path: tmp/*.zip
-      
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@latest
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release a${{ github.ref }}
-          body: this is a body
-          draft: true
-          prerelease: true
+  
+  
+  # release:
+  #   needs: build
+  #   runs-on: linux-latest
+  #   steps:
+  #    - name: Create Release
+  #       id: create_release
+  #       uses: actions/create-release@latest
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #       with:
+  #         tag_name: ${{ github.ref }}
+  #         release_name: Release a${{ github.ref }}
+  #         body: this is a body
+  #         draft: true
+  #         prerelease: true
 

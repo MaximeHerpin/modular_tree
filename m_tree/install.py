@@ -27,7 +27,6 @@ def install():
 
     install_vcpkg_dependencies()
     build()
-    
 
     
 def install_vcpkg_dependencies():
