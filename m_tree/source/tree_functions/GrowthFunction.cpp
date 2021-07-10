@@ -3,7 +3,7 @@
 #include <vector>
 #include <math.h>
 #include <Eigen/Geometry>
-#include "../utilities/GeometryUtilities.hpp"
+#include "source/utilities/GeometryUtilities.hpp"
 #include "./base_types/TreeFunction.hpp"
 #include "GrowthFunction.hpp"
 
@@ -75,7 +75,7 @@ namespace Mtree
 		info.age++;
 		if (secondary_growth)
 		{
-			node.radius = (1 - std::expf(-info.age * .01f) + .01f) * .5;
+			node.radius = (1 - std::exp(-info.age * .01f) + .01f) * .5;
 		}
 		if (primary_growth) 
 		{
@@ -138,7 +138,7 @@ namespace Mtree
 		offset[2] = 0;
 		float lever_arm = offset.norm();
 		float torque = info.branch_weight * lever_arm;
-		float bendiness = std::expf(-(info.age/2 + info.vigor));
+		float bendiness = std::exp(-(info.age/2 + info.vigor));
 		float angle = torque * bendiness * gravity_strength * 50;
 		Vector3 tangent = node.direction.cross(Vector3{ 0,0,-1 });
 		Eigen::Matrix3f rot;
@@ -175,7 +175,7 @@ namespace Mtree
 		{
 			for (Stem& stem : stems) // the energy is not shared between stems
 			{
-				float target_light_flux = 1 + std::powf(i, 1.5);
+				float target_light_flux = 1 + std::pow(i, 1.5);
 				float light_flux = update_vigor_ratio_rec(stem.node); // get total available energy
 
 				if (target_light_flux > light_flux)

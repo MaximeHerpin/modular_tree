@@ -2,8 +2,8 @@
 #include <queue>
 
 #include "BranchFunction.hpp"
-#include "../Utilities/NodeUtilities.hpp"
-#include "../Utilities/GeometryUtilities.hpp"
+#include "source/utilities/NodeUtilities.hpp"
+#include "source/utilities/GeometryUtilities.hpp"
 
 namespace Mtree
 {

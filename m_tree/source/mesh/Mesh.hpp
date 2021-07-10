@@ -3,6 +3,7 @@
 #include <array>
 #include <map>
 #include <Eigen/Core>
+#include <memory>
 #include "Attribute.hpp"
 
 // #include<pybind11/pybind11.h>

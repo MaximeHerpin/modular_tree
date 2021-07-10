@@ -1,5 +1,5 @@
 #include "TrunkFunction.hpp"
-#include "../Utilities/GeometryUtilities.hpp"
+#include "source/utilities/GeometryUtilities.hpp"
 namespace Mtree
 {
 	void TrunkFunction::execute(std::vector<Stem>& stems, int id, int parent_id)

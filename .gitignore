@@ -38,3 +38,4 @@ m_tree/m_tree.egg-info/
 **/.vscode/
 m_tree.egg-info/
 *.exp
+*/binaries/

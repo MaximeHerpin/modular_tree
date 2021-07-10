@@ -31,10 +31,14 @@ def install_vcpkg_dependencies():
     if platform.system() == "Windows":
         subprocess.run(f"bootstrap-vcpkg.bat", cwd=VCPKG_PATH, shell=True)
     else:
-        subprocess.run(["sh", "./bootstrap-vcpkg.sh"], cwd=VCPKG_PATH, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    triplet = ":x64-windows" if platform.system() == "Windows" else "x64-linux"
+        subprocess.run(os.path.join(VCPKG_PATH, "bootstrap-vcpkg.sh"))
     for package in PACKAGES:
-        subprocess.run(["./vcpkg", "install", package+triplet], cwd=VCPKG_PATH, shell=True)
+        if platform.system() == "Windows":
+            triplet = ":x64-windows"
+            subprocess.run(["./vcpkg", "install", package+triplet], cwd=VCPKG_PATH, shell=True)
+        else:
+            triplet = ":x64-linux"
+            subprocess.run([os.path.join(VCPKG_PATH, "vcpkg"), "install", package+triplet])
 
 
 def build():
@@ -44,6 +48,7 @@ def build():
 
     subprocess.check_call(['cmake', "../"], cwd=build_dir)
     subprocess.check_call(['cmake', '--build', '.', "--config", "Release"], cwd=build_dir)
+    
 
 if __name__ == "__main__":
     install()

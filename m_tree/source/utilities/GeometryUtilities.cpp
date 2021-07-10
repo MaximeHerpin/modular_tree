@@ -8,7 +8,7 @@
 namespace Mtree {
 	namespace Geometry {
 
-		void Mtree::Geometry::add_circle(std::vector<Vector3>& points, Vector3 position, Vector3 direction, float radius, int n_points)
+		void add_circle(std::vector<Vector3>& points, Vector3 position, Vector3 direction, float radius, int n_points)
 		{
 			Eigen::Matrix3f rot;
 			// rot = Eigen::AngleAxis<float>( angle, axis );
@@ -23,7 +23,7 @@ namespace Mtree {
 			}
 		}
 
-		Eigen::Matrix3f Mtree::Geometry::get_look_at_rot(Vector3 direction)
+		Eigen::Matrix3f get_look_at_rot(Vector3 direction)
 		{
 			Vector3 up{ 0,0,1 };
 			Vector3 axis = up.cross(direction);
