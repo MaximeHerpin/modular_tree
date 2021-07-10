@@ -14,7 +14,7 @@ def setup_addon_directory():
 
     all_files = os.listdir(".")
     for f in all_files:
-        if f.endswith(".py") or f.endswith(".pyd"):
+        if f.endswith(".py") or f.endswith(".pyd") or f.endswith(".so"):
             shutil.copy2(os.path.join(".",f), addon_dirpath)
         elif f == ADDON_SOURCE_DIR:
             shutil.copytree(os.path.join(".",f), os.path.join(addon_dirpath, f))
