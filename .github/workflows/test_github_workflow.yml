@@ -7,7 +7,7 @@ jobs:
         include:
           - os: windows-latest
             extension: bat
-          - os: linux-latest
+          - os: ubuntu-latest
             extension: sh
     runs-on: ${{ matrix.os }}
     steps:
