@@ -37,3 +37,4 @@ m_tree/m_tree.egg-info/
 *.pdb
 **/.vscode/
 m_tree.egg-info/
+*.exp

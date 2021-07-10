@@ -4,8 +4,6 @@ import sys
 import platform
 import subprocess
 
-from setuptools import setup, Extension
-from setuptools.command.build_ext import build_ext
 from distutils.version import LooseVersion
 
 
@@ -30,12 +28,13 @@ def install():
 
     
 def install_vcpkg_dependencies():
-    extension = ".bat" if platform.system() == "Windows" else ".sh"
-    subprocess.run(f"bootstrap-vcpkg{extension}", cwd=VCPKG_PATH, shell=True)
-
+    if platform.system() == "Windows":
+        subprocess.run(f"bootstrap-vcpkg.bat", cwd=VCPKG_PATH, shell=True)
+    else:
+        subprocess.run(["sh", "./bootstrap-vcpkg.sh"], cwd=VCPKG_PATH, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     triplet = ":x64-windows" if platform.system() == "Windows" else "x64-linux"
     for package in PACKAGES:
-        subprocess.run(["vcpkg", "install", package+triplet], cwd=VCPKG_PATH, shell=True)
+        subprocess.run(["./vcpkg", "install", package+triplet], cwd=VCPKG_PATH, shell=True)
 
 
 def build():
