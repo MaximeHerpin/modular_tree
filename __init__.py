@@ -11,15 +11,24 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import os
+from pathlib import Path
 from . import python_classes
-from .version import VERSION
+
+VERSION_FILEPATH = os.path.join(Path(__file__).parent, "VERSION")
+
+
+def get_version():
+    with open(VERSION_FILEPATH, "r") as f:
+        return tuple(int(i) for i in f.read().split("_"))
+
 
 bl_info = {
     "name" : "Modular Tree",
     "author" : "Maxime",
     "description" : "create trees",
     "blender" : (2, 83, 0),
-    "version" : VERSION,
+    "version" : get_version(),
     "location" : "",
     "warning" : "",
     "category" : "Generic"
