@@ -50,4 +50,5 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
           files: ./modular_tree_windows/modular_tree_${{ steps.vars.outputs.version }}_windows.zip ./modular_tree_linux/modular_tree_${{ steps.vars.outputs.version }}_linux.zip
+          release: Release V${{ steps.vars.outputs.version }}
 
