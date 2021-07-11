@@ -35,12 +35,12 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: checkout
+        uses: actions/checkout@v2
       - name: Download build artifacts
         uses: actions/download-artifact@v2
       - name: Display structure of downloaded files
         run: ls -R
-      - name: checkout
-        uses: actions/checkout@v2
       - name: Get version
         id: vars
         run: echo ::set-output name=version::$(cat VERSION)
