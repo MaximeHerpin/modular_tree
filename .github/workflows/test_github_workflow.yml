@@ -52,7 +52,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: ./modular_tree_windows/modular_tree_${{ steps.vars.outputs.version }}_windows.zip ./modular_tree_linux/modular_tree_${{ steps.vars.outputs.version }}_linux.zip
           release: Release V${{ steps.vars.outputs.version }}${{ env.STATUS }}
-          tag: test_tag
+          tag: ${{ steps.vars.outputs.version }}${{ env.STATUS }}
           message: V${{ steps.vars.outputs.version }}
           body: ''
 
