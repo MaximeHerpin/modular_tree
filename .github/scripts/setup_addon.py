@@ -3,13 +3,16 @@ import os
 import zipfile
 from pathlib import Path
 import shutil
+import platform
+
 
 
 TMP_DIRPATH = r"./tmp"
 ADDON_SOURCE_DIR = "python_classes"
 
 def setup_addon_directory():
-    addon_dirpath = os.path.join(TMP_DIRPATH, f"modular_tree")
+    plateform_name = "windows" if platform.system() == "Windows" else "linux"
+    addon_dirpath = os.path.join(TMP_DIRPATH, f"modular_tree_{plateform_name}")
     Path(addon_dirpath).mkdir(exist_ok=True, parents=True)
 
     all_files = os.listdir(".")
