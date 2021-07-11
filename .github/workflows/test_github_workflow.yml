@@ -39,10 +39,11 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           path: ./build_artefacts
+      - name: Display structure of downloaded files
+        run: ls -R
       - name: Update release
         uses: johnwbyrd/update-release@v1.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
-          files: ./build_artefacts/modular_tree_windows.zip ./build_artefacts/modular_tree_linux.zip
 
