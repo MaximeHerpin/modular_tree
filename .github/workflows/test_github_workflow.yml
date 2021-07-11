@@ -54,4 +54,5 @@ jobs:
           release: Release V${{ steps.vars.outputs.version }}${{ env.STATUS }}
           tag: test_tag
           message: V${{ steps.vars.outputs.version }}
+          body: ''
 
