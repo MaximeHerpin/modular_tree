@@ -6,13 +6,14 @@ import shutil
 import platform
 
 
-
 TMP_DIRPATH = r"./tmp"
 ADDON_SOURCE_DIR = "python_classes"
+VERSION_FILEPATH = os.path.join(Path(__file__).parent.parent.parent, "VERSION")
 
 def setup_addon_directory():
     plateform_name = "windows" if platform.system() == "Windows" else "linux"
-    addon_dirpath = os.path.join(TMP_DIRPATH, f"modular_tree_{plateform_name}")
+    version = read_version()
+    addon_dirpath = os.path.join(TMP_DIRPATH, f"modular_tree_{version}_{plateform_name}")
     Path(addon_dirpath).mkdir(exist_ok=True, parents=True)
 
     all_files = os.listdir(".")
@@ -28,6 +29,11 @@ def create_zip(input_dir, output_dir):
     basename = os.path.join(output_dir, Path(input_dir).stem)
     filepath = shutil.make_archive(basename, "zip", input_dir)
     return filepath
+
+
+def read_version():
+    with open(VERSION_FILEPATH, "r") as f:
+        return f.read()
 
 if __name__ == "__main__":
     addon_dirpath = setup_addon_directory()
