@@ -15,20 +15,13 @@ import os
 from pathlib import Path
 from . import python_classes
 
-VERSION_FILEPATH = os.path.join(Path(__file__).parent, "VERSION")
-
-
-def get_version():
-    with open(VERSION_FILEPATH, "r") as f:
-        return tuple(int(i) for i in f.read().split("_"))
-
 
 bl_info = {
     "name" : "Modular Tree",
     "author" : "Maxime",
     "description" : "create trees",
     "blender" : (2, 83, 0),
-    "version" : get_version(),
+    "version" : (4, 0, 0),
     "location" : "",
     "warning" : "",
     "category" : "Generic"
