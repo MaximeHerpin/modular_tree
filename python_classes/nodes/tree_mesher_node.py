@@ -43,7 +43,7 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         else:
             tree_mesh = tree_obj.data
             tree_mesh.clear_geometry()
-
+        bpy.context.view_layer.objects.active = tree_obj
         self.fill_blender_mesh(tree_mesh, cp_mesh)
    
     def fill_blender_mesh(self, mesh, cpp_mesh):
