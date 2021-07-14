@@ -14,14 +14,15 @@ def setup_addon_directory():
     plateform_name = "windows" if platform.system() == "Windows" else "linux"
     version = read_version()
     addon_dirpath = os.path.join(TMP_DIRPATH, f"modular_tree_{version}_{plateform_name}")
-    Path(addon_dirpath).mkdir(exist_ok=True, parents=True)
+    root = os.path.join(addon_dirpath, "modular_tree")
+    Path(root).mkdir(exist_ok=True, parents=True)
 
     all_files = os.listdir(".")
     for f in all_files:
         if f.endswith(".py") or f.endswith(".pyd") or f.endswith(".so"):
-            shutil.copy2(os.path.join(".",f), addon_dirpath)
+            shutil.copy2(os.path.join(".",f), root)
         elif f == ADDON_SOURCE_DIR:
-            shutil.copytree(os.path.join(".",f), os.path.join(addon_dirpath, f))
+            shutil.copytree(os.path.join(".",f), os.path.join(root, f))
 
     return addon_dirpath
 

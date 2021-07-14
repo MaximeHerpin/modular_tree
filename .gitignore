@@ -39,3 +39,4 @@ m_tree/m_tree.egg-info/
 m_tree.egg-info/
 *.exp
 */binaries/
+tmp/*
