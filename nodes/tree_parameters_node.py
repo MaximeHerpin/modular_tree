@@ -13,29 +13,29 @@ from ..tree import MTree
 class MtreeParameters(Node, BaseNode):
     bl_label = "Tree parameters"
     
-    auto_update = BoolProperty(update = BaseNode.property_changed)
-    mesh_type = bpy.props.EnumProperty(
+    auto_update: BoolProperty(update = BaseNode.property_changed)
+    mesh_type: bpy.props.EnumProperty(
         items=[('final', 'Final', ''), ('preview', 'Preview', '')],
         name="output",
         default="preview", update = BaseNode.property_changed)
-    resolution = IntProperty(min=0, default=16, update = BaseNode.property_changed)
-    create_leafs = BoolProperty(default = False, update = BaseNode.property_changed)
-    leaf_amount = IntProperty(min=1, default=3000, update = BaseNode.property_changed)
-    leaf_max_radius = FloatProperty(min=0, default=.1, update = BaseNode.property_changed)
-    leaf_dupli_object = PointerProperty(type=bpy.types.Object, name="leaf", update = BaseNode.property_changed)
-    leaf_size = FloatProperty(min=0, default=.1, update = BaseNode.property_changed)
-    leaf_extremity_only = BoolProperty(name="extremities only", default=False, update = BaseNode.property_changed)
-    leaf_spread = FloatProperty(min=0, max=1, default=.2, update = BaseNode.property_changed)
-    leaf_flatten = FloatProperty(min=0, max=1, default=.2, update = BaseNode.property_changed)
-    leaf_weight = FloatProperty(min=-1, max=1, default=0, update = BaseNode.property_changed)
+    resolution: IntProperty(min=0, default=16, update = BaseNode.property_changed)
+    create_leafs: BoolProperty(default = False, update = BaseNode.property_changed)
+    leaf_amount: IntProperty(min=1, default=3000, update = BaseNode.property_changed)
+    leaf_max_radius: FloatProperty(min=0, default=.1, update = BaseNode.property_changed)
+    leaf_dupli_object: PointerProperty(type=bpy.types.Object, name="leaf", update = BaseNode.property_changed)
+    leaf_size: FloatProperty(min=0, default=.1, update = BaseNode.property_changed)
+    leaf_extremity_only: BoolProperty(name="extremities only", default=False, update = BaseNode.property_changed)
+    leaf_spread: FloatProperty(min=0, max=1, default=.2, update = BaseNode.property_changed)
+    leaf_flatten: FloatProperty(min=0, max=1, default=.2, update = BaseNode.property_changed)
+    leaf_weight: FloatProperty(min=-1, max=1, default=0, update = BaseNode.property_changed)
 
-    create_armature = BoolProperty(default=False, update = BaseNode.property_changed)
-    armature_min_radius = FloatProperty(min=0, max=1, default=.08, update = BaseNode.property_changed)
+    create_armature: BoolProperty(default=False, update = BaseNode.property_changed)
+    armature_min_radius: FloatProperty(min=0, max=1, default=.08, update = BaseNode.property_changed)
 
-    has_changed = BoolProperty(default = True) # has there been a change in the node tree or any of its parameters
-    active_tree_object = PointerProperty(type=bpy.types.Object) # referece to last tree made, used when updating
+    has_changed: BoolProperty(default = True) # has there been a change in the node tree or any of its parameters
+    active_tree_object: PointerProperty(type=bpy.types.Object) # referece to last tree made, used when updating
 
-    last_execution_info = StringProperty() # this propperty is not be in the properties variable in order to avoid loop
+    last_execution_info: StringProperty() # this propperty is not be in the properties variable in order to avoid loop
 
     properties = ["resolution", "create_leafs", "leaf_amount", "leaf_max_radius", "leaf_weight", "leaf_dupli_object", "leaf_size",
                   "leaf_extremity_only", "leaf_flatten", "leaf_spread", "mesh_type", "create_armature", "armature_min_radius"]
@@ -72,10 +72,10 @@ class MtreeParameters(Node, BaseNode):
         except IndexError:
             ShowMessageBox("The tree needs a trunk node in order to execute", "Invalid node tree", "ERROR")
             return
-        t0 = time.clock()
+        t0 = time.time()
         if change_level != "particle_system":
             trunk.execute(tree)
-        t1 = time.clock()
+        t1 = time.time()
 
         if self.create_armature:
             armature_ob = create_armature(self.armature_min_radius, tree, armature_ob)
@@ -91,14 +91,14 @@ class MtreeParameters(Node, BaseNode):
             if self.create_armature:
                 arm = tree_ob.modifiers.new("armature", type='ARMATURE')
                 arm.object = armature_ob
-        t2 = time.clock()
+        t2 = time.time()
         if self.create_leafs:
             if change_level in {"tree_execution", "leafs_emitter"}:
                 leaf_ob = generate_leafs_object(tree, self.leaf_amount, self.leaf_weight, self.leaf_max_radius, self.leaf_spread, self.leaf_flatten, self.leaf_extremity_only, leaf_ob, tree_ob)
             create_particle_system(leaf_ob, self.leaf_amount, self.leaf_dupli_object, self.leaf_size)
         elif leaf_ob != None: # if there should not be leafs yet an emitter exists, delete it
             bpy.data.objects.remove(leaf_ob, do_unlink=True) # delete leaf object
-        t3 = time.clock()
+        t3 = time.time()
         self.has_changed = False
         print("tree generation duration : {}".format(t1-t0))
         print("mesh creation duration : {}".format(t2-t1))
@@ -191,9 +191,9 @@ def get_current_object(tree_ob_type, active_tree):
 
 def generate_tree_object(ob, tree, resolution, tree_property="is_tree"):
     ''' Create the tree mesh/object '''
-    t0 = time.clock()
+    t0 = time.time()
     verts, faces, radii, uvs, bone_weights = tree.build_mesh_data(resolution) # tree mesh data
-    dt = time.clock() - t0
+    dt = time.time() - t0
     print("mesh data creation : {}".format(dt))
     mesh = bpy.data.meshes.new("tree")
     material = None # material of tree object
@@ -414,7 +414,7 @@ class ExecuteMtreeNodeTreeOperator(Operator):
     """Execute or update tree"""
     bl_idname = "object.mtree_execute_tree"
     bl_label = "Execute Mtree node tree"
-    node_group_name = StringProperty()
+    node_group_name: StringProperty()
 
     def execute(self, context):
         node = [i for i in bpy.data.node_groups[self.node_group_name].nodes if i.bl_idname == "MtreeParameters"][0]
@@ -426,7 +426,7 @@ class RandomizeTreeOperator(Operator):
     bl_idname = "mtree.randomize_tree"
     bl_label = "Randomize Mtree node tree"
     
-    node_group_name = StringProperty()
+    node_group_name: StringProperty()
 
     def execute(self, context):
         parameters_node = [i for i in bpy.data.node_groups[self.node_group_name].nodes if i.bl_idname == "MtreeParameters"][0]
@@ -443,7 +443,7 @@ class ResetActiveTreeObject(Operator):
     bl_idname = "mtree.reset_active_tree_object"
     bl_label = "Reset Active Tree Object"
     
-    node_group_name = StringProperty()
+    node_group_name: StringProperty()
 
     def execute(self, context):
         parameters_node = [i for i in bpy.data.node_groups[self.node_group_name].nodes if i.bl_idname == "MtreeParameters"][0]

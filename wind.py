@@ -55,8 +55,8 @@ class FastWind(Operator):
     bl_label = "Fast Wind"
     bl_options = {"REGISTER", "UNDO"}
 
-    strength = FloatProperty(default=1)
-    speed = FloatProperty(min=0, default=.5)
+    strength: FloatProperty(default=1)
+    speed: FloatProperty(min=0, default=.5)
 
     def draw(self, context):
         layout = self.layout

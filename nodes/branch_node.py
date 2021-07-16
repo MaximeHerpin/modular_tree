@@ -7,26 +7,26 @@ import random
 class MtreeBranch(Node, BaseNode):
     bl_label = "Branch Node"
 
-    seed = IntProperty(update = BaseNode.property_changed)
-    advanced_settings = BoolProperty(default=False, update = BaseNode.property_changed) # show advanced properties
-    amount = IntProperty(min=0, default=20, update = BaseNode.property_changed) # number of splits
-    split_angle = FloatProperty(min=0, max=1.5, default=.6, update = BaseNode.property_changed) # angle of a fork
-    max_split_number = IntProperty(min=0, default=3, update = BaseNode.property_changed) # number of forks per split
-    radius = FloatProperty(min=0, max=1, default=.6, update = BaseNode.property_changed) # radius of split
-    end_radius = FloatProperty(min=0, max=1, default=0, update = BaseNode.property_changed)
-    min_height = FloatProperty(min=0, max=.999, default=.1, name="start", update = BaseNode.property_changed) # min height at which a split occurs
+    seed: IntProperty(update = BaseNode.property_changed)
+    advanced_settings: BoolProperty(default=False, update = BaseNode.property_changed) # show advanced properties
+    amount: IntProperty(min=0, default=20, update = BaseNode.property_changed) # number of splits
+    split_angle: FloatProperty(min=0, max=1.5, default=.6, update = BaseNode.property_changed) # angle of a fork
+    max_split_number: IntProperty(min=0, default=3, update = BaseNode.property_changed) # number of forks per split
+    radius: FloatProperty(min=0, max=1, default=.6, update = BaseNode.property_changed) # radius of split
+    end_radius: FloatProperty(min=0, max=1, default=0, update = BaseNode.property_changed)
+    min_height: FloatProperty(min=0, max=.999, default=.1, name="start", update = BaseNode.property_changed) # min height at which a split occurs
     
-    length = FloatProperty(min=0, default=7, update = BaseNode.property_changed) # length of trunk
-    shape_start = FloatProperty(min=0, default=1, update = BaseNode.property_changed) # length at the base of the tree
-    shape_end = FloatProperty(min=0, default=1, update = BaseNode.property_changed) # length at the end of the tree
-    shape_convexity = FloatProperty(default=.3, update = BaseNode.property_changed) # how curved the length will be in function of the height of the branch
-    resolution = FloatProperty(min=.002, default=1, update = BaseNode.property_changed) # how many loops a branch has
-    randomness = FloatProperty(default=.15, update = BaseNode.property_changed) # how unregular the branches look
-    split_proba = FloatProperty(min=0, max=1, default=.1, update = BaseNode.property_changed) # how likely is a branch to fork
-    split_flatten = FloatProperty(min=0, max=1, default=.5, update = BaseNode.property_changed) # how constraint on the horizontal axis the splits are
-    can_spawn_leafs = BoolProperty(default=True, update = BaseNode.property_changed)
-    gravity_strength = FloatProperty(default=.3, update = BaseNode.property_changed) # how much branches go towards the floor/sky
-    floor_avoidance = FloatProperty(min=0, default=1, update = BaseNode.property_changed) # how much the branches avoid the floor 
+    length: FloatProperty(min=0, default=7, update = BaseNode.property_changed) # length of trunk
+    shape_start: FloatProperty(min=0, default=1, update = BaseNode.property_changed) # length at the base of the tree
+    shape_end: FloatProperty(min=0, default=1, update = BaseNode.property_changed) # length at the end of the tree
+    shape_convexity: FloatProperty(default=.3, update = BaseNode.property_changed) # how curved the length will be in function of the height of the branch
+    resolution: FloatProperty(min=.002, default=1, update = BaseNode.property_changed) # how many loops a branch has
+    randomness: FloatProperty(default=.15, update = BaseNode.property_changed) # how unregular the branches look
+    split_proba: FloatProperty(min=0, max=1, default=.1, update = BaseNode.property_changed) # how likely is a branch to fork
+    split_flatten: FloatProperty(min=0, max=1, default=.5, update = BaseNode.property_changed) # how constraint on the horizontal axis the splits are
+    can_spawn_leafs: BoolProperty(default=True, update = BaseNode.property_changed)
+    gravity_strength: FloatProperty(default=.3, update = BaseNode.property_changed) # how much branches go towards the floor/sky
+    floor_avoidance: FloatProperty(min=0, default=1, update = BaseNode.property_changed) # how much the branches avoid the floor 
 
 
     properties = ["seed", "amount", "split_angle", "max_split_number", "radius", "end_radius", "min_height", "length", "shape_start", "shape_end",

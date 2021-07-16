@@ -8,15 +8,15 @@ from ..tree import MTree
 class MtreeTrunk(Node, BaseNode):
     bl_label = "Trunk Node"
     
-    seed = IntProperty(default=1, update = BaseNode.property_changed)
-    length = FloatProperty(min=0, default=25, update = BaseNode.property_changed) # length of trunk
-    radius = FloatProperty(min=.0005, default=.5, update = BaseNode.property_changed) # radius of trunk
-    end_radius = FloatProperty(min=0, max=1, default=0, update = BaseNode.property_changed) # radius at the end of the trunk
-    resolution = FloatProperty(min=.002, default=1, update = BaseNode.property_changed) # how many loops the trunk has
-    shape = FloatProperty(min=0.01, default=1, update = BaseNode.property_changed) # how the radius decreases with length
-    randomness = FloatProperty(min=0, max=0.5, default=.1, update = BaseNode.property_changed) 
-    axis_attraction = FloatProperty(min=0, max=1, default=.25, update = BaseNode.property_changed)
-    use_grease_pencil = BoolProperty(default=False, update = BaseNode.property_changed)
+    seed: IntProperty(default=1, update = BaseNode.property_changed)
+    length: FloatProperty(min=0, default=25, update = BaseNode.property_changed) # length of trunk
+    radius: FloatProperty(min=.0005, default=.5, update = BaseNode.property_changed) # radius of trunk
+    end_radius: FloatProperty(min=0, max=1, default=0, update = BaseNode.property_changed) # radius at the end of the trunk
+    resolution: FloatProperty(min=.002, default=1, update = BaseNode.property_changed) # how many loops the trunk has
+    shape: FloatProperty(min=0.01, default=1, update = BaseNode.property_changed) # how the radius decreases with length
+    randomness: FloatProperty(min=0, max=0.5, default=.1, update = BaseNode.property_changed) 
+    axis_attraction: FloatProperty(min=0, max=1, default=.25, update = BaseNode.property_changed)
+    use_grease_pencil: BoolProperty(default=False, update = BaseNode.property_changed)
 
     properties = ["seed", "length", "radius", "end_radius", "resolution", "shape", "randomness", "axis_attraction", "use_grease_pencil"]
     
@@ -57,7 +57,7 @@ class UpdateGreasePencil(Operator):
     bl_idname = "mtree.update_gp_strokes"
     bl_label = "Reset Active Tree Object"
     
-    node_group_name = StringProperty()
+    node_group_name: StringProperty()
 
     def execute(self, context):
         parameters_node = [i for i in bpy.data.node_groups[self.node_group_name].nodes if i.bl_idname == "MtreeParameters"][0]
