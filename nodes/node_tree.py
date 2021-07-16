@@ -25,8 +25,8 @@ class MtreeNodeTree(NodeTree):
     bl_label = "Mtree Node Tree"
     bl_icon = 'NODETREE'
 
-    preset_to_load = EnumProperty(name = "Presets", items = get_preset_list, description = "presets")
-    preset_to_save = StringProperty(name="name", default="default tree")
+    preset_to_load: EnumProperty(name = "Presets", items = get_preset_list, description = "presets")
+    preset_to_save: StringProperty(name="name", default="default tree")
 
     def save_as_json(self, return_string=False):
         ''' save node tree information in a json file '''
@@ -155,8 +155,8 @@ class MtreeSaveLoadPreset(Operator):
     bl_label = " Save or Load Preset"
     bl_options = {"REGISTER", "UNDO"}
  
-    node_group_name = StringProperty()
-    load = BoolProperty(default=False)
+    node_group_name: StringProperty()
+    load: BoolProperty(default=False)
 
     def execute(self, context):        
         node_tree = bpy.data.node_groups[self.node_group_name] # get node tree

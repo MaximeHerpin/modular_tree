@@ -7,11 +7,11 @@ from ..tree import MTree
 class MtreeRoots(Node, BaseNode):
     bl_label = "Roots Node"
     
-    seed = IntProperty(default=9, update = BaseNode.property_changed)
-    length = FloatProperty(min=0, default=14, update = BaseNode.property_changed) # length of trunk
-    resolution = FloatProperty(min=.002, default=2, update = BaseNode.property_changed) # how many loops the trunk has
-    split_proba = FloatProperty(min=0, max=1, default=.2, update = BaseNode.property_changed)
-    randomness = FloatProperty(min=0, max=0.5, default=.2, update = BaseNode.property_changed) 
+    seed: IntProperty(default=9, update = BaseNode.property_changed)
+    length: FloatProperty(min=0, default=14, update = BaseNode.property_changed) # length of trunk
+    resolution: FloatProperty(min=.002, default=2, update = BaseNode.property_changed) # how many loops the trunk has
+    split_proba: FloatProperty(min=0, max=1, default=.2, update = BaseNode.property_changed)
+    randomness: FloatProperty(min=0, max=0.5, default=.2, update = BaseNode.property_changed) 
 
     properties = ["seed", "length", "resolution", "split_proba", "randomness"]
     

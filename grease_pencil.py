@@ -43,7 +43,7 @@ class ConnectStrokes(Operator):
     bl_label = "connect strokes"
     bl_options = {"REGISTER", "UNDO"}
 
-    point_dist = FloatProperty(min=0.001, default=.8)
+    point_dist: FloatProperty(min=0.001, default=.8)
     
     def execute(self, context):
         process_gp_layer(self.point_dist)

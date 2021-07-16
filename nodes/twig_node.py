@@ -12,20 +12,20 @@ from random import random, seed
 class MtreeTwig(Node, BaseNode):
     bl_label = "Twig Node"
     
-    seed = IntProperty(default=1)
-    length = FloatProperty(min=.01, default=3)
-    radius = FloatProperty(min=0.001, default=.15)
-    branch_number = IntProperty(min=0, default=6)
-    randomness = FloatProperty(default=.7, min=0)
-    resolution = FloatProperty(min=.1, default=8)
-    gravity_strength = FloatProperty(default=4)
-    flatten = FloatProperty(min=0, max=1, default=.6)
-    leaf_object = PointerProperty(type=bpy.types.Object)
-    leaf_type = EnumProperty(
+    seed: IntProperty(default=1)
+    length: FloatProperty(min=.01, default=3)
+    radius: FloatProperty(min=0.001, default=.15)
+    branch_number: IntProperty(min=0, default=6)
+    randomness: FloatProperty(default=.7, min=0)
+    resolution: FloatProperty(min=.1, default=8)
+    gravity_strength: FloatProperty(default=4)
+    flatten: FloatProperty(min=0, max=1, default=.6)
+    leaf_object: PointerProperty(type=bpy.types.Object)
+    leaf_type: EnumProperty(
         items=[('palmate', 'Palmate', ''), ('serrate', 'Serrate', ''), ('palmatisate', 'Palmatisate', ''), ('custom', 'Custom', '')],
         name="leaf type",
         default="palmate")
-    leaf_size = FloatProperty(min=0, default=1)
+    leaf_size: FloatProperty(min=0, default=1)
 
     def init(self, context):
         self.name = MtreeTwig.bl_label
@@ -80,8 +80,8 @@ class TwigOperator(Operator):
     bl_label = " Make Twig"
     bl_options = {"REGISTER", "UNDO"}
  
-    node_group_name = StringProperty()
-    node_name = StringProperty()
+    node_group_name: StringProperty()
+    node_name: StringProperty()
 
     def execute(self, context):        
         node = bpy.data.node_groups[self.node_group_name].nodes[self.node_name]
