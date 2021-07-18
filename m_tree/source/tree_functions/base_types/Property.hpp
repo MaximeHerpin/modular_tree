@@ -20,7 +20,7 @@ namespace Mtree
         float max;
         float value;
 
-        ConstantProperty(float min, float max, float value) : min(min), max(max), value(value) {};
+        ConstantProperty(float min=0, float max=1, float value=1) : min(min), max(max), value(value) {};
 
         float execute(float x) override
         {
@@ -38,7 +38,7 @@ namespace Mtree
         float min_value;
         float max_value;
 
-        RandomProperty(float min, float max) : min_value(min), max_value(max) {};
+        RandomProperty(float min=0, float max=1) : min_value(min), max_value(max) {};
 
         float execute(float x) override
         {
@@ -54,17 +54,17 @@ namespace Mtree
         float y_max;
         float power;
 
-        SimpleCurveProperty(float x_min, float x_max, float y_min, float y_max, float power = 1) : 
+        SimpleCurveProperty(float x_min=0, float x_max=1, float y_min=0, float y_max=1, float power = 1) : 
             x_min(x_min), x_max(x_max), y_min(y_min), y_max(y_max), power(power) {};
 
         float execute(float x) override\
         {
-            float factor = std::clamp((x-x_min)/std::max(0.001f, (x_max - x_min)), 0.f, 1.f);
+            float factor = std::clamp((x - x_min) / std::max(0.001f, (x_max - x_min)), 0.f, 1.f);
             if (power > 0 && power != 1)
             {
                 factor = std::pow(factor, power);
             }
-            return y_min * (1-factor) + y_max * factor; 
+            return Geometry::lerp(y_min, y_max, factor); 
         }
     };
     

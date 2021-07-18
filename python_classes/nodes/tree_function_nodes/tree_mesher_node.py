@@ -1,8 +1,8 @@
 import time
 import numpy as np
 import bpy
-from ... import m_tree
-from .base_types.node import MtreeNode 
+from .... import m_tree
+from ..base_types.node import MtreeNode 
 
 
 class TreeMesherNode(bpy.types.Node, MtreeNode):

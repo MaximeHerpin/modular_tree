@@ -36,6 +36,7 @@ PYBIND11_MODULE(m_tree, m) {
         .def("add_child", &TreeFunction::add_child);
 
     py::class_<ConstantProperty, std::shared_ptr<ConstantProperty>>(m, "ConstantProperty")
+        .def(py::init<>())
         .def(py::init<float, float, float>())
         .def_readwrite("min", &ConstantProperty::min)
         .def_readwrite("max", &ConstantProperty::max)
@@ -43,13 +44,13 @@ PYBIND11_MODULE(m_tree, m) {
         ;
 
     py::class_<RandomProperty, std::shared_ptr<RandomProperty>>(m, "RandomProperty")
-        .def(py::init<float, float>())
+        .def(py::init<>())
         .def_readwrite("min", &RandomProperty::min_value)
         .def_readwrite("max", &RandomProperty::max_value)
         ;
 
     py::class_<SimpleCurveProperty, std::shared_ptr<SimpleCurveProperty>>(m, "SimpleCurveProperty")
-        .def(py::init<float, float, float, float, float>())
+        .def(py::init<>())
         .def_readwrite("x_min", &SimpleCurveProperty::x_min)
         .def_readwrite("y_min", &SimpleCurveProperty::y_min)
         .def_readwrite("x_max", &SimpleCurveProperty::x_max)
@@ -59,6 +60,9 @@ PYBIND11_MODULE(m_tree, m) {
 
     py::class_<PropertyWrapper, std::shared_ptr<PropertyWrapper>>(m, "PropertyWrapper")
         .def(py::init<>())
+        .def(py::init<ConstantProperty&>())
+        .def(py::init<RandomProperty&>())
+        .def(py::init<SimpleCurveProperty&>())
         .def("set_constant_property", &PropertyWrapper::set_property<ConstantProperty>)
         .def("set_random_property", &PropertyWrapper::set_property<RandomProperty>)
         .def("set_simple_curve_property", &PropertyWrapper::set_property<SimpleCurveProperty>)

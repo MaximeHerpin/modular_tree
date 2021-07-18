@@ -17,6 +17,10 @@ node_categories = [
     MTreeNodeCategory('Branch', "Branch", items=[
         NodeItem("mt_BranchNode"),
     ]),
+    MTreeNodeCategory('Property', "Property", items=[
+        NodeItem("mt_RandomPropertyNode"),
+        NodeItem("mt_RampPropertyNode"),
+    ]),
 ]
 
 def register():

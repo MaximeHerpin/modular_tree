@@ -12,7 +12,7 @@ class MtreeFloatSocket(bpy.types.NodeSocket, MtreeSocket):
     max_value : bpy.props.FloatProperty(default = float('inf'))
     def update_value(self, context):
         self["property_value"] = max(self.min_value, min(self.max_value, self.property_value))
-        mesher = self.node.get_mesher_rec()
+        mesher = self.node.get_mesher()
         if mesher is not None:
             mesher.build_tree()
     property_value : bpy.props.FloatProperty(default = 0, update=update_value)
