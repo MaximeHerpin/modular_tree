@@ -13,7 +13,7 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
 
         self.add_input("mt_FloatSocket", "Start", min_value=0, max_value=1, property_name="start", property_value=.1)
         self.add_input("mt_FloatSocket", "End", min_value=0, max_value=1, property_name="end", property_value=.95)
-        self.add_input("mt_FloatSocket", "Length", min_value=0, property_name="length", property_value=9)
+        self.add_input("mt_PropertySocket", "Length", min_value=0, property_name="length", property_value=9)
         self.add_input("mt_FloatSocket", "Resolution", min_value=0.0001, property_name="resolution", property_value=3)
         self.add_input("mt_FloatSocket", "Start Radius", min_value=0.0001, property_name="start_radius", property_value=.4)
         self.add_input("mt_FloatSocket", "Randomness", min_value=0.0001, property_name="randomness", property_value=.5)

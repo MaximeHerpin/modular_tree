@@ -170,6 +170,7 @@ namespace Mtree
 						{
 							break;
 						}
+						float factor = (current_length - absolute_start) / std::max(0.001f, absolute_end - absolute_start);
 						tangent = rot * tangent;
 						Geometry::project_on_plane(tangent, node.direction);
 						tangent.normalize();
@@ -180,7 +181,7 @@ namespace Mtree
 						NodeChild child{Node{child_direction, node.tangent, 1/(resolution+0.001f), child_radius, id}, position_in_parent};
 						node.children.push_back(std::make_shared<NodeChild>(std::move(child)));
 						auto& child_node = node.children.back()->node;
-						child_node.growthInfo = std::make_unique<BranchGrowthInfo>(length, node.radius, child_node.length);
+						child_node.growthInfo = std::make_unique<BranchGrowthInfo>(length.execute(factor), node.radius, child_node.length);
 						origins.push_back(std::ref(child_node));
 						position_in_parent += position_in_parent_step;
 						if (i > 0)

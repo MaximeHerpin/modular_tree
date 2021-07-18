@@ -88,7 +88,11 @@ class MtreeFunctionNode(MtreeNode):
         
         for input_socket in self.inputs:
             if input_socket.is_property:
-                setattr(function_instance, input_socket.property_name, input_socket.property_value)
+                if input_socket.bl_idname == "mt_PropertySocket":
+                    property = input_socket.get_property()
+                    setattr(function_instance, input_socket.property_name, property)
+                else:
+                    setattr(function_instance, input_socket.property_name, input_socket.property_value)
         
         for child in self.get_child_nodes():
             if isinstance(child, MtreeFunctionNode):

@@ -4,6 +4,7 @@
 #include "./base_types/TreeFunction.hpp"
 #include "source/utilities/NodeUtilities.hpp"
 #include "source/utilities/GeometryUtilities.hpp"
+#include "source/tree_functions/base_types/Property.hpp"
 
 
 namespace Mtree
@@ -40,7 +41,7 @@ namespace Mtree
 		float start;
 		float end;
 		float branches_density = 2;
-		float length = 7;
+		PropertyWrapper length{ConstantProperty(0,1000,14)};
 		float start_radius = .3f;
 		float end_radius = .05;
 		float break_chance = .1;

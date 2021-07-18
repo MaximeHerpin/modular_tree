@@ -8,6 +8,7 @@
 
 #include "source/mesh/Mesh.hpp"
 #include "source/tree/Tree.hpp"
+#include "source/tree_functions/base_types/Property.hpp"
 #include "source/tree_functions/TrunkFunction.hpp"
 #include "source/tree_functions/BranchFunction.hpp"
 #include "source/tree_functions/GrowthFunction.hpp"
@@ -33,6 +34,35 @@ PYBIND11_MODULE(m_tree, m) {
 
     py::class_<TreeFunction, std::shared_ptr<TreeFunction>>(m, "TreeFunction")
         .def("add_child", &TreeFunction::add_child);
+
+    py::class_<ConstantProperty, std::shared_ptr<ConstantProperty>>(m, "ConstantProperty")
+        .def(py::init<float, float, float>())
+        .def_readwrite("min", &ConstantProperty::min)
+        .def_readwrite("max", &ConstantProperty::max)
+        .def_readwrite("value", &ConstantProperty::value)
+        ;
+
+    py::class_<RandomProperty, std::shared_ptr<RandomProperty>>(m, "RandomProperty")
+        .def(py::init<float, float>())
+        .def_readwrite("min", &RandomProperty::min_value)
+        .def_readwrite("max", &RandomProperty::max_value)
+        ;
+
+    py::class_<SimpleCurveProperty, std::shared_ptr<SimpleCurveProperty>>(m, "SimpleCurveProperty")
+        .def(py::init<float, float, float, float, float>())
+        .def_readwrite("x_min", &SimpleCurveProperty::x_min)
+        .def_readwrite("y_min", &SimpleCurveProperty::y_min)
+        .def_readwrite("x_max", &SimpleCurveProperty::x_max)
+        .def_readwrite("y_max", &SimpleCurveProperty::y_max)
+        .def_readwrite("power", &SimpleCurveProperty::power)
+        ;
+
+    py::class_<PropertyWrapper, std::shared_ptr<PropertyWrapper>>(m, "PropertyWrapper")
+        .def(py::init<>())
+        .def("set_constant_property", &PropertyWrapper::set_property<ConstantProperty>)
+        .def("set_random_property", &PropertyWrapper::set_property<RandomProperty>)
+        .def("set_simple_curve_property", &PropertyWrapper::set_property<SimpleCurveProperty>)
+        ;
 
     py::class_<TrunkFunction, std::shared_ptr<TrunkFunction>, TreeFunction>(m, "TrunkFunction")
         .def(py::init<>())
