@@ -42,18 +42,18 @@ namespace Mtree
 		float end;
 		float branches_density = 2;
 		PropertyWrapper length{ConstantProperty(0,1000,14)};
-		float start_radius = .3f;
+		PropertyWrapper start_radius { ConstantProperty(0,1,.4) };
 		float end_radius = .05;
 		float break_chance = .1;
 		float resolution = .5f;
-		float randomness = .1f;
+		PropertyWrapper randomness { ConstantProperty(0,100,.4) };
 		float phillotaxis = 137.5f;
 		float gravity_strength = 1;
 		float stiffness = 1;
 		float up_attraction = 1;
 		float flatness = 0;
 		float split_radius = .9f;
-		float start_angle = 45.0f;
+		PropertyWrapper start_angle{ ConstantProperty(0,180,45) };
 		float split_angle = 45.0f;
 		float split_proba = .05f;
 

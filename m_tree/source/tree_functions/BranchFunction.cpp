@@ -54,10 +54,10 @@ namespace Mtree
 		BranchGrowthInfo& info = static_cast<BranchGrowthInfo&>(*node.growthInfo);
 		float factor_in_branch = info.current_length / info.desired_length;
 		
-		Vector3 child_direction = node.direction + Geometry::random_vec() * randomness / resolution;		
+		Vector3 child_direction = node.direction + Geometry::random_vec() * randomness.execute(factor_in_branch) / resolution;		
 		child_direction += Vector3{0,0,1} * up_attraction / resolution / 50 * (1 - node.direction.z());
 		child_direction.normalize();
-		float child_radius = info.origin_radius * Geometry::lerp(start_radius, end_radius, factor_in_branch);
+		float child_radius = Geometry::lerp(info.origin_radius, info.origin_radius * end_radius, factor_in_branch);
 		float child_length = std::min(1/resolution, info.desired_length - info.current_length);
 		
 		NodeChild child{ Node{child_direction, node.tangent, child_length, child_radius, id}, 1 };
@@ -84,7 +84,7 @@ namespace Mtree
 			node.children.push_back(std::make_shared<NodeChild>(std::move(child)));
 			auto& child_node = node.children.back()->node;
 
-			BranchGrowthInfo child_info{ info.desired_length, info.origin_radius, current_length };
+			BranchGrowthInfo child_info{ info.desired_length, info.origin_radius * split_radius, current_length };
 			child_node.growthInfo = std::make_unique<BranchGrowthInfo>(child_info);
 			if (current_length < info.desired_length)
 			{
@@ -174,14 +174,14 @@ namespace Mtree
 						tangent = rot * tangent;
 						Geometry::project_on_plane(tangent, node.direction);
 						tangent.normalize();
-						Vector3 child_direction = Geometry::lerp(node.direction, tangent, start_angle / 90);
+						Vector3 child_direction = Geometry::lerp(node.direction, tangent, start_angle.execute(factor) / 90);
 				 		child_direction.normalize();
-				 		float child_radius = node.radius * start_radius;
+				 		float child_radius = node.radius * start_radius.execute(factor);
 
 						NodeChild child{Node{child_direction, node.tangent, 1/(resolution+0.001f), child_radius, id}, position_in_parent};
 						node.children.push_back(std::make_shared<NodeChild>(std::move(child)));
 						auto& child_node = node.children.back()->node;
-						child_node.growthInfo = std::make_unique<BranchGrowthInfo>(length.execute(factor), node.radius, child_node.length);
+						child_node.growthInfo = std::make_unique<BranchGrowthInfo>(length.execute(factor), child_radius, child_node.length);
 						origins.push_back(std::ref(child_node));
 						position_in_parent += position_in_parent_step;
 						if (i > 0)
