@@ -54,7 +54,7 @@ namespace Mtree
 		BranchGrowthInfo& info = static_cast<BranchGrowthInfo&>(*node.growthInfo);
 		float factor_in_branch = info.current_length / info.desired_length;
 		
-		Vector3 child_direction = node.direction + Geometry::random_vec() * randomness.execute(factor_in_branch) / resolution;		
+		Vector3 child_direction = node.direction + Geometry::random_vec(flatness).normalized() * randomness.execute(factor_in_branch) / resolution;		
 		child_direction += Vector3{0,0,1} * up_attraction / resolution / 50 * (1 - node.direction.z());
 		child_direction.normalize();
 		float child_radius = Geometry::lerp(info.origin_radius, info.origin_radius * end_radius, factor_in_branch);
@@ -74,8 +74,11 @@ namespace Mtree
 
 		if (split)
 		{
-			child_direction = Geometry::random_vec();
+			child_direction = Geometry::random_vec(flatness);
 			child_direction = child_direction.cross(node.direction);
+			Vector3 flat_normal = Vector3{ 0,0,1 }.cross(node.direction).cross(node.direction).normalized();
+			child_direction -= child_direction.dot(flat_normal) * flatness * flat_normal;
+			child_direction.normalize();
 			child_direction = Geometry::lerp(node.direction, child_direction, split_angle/90);
 			child_direction.normalize();
 			child_radius = node.radius * split_radius;

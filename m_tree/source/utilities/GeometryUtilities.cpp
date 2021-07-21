@@ -47,10 +47,11 @@ namespace Mtree {
 			return vec;
 		}
 
-		Vector3 random_vec()
+		Vector3 random_vec(float flatness)
 		{
 			auto vec = Vector3{};
 			vec.setRandom();
+			vec.z() *= (1 - flatness);
 			return vec;
 		}
 

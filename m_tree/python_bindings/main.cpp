@@ -89,6 +89,7 @@ PYBIND11_MODULE(m_tree, m) {
         .def_readwrite("start_radius", &BranchFunction::start_radius)
         .def_readwrite("end_radius", &BranchFunction::end_radius)
         .def_readwrite("randomness", &BranchFunction::randomness)
+        .def_readwrite("flatness", &BranchFunction::flatness)
         .def_readwrite("gravity_strength", &BranchFunction::gravity_strength)
         .def_readwrite("stiffness", &BranchFunction::stiffness)
         .def_readwrite("up_attraction", &BranchFunction::up_attraction)

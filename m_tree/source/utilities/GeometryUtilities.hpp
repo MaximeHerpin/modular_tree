@@ -19,7 +19,7 @@ namespace Mtree { namespace Geometry
 
 	Vector3 random_vec_on_unit_sphere();
 	
-	Vector3 random_vec();
+	Vector3 random_vec(float flatness=0);
 
 	Vector3 get_orthogonal_vector(const Vector3& v);
 
