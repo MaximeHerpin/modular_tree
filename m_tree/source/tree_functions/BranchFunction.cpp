@@ -49,6 +49,10 @@ namespace Mtree
 	// grow extremity by one level (add one or more children)
 	void BranchFunction::grow_node_once(Node& node, const int id, std::queue<std::reference_wrapper<Node>>& results) 
 	{
+		bool break_branch = rand_gen.get_0_1() * resolution < break_chance;
+		if (break_branch)
+			return;
+
 		bool split = rand_gen.get_0_1() * resolution < split_proba; // should the node split into two children
 
 		BranchGrowthInfo& info = static_cast<BranchGrowthInfo&>(*node.growthInfo);

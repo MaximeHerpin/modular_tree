@@ -86,6 +86,7 @@ PYBIND11_MODULE(m_tree, m) {
         .def_readwrite("end", &BranchFunction::end)
         .def_readwrite("branches_density", &BranchFunction::branches_density)
         .def_readwrite("resolution", &BranchFunction::resolution)
+        .def_readwrite("break_chance", &BranchFunction::break_chance)
         .def_readwrite("start_radius", &BranchFunction::start_radius)
         .def_readwrite("end_radius", &BranchFunction::end_radius)
         .def_readwrite("randomness", &BranchFunction::randomness)
