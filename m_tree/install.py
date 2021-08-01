@@ -40,6 +40,7 @@ def install_vcpkg_dependencies():
             triplet = ":x64-windows"
             parameters = ["vcpkg", "install", package+triplet]
             print(f"running {' '.join(parameters)}")
+            print(VCPKG_PATH)
             print(os.path.exists(VCPKG_PATH))
             print(os.path.exists(os.path.join(VCPKG_PATH, "vcpkg.exe")))
             subprocess.check_call(parameters, cwd=VCPKG_PATH, shell=True)
