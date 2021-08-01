@@ -9,7 +9,7 @@ from distutils.version import LooseVersion
 
 VCPKG_PATH = os.path.join(os.path.dirname(__file__), "dependencies", "vcpkg")
 
-PACKAGES = ["eigen3"]
+PACKAGES = ["lodepng", "eigen3"]
 
 
 def install():
