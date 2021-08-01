@@ -9,7 +9,7 @@ from distutils.version import LooseVersion
 
 VCPKG_PATH = os.path.join(os.path.dirname(__file__), "dependencies", "vcpkg")
 
-PACKAGES = ["lodepng"]
+PACKAGES = ["eigen3"]
 
 
 def install():
@@ -24,12 +24,11 @@ def install():
             raise RuntimeError("CMake >= 3.1.0 is required on Windows")
 
     install_vcpkg_dependencies()
-    # build()
+    build()
 
     
 def install_vcpkg_dependencies():
     print(f"system is {platform.system()}")
-    print(PACKAGES)
     if platform.system() == "Windows":
         subprocess.run(f"bootstrap-vcpkg.bat", cwd=VCPKG_PATH, shell=True)
     else:
@@ -38,10 +37,6 @@ def install_vcpkg_dependencies():
         print(f"installing {package}")
         if platform.system() == "Windows":
             triplet = ":x64-windows"
-            print(VCPKG_PATH)
-            print(os.path.exists(VCPKG_PATH))
-            print(os.path.exists(os.path.join(VCPKG_PATH, "vcpkg.exe")))
-            # subprocess.check_call([os.path.join(VCPKG_PATH, "vcpkg.exe"), "install", package+triplet])
             subprocess.check_call([os.path.join(VCPKG_PATH, "vcpkg.exe"), "install", package + triplet])
         else:
             triplet = ":x64-linux"
