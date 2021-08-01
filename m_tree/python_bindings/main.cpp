@@ -21,16 +21,6 @@ namespace py = pybind11;
 
 
 PYBIND11_MODULE(m_tree, m) {
-    m.doc() = R"pbdoc(
-        Mtree plugin
-        -----------------------
-
-        .. currentmodule:: m_tree
-
-        .. autosummary::
-           :toctree: _generate
-
-    )pbdoc";
 
     py::class_<TreeFunction, std::shared_ptr<TreeFunction>>(m, "TreeFunction")
         .def("add_child", &TreeFunction::add_child);
@@ -156,6 +146,25 @@ PYBIND11_MODULE(m_tree, m) {
                 }
                 return result;
             })
+        .def("get_vector3_attribute", [](const Mesh& mesh, std::string name)
+            {
+                if (mesh.attributes.count(name) == 0)
+                {
+                    throw std::invalid_argument("attribute " + name + " doesn't exist");
+                }
+                auto& attribute = *static_cast<Attribute<Vector3>*>(mesh.attributes.at(name).get());
+                py::array_t<float> result(mesh.vertices.size() * 3);
+                py::buffer_info buff = result.request();
+
+                float* ptr = (float*)buff.ptr;
+                for (int i = 0; i < mesh.vertices.size(); i++)
+                {
+                    ptr[i*3] = attribute.data[i][0];
+                    ptr[i*3 + 1] = attribute.data[i][1];
+                    ptr[i*3 + 2] = attribute.data[i][2];
+                }
+                return result;
+            })        
         .def("get_polygons", [](const Mesh& mesh) 
             {
                 py::array_t<int> result(mesh.polygons.size() * 4);

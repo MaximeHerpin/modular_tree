@@ -14,6 +14,7 @@ namespace Mtree
         Mesh mesh;
         auto& smooth_attr = mesh.add_attribute<float>(AttributeNames::smooth_amount);
         auto& radius_attr = mesh.add_attribute<float>(AttributeNames::radius);
+        auto& direction_attr = mesh.add_attribute<Vector3>(AttributeNames::direction);
         for (auto& stem : tree.get_stems())
         {
             int start_index = mesh.vertices.size();
@@ -87,6 +88,7 @@ namespace Mtree
         auto& smooth_attr = *static_cast<Attribute<float>*> (mesh.attributes[AttributeNames::smooth_amount].get());
         auto& radius_attr = *static_cast<Attribute<float>*> (mesh.attributes[AttributeNames::radius].get());
         float smooth_amount = get_smooth_amount(radius, node.length);
+        auto& direction_attr = *static_cast<Attribute<Vector3>*> (mesh.attributes[AttributeNames::direction].get());
         for (int i = 0; i < radial_n_points; i++)
         {
             float angle = (float)i / radial_n_points * 2 * M_PI;
@@ -95,6 +97,7 @@ namespace Mtree
             int index = mesh.add_vertex(point);
             smooth_attr.data[index] = smooth_amount;
             radius_attr.data[index] = radius;
+            direction_attr.data[index] = node.direction;
         }
         return return_index;
     }
@@ -199,6 +202,10 @@ namespace Mtree
         
         auto& smooth_attr = *static_cast<Attribute<float>*> (mesh.attributes[AttributeNames::smooth_amount].get());
         auto& radius_attr = *static_cast<Attribute<float>*> (mesh.attributes[AttributeNames::radius].get());
+        auto& direction_attr = *static_cast<Attribute<Vector3>*> (mesh.attributes[AttributeNames::direction].get());
+
+        Vector3 direction = (mesh.vertices[child_base_indices[2]] - mesh.vertices[child_base_indices[0]]).cross(mesh.vertices[child_base_indices[1]] - mesh.vertices[child_base_indices[0]]).normalized();
+
         for (int i = 0; i < base_radial_n; i++)
         {
             int index = (i+offset)%base_radial_n;
@@ -207,7 +214,7 @@ namespace Mtree
             int added_vertex_index = mesh.add_vertex(vertex);
             smooth_attr.data[added_vertex_index] = smooth_amount;
             radius_attr.data[added_vertex_index] = child_radius;
-
+            direction_attr.data[added_vertex_index] = direction;
             mesh.polygons.push_back({
                 child_base_indices[index],
                 child_base_indices[(index + 1) % base_radial_n],

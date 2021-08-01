@@ -17,6 +17,7 @@ namespace Mtree
 		{
 			inline static std::string smooth_amount = "smooth_amount";
 			inline static std::string radius = "radius";
+			inline static std::string direction = "direction";
 		};
 
 		void mesh_node_rec(Node& node, Vector3 node_position, int radial_n_points, int base_start_index, Mesh& mesh) const;

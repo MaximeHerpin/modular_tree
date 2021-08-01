@@ -51,6 +51,7 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         verts = cpp_mesh.get_vertices()
         faces = cpp_mesh.get_polygons()
         radii = cpp_mesh.get_float_attribute("radius")
+        directions = cpp_mesh.get_vector3_attribute("direction")
         print("readback", (time.time() - t0)*1000)
         t0 = time.time()
 
@@ -58,6 +59,8 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         mesh.vertices.foreach_set("co", verts)
         mesh.attributes.new(name='radius', type='FLOAT', domain='POINT')
         mesh.attributes['radius'].data.foreach_set('value', radii)
+        mesh.attributes.new(name='direction', type='FLOAT_VECTOR', domain='POINT')
+        mesh.attributes['direction'].data.foreach_set('vector', directions)
         
         mesh.loops.add(len(faces))
         mesh.loops.foreach_set("vertex_index", faces)
