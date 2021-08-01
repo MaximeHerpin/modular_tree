@@ -5,7 +5,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: windows-2016
+          - os: windows-latest
             extension: bat
             name: windows
           - os: ubuntu-latest
