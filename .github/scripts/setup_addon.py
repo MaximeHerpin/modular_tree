@@ -18,12 +18,16 @@ def setup_addon_directory():
     Path(root).mkdir(exist_ok=True, parents=True)
 
     all_files = os.listdir(".")
+    if not [i for i in all_files if i.endswith(".pyd") or i.endswith(".so")]:
+        raise Exception("no libraries were output")
     for f in all_files:
         if f.endswith(".py") or f.endswith(".pyd") or f.endswith(".so"):
             shutil.copy2(os.path.join(".",f), root)
+            libraries_count+=1
         elif f == ADDON_SOURCE_DIR:
             shutil.copytree(os.path.join(".",f), os.path.join(root, f))
 
+    assert libraries_count > 0, "no libraries were output"
     return addon_dirpath
 
 def create_zip(input_dir, output_dir):
