@@ -28,6 +28,7 @@ def install():
 
     
 def install_vcpkg_dependencies():
+    print(f"system is {platform.system()}")
     if platform.system() == "Windows":
         subprocess.run(f"bootstrap-vcpkg.bat", cwd=VCPKG_PATH, shell=True)
     else:
@@ -35,18 +36,18 @@ def install_vcpkg_dependencies():
     for package in PACKAGES:
         if platform.system() == "Windows":
             triplet = ":x64-windows"
-            subprocess.run(["vcpkg", "install", package+triplet], cwd=VCPKG_PATH, shell=True)
+            # subprocess.run(["vcpkg", "install", package+triplet], cwd=VCPKG_PATH, shell=True)
         else:
             triplet = ":x64-linux"
-            subprocess.run([os.path.join(VCPKG_PATH, "vcpkg"), "install", package+triplet])
 
+        subprocess.run([os.path.join(VCPKG_PATH, "vcpkg"), "install", package+triplet])
 
 def build():
     build_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "build"))
     if not os.path.exists(build_dir):
         os.makedirs(build_dir)
 
-    subprocess.check_call(['cmake', "../"], cwd=build_dir)
+    subprocess.check_call(['cmake', "../", "-DPYBIND11_PYTHON_VERSION=3.9"], cwd=build_dir)
     subprocess.check_call(['cmake', '--build', '.', "--config", "Release"], cwd=build_dir)
     
 
