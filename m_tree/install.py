@@ -9,7 +9,7 @@ from distutils.version import LooseVersion
 
 VCPKG_PATH = os.path.join(os.path.dirname(__file__), "dependencies", "vcpkg")
 
-PACKAGES = ["lodepng", "eigen3"]
+PACKAGES = ["lodepng"]
 
 
 def install():
@@ -42,7 +42,7 @@ def install_vcpkg_dependencies():
             print(os.path.exists(VCPKG_PATH))
             print(os.path.exists(os.path.join(VCPKG_PATH, "vcpkg.exe")))
             # subprocess.check_call([os.path.join(VCPKG_PATH, "vcpkg.exe"), "install", package+triplet])
-            subprocess.check_call([os.path.join(VCPKG_PATH, "vcpkg.exe"), "install"])
+            subprocess.check_call([os.path.join(VCPKG_PATH, "vcpkg.exe"), "install", package + triplet])
         else:
             triplet = ":x64-linux"
             subprocess.check_call([os.path.join(VCPKG_PATH, "vcpkg"), "install", package+triplet])
