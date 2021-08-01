@@ -7,7 +7,7 @@ import subprocess
 from distutils.version import LooseVersion
 
 
-VCPKG_PATH = os.path.join(os.path.dirname(__file__), r"./dependencies/vcpkg/")
+VCPKG_PATH = os.path.join(os.path.dirname(__file__), "dependencies", "vcpkg")
 
 PACKAGES = ["eigen3"]
 
