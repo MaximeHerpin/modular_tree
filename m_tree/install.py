@@ -38,11 +38,10 @@ def install_vcpkg_dependencies():
         print(f"installing {package}")
         if platform.system() == "Windows":
             triplet = ":x64-windows"
-            # subprocess.run(["vcpkg", "install", package+triplet], cwd=VCPKG_PATH, shell=True)
+            subprocess.run(["vcpkg", "install", package+triplet], cwd=VCPKG_PATH, shell=True)
         else:
             triplet = ":x64-linux"
-
-        subprocess.run([os.path.join(VCPKG_PATH, "vcpkg"), "install", package+triplet])
+            subprocess.run([os.path.join(VCPKG_PATH, "vcpkg"), "install", package+triplet])
 
 def build():
     build_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "build"))
