@@ -29,11 +29,13 @@ def install():
     
 def install_vcpkg_dependencies():
     print(f"system is {platform.system()}")
+    print(PACKAGES)
     if platform.system() == "Windows":
         subprocess.run(f"bootstrap-vcpkg.bat", cwd=VCPKG_PATH, shell=True)
     else:
         subprocess.run(os.path.join(VCPKG_PATH, "bootstrap-vcpkg.sh"))
     for package in PACKAGES:
+        print(f"installing {package}")
         if platform.system() == "Windows":
             triplet = ":x64-windows"
             # subprocess.run(["vcpkg", "install", package+triplet], cwd=VCPKG_PATH, shell=True)
