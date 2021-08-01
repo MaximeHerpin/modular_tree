@@ -24,7 +24,7 @@ def install():
             raise RuntimeError("CMake >= 3.1.0 is required on Windows")
 
     install_vcpkg_dependencies()
-    build()
+    # build()
 
     
 def install_vcpkg_dependencies():
@@ -33,14 +33,14 @@ def install_vcpkg_dependencies():
         subprocess.run(f"bootstrap-vcpkg.bat", cwd=VCPKG_PATH, shell=True)
     else:
         subprocess.run(os.path.join(VCPKG_PATH, "bootstrap-vcpkg.sh"))
-    for package in PACKAGES:
-        if platform.system() == "Windows":
-            triplet = ":x64-windows"
-            # subprocess.run(["vcpkg", "install", package+triplet], cwd=VCPKG_PATH, shell=True)
-        else:
-            triplet = ":x64-linux"
+    # for package in PACKAGES:
+    #     if platform.system() == "Windows":
+    #         triplet = ":x64-windows"
+    #         # subprocess.run(["vcpkg", "install", package+triplet], cwd=VCPKG_PATH, shell=True)
+    #     else:
+    #         triplet = ":x64-linux"
 
-        subprocess.run([os.path.join(VCPKG_PATH, "vcpkg"), "install", package+triplet])
+    #     subprocess.run([os.path.join(VCPKG_PATH, "vcpkg"), "install", package+triplet])
 
 def build():
     build_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "build"))
