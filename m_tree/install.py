@@ -41,7 +41,7 @@ def install_vcpkg_dependencies():
             print(VCPKG_PATH)
             print(os.path.exists(VCPKG_PATH))
             print(os.path.exists(os.path.join(VCPKG_PATH, "vcpkg.exe")))
-            subprocess.check_call([os.path.join(VCPKG_PATH, "vcpkg.exe"), "install", package+triplet])
+            # subprocess.check_call([os.path.join(VCPKG_PATH, "vcpkg.exe"), "install", package+triplet])
             subprocess.check_call([os.path.join(VCPKG_PATH, "vcpkg.exe"), "install", package])
         else:
             triplet = ":x64-linux"
