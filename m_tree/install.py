@@ -38,7 +38,9 @@ def install_vcpkg_dependencies():
         print(f"installing {package}")
         if platform.system() == "Windows":
             triplet = ":x64-windows"
-            subprocess.run(["vcpkg", "install", package+triplet], cwd=VCPKG_PATH, shell=True)
+            parameters = ["vcpkg", "install", package+triplet]
+            print(f"running {' '.join(parameters)}")
+            subprocess.run(parameters, cwd=VCPKG_PATH, shell=True)
         else:
             triplet = ":x64-linux"
             subprocess.run([os.path.join(VCPKG_PATH, "vcpkg"), "install", package+triplet])
