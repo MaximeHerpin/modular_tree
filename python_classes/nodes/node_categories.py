@@ -17,6 +17,9 @@ node_categories = [
     MTreeNodeCategory('Branch', "Branch", items=[
         NodeItem("mt_BranchNode"),
     ]),
+    MTreeNodeCategory('Modifiers', "Modifiers", items=[
+        NodeItem("mt_PipeRadiusNode"),
+    ]),
     MTreeNodeCategory('Property', "Property", items=[
         NodeItem("mt_RandomPropertyNode"),
         NodeItem("mt_RampPropertyNode"),

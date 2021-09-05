@@ -12,6 +12,7 @@
 #include "source/tree_functions/TrunkFunction.hpp"
 #include "source/tree_functions/BranchFunction.hpp"
 #include "source/tree_functions/GrowthFunction.hpp"
+#include "source/tree_functions/PipeRadiusFunction.hpp"
 #include "source/meshers/splines_mesher/BasicMesher.hpp"
 #include "source/meshers/manifold_mesher/ManifoldMesher.hpp"
 
@@ -23,6 +24,7 @@ namespace py = pybind11;
 PYBIND11_MODULE(m_tree, m) {
 
     py::class_<TreeFunction, std::shared_ptr<TreeFunction>>(m, "TreeFunction")
+        .def_readwrite("seed", &TreeFunction::seed)
         .def("add_child", &TreeFunction::add_child);
 
     py::class_<ConstantProperty, std::shared_ptr<ConstantProperty>>(m, "ConstantProperty")
@@ -67,6 +69,13 @@ PYBIND11_MODULE(m_tree, m) {
         .def_readwrite("shape", &TrunkFunction::shape)
         .def_readwrite("up_attraction", &TrunkFunction::up_attraction)
         .def_readwrite("randomness", &TrunkFunction::randomness)
+        ;
+
+    py::class_<PipeRadiusFunction, std::shared_ptr<PipeRadiusFunction>, TreeFunction>(m, "PipeRadiusFunction")
+        .def(py::init<>())
+        .def_readwrite("end_radius", &PipeRadiusFunction::end_radius)
+        .def_readwrite("constant_growth", &PipeRadiusFunction::constant_growth)
+        .def_readwrite("power", &PipeRadiusFunction::power)
         ;
     
     py::class_<BranchFunction, std::shared_ptr<BranchFunction>, TreeFunction>(m, "BranchFunction")

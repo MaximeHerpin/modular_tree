@@ -5,8 +5,9 @@ import nodeitems_utils
 from .branch_node import BranchNode
 from .tree_mesher_node import TreeMesherNode
 from .trunk_node import TrunkNode
+from .pipe_radius_node import PipeRadiusNode
 
-classes = [BranchNode, TreeMesherNode, TrunkNode]
+classes = [BranchNode, TreeMesherNode, TrunkNode, PipeRadiusNode]
 
 def register():
     for cls in classes:
