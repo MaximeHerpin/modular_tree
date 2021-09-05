@@ -1,15 +1,17 @@
+from random import randint
 import bpy
 from ..base_types.node import MtreeFunctionNode
 from ....m_tree import BranchFunction
 
 class BranchNode(bpy.types.Node, MtreeFunctionNode):
     bl_idname = "mt_BranchNode"
-    bl_label = "Branch Node"
+    bl_label = "Branches"
 
     tree_function = BranchFunction
 
     def init(self, context):
         self.add_input("mt_TreeSocket", "Tree", is_property=False)
+        self.add_input("mt_IntSocket", "Seed", min_value=0, property_name="seed", property_value=randint(0,1000))
         self.add_input("mt_FloatSocket", "Start", min_value=0, max_value=1, property_name="start", property_value=.1)
         self.add_input("mt_FloatSocket", "End", min_value=0, max_value=1, property_name="end", property_value=.95)
         self.add_input("mt_PropertySocket", "Length", min_value=0, property_name="length", property_value=9)
@@ -22,6 +24,7 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
         self.add_input("mt_FloatSocket", "Flatness", min_value=0, max_value=1, property_name="flatness", property_value=0.2)
         self.add_input("mt_FloatSocket", "Up Attraction", property_name="up_attraction", property_value=5)
         self.add_input("mt_FloatSocket", "Gravity Strength", property_name="gravity_strength", property_value=4)
+        self.add_input("mt_FloatSocket", "Stiffness", property_name="stiffness", property_value=.1)
         self.add_input("mt_FloatSocket", "Split proba", min_value=0, max_value=1, property_name="split_proba", property_value=.5)
         self.add_input("mt_FloatSocket", "Phillotaxis", min_value=0, max_value = 360, property_name="phillotaxis", property_value=137.5)
         self.add_input("mt_FloatSocket", "Split radius", min_value=0.0001, property_name="split_radius", property_value=.8)
