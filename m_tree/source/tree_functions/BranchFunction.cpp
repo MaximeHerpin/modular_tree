@@ -17,8 +17,11 @@ namespace Mtree
 	{
 		float horizontality = 1-abs(node.direction.z());
 		BranchGrowthInfo& info = static_cast<BranchGrowthInfo&>(*node.growthInfo);
-		info.age += 1/resolution * stiffness;
-		float displacement =  horizontality * info.cumulated_weight * gravity_strength / resolution / resolution / 1000 / (1+info.age);
+		info.age += 1/resolution;
+		float displacement =  horizontality * std::pow(info.cumulated_weight, .5f) * gravity_strength / resolution / resolution / 1000 / (1+info.age);
+		displacement *= std::exp(- std::abs(info.deviation_from_rest_pose / resolution * stiffness));
+		info.deviation_from_rest_pose += displacement;
+
 		Vector3 tangent = node.direction.cross(Vector3{0,0,-1}).normalized();
 		Eigen::AngleAxisf rot{displacement, tangent};
 		rot = rot * previous_rotations;

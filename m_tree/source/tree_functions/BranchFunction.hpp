@@ -19,9 +19,12 @@ namespace Mtree
 			float desired_length;
 			float current_length;
 			float origin_radius;
-			float cumulated_weight;
-			float age;
-			BranchGrowthInfo(float desired_length, float origin_radius, float current_length=0) : desired_length(desired_length), origin_radius(origin_radius), current_length(current_length){};
+			float cumulated_weight=0;
+			float deviation_from_rest_pose;
+			float age=0;
+			BranchGrowthInfo(float desired_length, float origin_radius, float current_length=0, float deviation=0) : 
+				desired_length(desired_length), origin_radius(origin_radius),
+				current_length(current_length), deviation_from_rest_pose(deviation){};
 		};
 
 
