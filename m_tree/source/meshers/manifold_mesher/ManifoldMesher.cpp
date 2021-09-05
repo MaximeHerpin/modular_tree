@@ -34,7 +34,6 @@ namespace Mtree
                 }
             }
         }
-        std::cout<<"max_index: "<< max << " , vertices_size: " << mesh.vertices.size() << std::endl;
         return mesh;
     }
 

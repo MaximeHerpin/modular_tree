@@ -7,25 +7,28 @@ from ..base_types.node import MtreeNode
 
 class TreeMesherNode(bpy.types.Node, MtreeNode):
     bl_idname = "mt_MesherNode"
-    bl_label = "Tree Mesher Node"
+    bl_label = "Tree Mesher"
 
 
     def init(self, context):
         self.add_output("mt_TreeSocket", "Tree", is_property=False)
 
+
+    def draw(self, context, layout):
+        valid_tree = self.get_tree_validity()
+        row = layout.row()
+        row.enabled = valid_tree
+        properties = row.operator("mtree.node_function", text="Generate Tree")
+        properties.node_tree_name = self.get_node_tree().name
+        properties.node_name = self.name
+        properties.function_name = "build_tree"
+
     def build_tree(self):
         tree = m_tree.Tree()
         trunk_function = self.outputs[0].links[0].to_node.construct_function()
         tree.set_trunk_function(trunk_function)
-        t0 = time.time()
         tree.execute_functions()
-        print("executing_functions:", (time.time() - t0) * 1000)
-        t0 = time.time()
-        
         cpp_mesh = self.mesh_tree(tree)
-        print("generating:", (time.time() - t0)*1000)
-
-        # self.test_time(cpp_mesh)
         self.output_object(cpp_mesh)
     
     def mesh_tree(self, tree):
@@ -47,13 +50,10 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         self.fill_blender_mesh(tree_mesh, cp_mesh)
    
     def fill_blender_mesh(self, mesh, cpp_mesh):
-        t0 = time.time()
         verts = cpp_mesh.get_vertices()
         faces = cpp_mesh.get_polygons()
         radii = cpp_mesh.get_float_attribute("radius")
         directions = cpp_mesh.get_vector3_attribute("direction")
-        print("readback", (time.time() - t0)*1000)
-        t0 = time.time()
 
         mesh.vertices.add(len(verts)//3)
         mesh.vertices.foreach_set("co", verts)
@@ -75,23 +75,14 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         # uv_layer = mesh.uv_layers.new()
         # uv_layer.data.foreach_set("uv", uv_data.flatten())
         mesh.update(calc_edges=True)    
-        print("filling mesh:", (time.time() - t0)*1000)
 
-    def draw(self, context, layout):
-        valid_tree = self.get_tree_validity()
-        row = layout.row()
-        row.enabled = valid_tree
-        properties = row.operator("mtree.node_function", text="press me !")
-        properties.node_tree_name = self.get_node_tree().name
-        properties.node_name = self.name
-        properties.function_name = "build_tree"
 
     def get_tree_validity(self):
         has_valid_child = len(self.outputs[0].links) == 1
-        loops_detected = self.detect_loop(self)
+        loops_detected = self.detect_loop_rec(self)
         return has_valid_child and not loops_detected
 
-    def detect_loop(self, node = None, seen_nodes = None):
+    def detect_loop_rec(self, node = None, seen_nodes = None):
         if node is None: 
             node = self
         if seen_nodes is None:
@@ -102,6 +93,6 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
                 if destination_node in seen_nodes:
                     return True
                 seen_nodes.add(destination_node)
-                self.detect_loop(destination_node, seen_nodes)
+                self.detect_loop_rec(destination_node, seen_nodes)
         return False
 
