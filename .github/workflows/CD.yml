@@ -12,7 +12,7 @@ jobs:
             extension: sh
             name: linux
           - os: macos-latest
-            extension: sh
+            extension: osx
             name: macOS
     runs-on: ${{ matrix.os }}
     steps:
