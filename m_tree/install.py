@@ -50,6 +50,8 @@ def build():
 
     subprocess.check_call(['cmake', "../", "-DPYBIND11_PYTHON_VERSION=3.9"], cwd=build_dir)
     subprocess.check_call(['cmake', '--build', '.', "--config", "Release"], cwd=build_dir)
+
+    print([i for i in os.listdir(os.path.join(os.path.dirname(__file__), "binaries", "Release"))])
     
 
 if __name__ == "__main__":
