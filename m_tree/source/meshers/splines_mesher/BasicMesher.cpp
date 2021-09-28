@@ -49,8 +49,12 @@ namespace Mtree
 				continue;
 			for (int i = 0; i < radial_resolution; i++)
 			{
-				std::vector<int> face{ n + i, n + radial_resolution + i, n + radial_resolution + (i + 1) % radial_resolution, n + (i + 1) % radial_resolution };
-				mesh.polygons.push_back(std::move(face));
+				int polygon_index = mesh.add_polygon();
+				mesh.polygons[polygon_index] = { 
+					n + i,
+					n + radial_resolution + i,
+					n + radial_resolution + (i + 1) % radial_resolution,
+					n + (i + 1) % radial_resolution };
 			}
 		}	
 	}

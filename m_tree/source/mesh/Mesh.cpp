@@ -21,4 +21,10 @@ namespace Mtree
 		}
 		return vertices.size() - 1;
 	}
+	int Mesh::add_polygon()
+	{
+		polygons.emplace_back();
+		uv_loops.emplace_back();
+		return  polygons.size() - 1;
+	}
 }

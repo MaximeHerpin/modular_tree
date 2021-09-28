@@ -188,6 +188,37 @@ PYBIND11_MODULE(m_tree, m) {
              		}
              	}
              	return result;
+            })
+        .def("get_uvs", [](const Mesh& mesh)
+            {
+                py::array_t<float> result(mesh.uvs.size() * 2);
+                py::buffer_info buff = result.request();
+
+                float* ptr = (float*)buff.ptr;
+                for (int i = 0; i < mesh.uvs.size(); i++)
+                {
+                    for (size_t j = 0; j < 2; j++)
+                    {
+                        ptr[i * 2 + j] = mesh.uvs[i][j];
+                    }
+                }
+
+                return result;
+            })
+        .def("get_uv_loops", [](const Mesh& mesh)
+            {
+                py::array_t<int> result(mesh.uv_loops.size() * 4);
+                py::buffer_info buff = result.request();
+
+                int* ptr = (int*)buff.ptr;
+                for (int i = 0; i < mesh.uv_loops.size(); i++)
+                {
+                    for (int j = 0; j < 4; j++)
+                    {
+                        ptr[i * 4 + j] = mesh.uv_loops[i][j];
+                    }
+                }
+                return result;
             });
 
 

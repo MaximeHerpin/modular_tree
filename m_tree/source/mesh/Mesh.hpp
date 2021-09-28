@@ -22,14 +22,16 @@ namespace Mtree
 		std::vector<Vector3> vertices;
 		std::vector<Vector3> normals;
 		std::vector<Vector2> uvs;
-		std::vector<std::vector<int>> polygons;
+		std::vector<std::array<int, 4>> polygons;
+		std::vector<std::array<int, 4>> uv_loops;
 		std::map<std::string, std::shared_ptr<AbstractAttribute>> attributes;
 
 		Mesh() {};
 		Mesh(std::vector<Vector3>&& vertices) { this->vertices = std::move(vertices); }
 		std::vector<std::vector<float>> get_vertices();
-		std::vector<std::vector<int>> get_polygons() { return this->polygons; };
+		std::vector<std::array<int, 4>> get_polygons() { return this->polygons; };
 		int add_vertex(const Vector3& position);
+		int add_polygon();
 		template <class T>
 		Attribute<T>& add_attribute(std::string name)
 		{

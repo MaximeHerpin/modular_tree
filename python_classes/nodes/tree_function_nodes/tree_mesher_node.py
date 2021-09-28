@@ -30,6 +30,7 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         tree.execute_functions()
         cpp_mesh = self.mesh_tree(tree)
         self.output_object(cpp_mesh)
+        print("hello")
     
     def mesh_tree(self, tree):
         mesher = m_tree.ManifoldMesher()
@@ -71,9 +72,13 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         mesh.polygons.foreach_set("loop_start", loop_start)
         mesh.polygons.foreach_set("loop_total", loop_total)
         
-        # uv_data = uvs[triangle_array]
-        # uv_layer = mesh.uv_layers.new()
-        # uv_layer.data.foreach_set("uv", uv_data.flatten())
+        uv_data = cpp_mesh.get_uvs()
+        uv_data.shape = (len(uv_data)//2, 2)
+        uv_loops = cpp_mesh.get_uv_loops()
+        uvs = uv_data[uv_loops].flatten()
+        uv_layer = mesh.uv_layers.new() if len(mesh.uv_layers) == 0 else mesh.uv_layers[0]
+        uv_layer.data.foreach_set("uv", uvs)
+        
         mesh.update(calc_edges=True)    
 
 
