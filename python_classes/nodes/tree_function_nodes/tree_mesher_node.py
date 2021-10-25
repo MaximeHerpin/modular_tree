@@ -30,7 +30,6 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         tree.execute_functions()
         cpp_mesh = self.mesh_tree(tree)
         self.output_object(cpp_mesh)
-        print("hello")
     
     def mesh_tree(self, tree):
         mesher = m_tree.ManifoldMesher()
