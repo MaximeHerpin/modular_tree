@@ -248,7 +248,7 @@ namespace
         float child_twist = get_child_twist(child.node, parent);
         int offset = (int)(child_twist / (2 * M_PI) * child_radial_n - child_radial_n / 4 + child_radial_n) % child_radial_n;
 
-        CircleDesignator child_base{ mesh.vertices.size(), mesh.uvs.size(), child_radial_n };
+        CircleDesignator child_base{ (int)mesh.vertices.size(), (int)mesh.uvs.size(), child_radial_n };
         child_base.uv_index = add_child_base_uvs(uv_y, parent, child, child_range, child_radial_n, parent_base.radial_n, mesh);
         add_child_base_geometry(child_base_indices, child_base, child.node.radius, child_pos, offset, smooth_amount, mesh);
         return child_base;
@@ -312,7 +312,7 @@ namespace Mtree
         auto& direction_attr = mesh.add_attribute<Vector3>(AttributeNames::direction);
         for (auto& stem : tree.get_stems())
         {
-            CircleDesignator start_circle{ mesh.vertices.size(), mesh.uvs.size(), radial_resolution };
+            CircleDesignator start_circle{ (int)mesh.vertices.size(), (int)mesh.uvs.size(), radial_resolution };
             add_circle(stem.position, stem.node, 0, radial_resolution, mesh, 0);
             mesh_node_rec(stem.node, stem.position, start_circle, mesh, 0);
         }
