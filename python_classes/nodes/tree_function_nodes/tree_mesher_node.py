@@ -13,15 +13,26 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
     def init(self, context):
         self.add_output("mt_TreeSocket", "Tree", is_property=False)
 
-
-    def draw(self, context, layout):
-        valid_tree = self.get_tree_validity()
-        row = layout.row()
-        row.enabled = valid_tree
-        properties = row.operator("mtree.node_function", text="Generate Tree")
+    def draw_generate(self, container):
+        properties = container.operator("mtree.node_function", text="Generate Tree")
         properties.node_tree_name = self.get_node_tree().name
         properties.node_name = self.name
         properties.function_name = "build_tree"
+
+    def draw_distribute_leaves(self, container):
+        properties = container.operator("mtree.add_leaves", text="Add leaves")
+        properties.object_id = self.get_current_tree_object().name
+
+
+    def draw(self, context, layout):
+        valid_tree = self.get_tree_validity()
+        generate_row = layout.row()
+        generate_row.enabled = valid_tree
+        self.draw_generate(generate_row)
+        leaves_row = layout.row()
+        leaves_row.enabled = valid_tree
+        self.draw_distribute_leaves(leaves_row)
+
 
     def build_tree(self):
         tree = m_tree.Tree()
@@ -37,15 +48,19 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         mesh_data = mesher.mesh_tree(tree)
         return mesh_data
 
-    def output_object(self, cp_mesh):
+
+    def get_current_tree_object(self):
         tree_obj = bpy.context.object
         if tree_obj is None:
             tree_mesh = bpy.data.meshes.new('tree')
             tree_obj = bpy.data.objects.new("tree", tree_mesh)
             bpy.context.collection.objects.link(tree_obj)
-        else:
-            tree_mesh = tree_obj.data
-            tree_mesh.clear_geometry()
+        return tree_obj
+
+    def output_object(self, cp_mesh):
+        tree_obj = self.get_current_tree_object()
+        tree_mesh = tree_obj.data
+        tree_mesh.clear_geometry()
         bpy.context.view_layer.objects.active = tree_obj
         self.fill_blender_mesh(tree_mesh, cp_mesh)
    
@@ -70,6 +85,8 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         mesh.polygons.add(len(faces)//4)
         mesh.polygons.foreach_set("loop_start", loop_start)
         mesh.polygons.foreach_set("loop_total", loop_total)
+        mesh.polygons.foreach_set('use_smooth',  np.ones(len(faces)//4, dtype=np.bool))
+        
         
         uv_data = cpp_mesh.get_uvs()
         uv_data.shape = (len(uv_data)//2, 2)
@@ -79,7 +96,6 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         uv_layer.data.foreach_set("uv", uvs)
         
         mesh.update(calc_edges=True)    
-
 
     def get_tree_validity(self):
         has_valid_child = len(self.outputs[0].links) == 1
