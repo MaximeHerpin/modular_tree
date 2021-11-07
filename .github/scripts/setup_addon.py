@@ -7,7 +7,8 @@ import platform
 
 
 TMP_DIRPATH = r"./tmp"
-ADDON_SOURCE_DIR = "python_classes"
+ADDON_SOURCE_DIRNAME = "python_classes"
+RESOURCES_DIRNAME = "resources"
 VERSION_FILEPATH = os.path.join(Path(__file__).parent.parent.parent, "VERSION")
 
 def setup_addon_directory():
@@ -21,9 +22,9 @@ def setup_addon_directory():
     if not [i for i in all_files if i.endswith(".pyd") or i.endswith(".so")]:
         raise Exception("no libraries were output")
     for f in all_files:
-        if f.endswith(".py") or f.endswith(".pyd") or f.endswith(".so") or f.endswith(".blend"):
+        if f.endswith(".py") or f.endswith(".pyd") or f.endswith(".so"):
             shutil.copy2(os.path.join(".",f), root)
-        elif f == ADDON_SOURCE_DIR:
+        elif f == ADDON_SOURCE_DIRNAME or f == RESOURCES_DIRNAME:
             shutil.copytree(os.path.join(".",f), os.path.join(root, f))
 
     return addon_dirpath
