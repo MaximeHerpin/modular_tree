@@ -12,7 +12,7 @@ namespace Mtree
 		void simulate_growth_rec(Node& node, int id);
 		void get_weight_rec(Node& node);
 		void apply_gravity_rec(Node& node, Eigen::Matrix3f curent_rotation);
-		void update_absolute_position_rec(Node& node, Vector3 node_position);
+		void update_absolute_position_rec(Node& node, const Vector3& node_position);
 
 	public:
 		int iterations = 5;

@@ -53,7 +53,7 @@ auto trunk = std::make_shared<TrunkFunction>();
 auto branches_healthy = std::make_shared<BranchFunction>();
 auto branches_dead = std::make_shared<BranchFunction>();
 branches_dead.length = RandomProperty{.1f,1f}; // dead branches will have a length between 10cm and 1m.
-branches_dead.start_radius = RandomProperty{.01f,.1f}; // dead branches will have a radius between 1% and 10% of the radius of the trunk.
+branches_dead.start_radius = ConstantProperty{.05f}; // dead branches will have a radius equal to 5% of the parent nodes
 
 trunk->add_child(branches_healthy); // both sets of branches are grown on top of the trunk
 trunk->add_child(branches_dead);

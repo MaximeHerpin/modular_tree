@@ -43,22 +43,22 @@ namespace Mtree
 	public:
 		float start;
 		float end;
-		float branches_density = 2;
-		PropertyWrapper length{ConstantProperty(0,1000,14)};
-		PropertyWrapper start_radius { ConstantProperty(0,1,.4) };
+		float branches_density = 2; // 0 < x
+		PropertyWrapper length{ConstantProperty(14)}; // x > 0
+		PropertyWrapper start_radius { ConstantProperty(.4) }; // 0 > x > 1
 		float end_radius = .05;
-		float break_chance = .1;
-		float resolution = .5f;
-		PropertyWrapper randomness { ConstantProperty(0,100,.4) };
+		float break_chance = .1; // 0 < x
+		float resolution = .5f; // 0 < x
+		PropertyWrapper randomness { ConstantProperty(.4) };
 		float phillotaxis = 137.5f;
 		float gravity_strength = 1;
 		float stiffness = 1;
 		float up_attraction = 1;
-		float flatness = 0;
-		float split_radius = .9f;
-		PropertyWrapper start_angle{ ConstantProperty(0,180,45) };
+		float flatness = 0; // 0 < x  < 1
+		float split_radius = .9f; // 0 < x < 1
+		PropertyWrapper start_angle{ ConstantProperty(45) }; // -180 < x < 180
 		float split_angle = 45.0f;
-		float split_proba = .05f;
+		float split_proba = .05f; // 0 < x
 
 		void execute(std::vector<Stem>& stems, int id, int parent_id) override;
 	};

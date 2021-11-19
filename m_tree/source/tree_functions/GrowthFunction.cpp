@@ -79,8 +79,7 @@ namespace Mtree
 		}
 		if (primary_growth) 
 		{
-			Vector3 child_direction = Geometry::random_vec();
-			child_direction = node.direction + Vector3{0,0,1} * gravitropism + Geometry::random_vec() * randomness;
+			Vector3 child_direction = node.direction + Vector3{0,0,1} * gravitropism + Geometry::random_vec() * randomness;
 			child_direction.normalize();
 			float child_radius = node.radius;
 			float child_length = branch_length * (info.vigor + .1f);
@@ -90,7 +89,7 @@ namespace Mtree
 			node.children.push_back(std::make_shared<NodeChild>(std::move(child)));
 			info.type = BioNodeInfo::NodeType::Branch;
 		}
-		if (primary_growth)
+		if (split)
 		{
 			info.philotaxis_angle += philotaxis_angle;
 			Vector3 tangent{ std::cos(info.philotaxis_angle), std::sin(info.philotaxis_angle), 0 };
@@ -152,7 +151,7 @@ namespace Mtree
 		}
 	}
 
-	void GrowthFunction::update_absolute_position_rec(Node& node, Vector3 node_position)
+	void GrowthFunction::update_absolute_position_rec(Node& node, const Vector3& node_position)
 	{
 		static_cast<BioNodeInfo*>(node.growthInfo.get())->absolute_position = node_position;
 		for (auto& child : node.children)
@@ -175,7 +174,7 @@ namespace Mtree
 		{
 			for (Stem& stem : stems) // the energy is not shared between stems
 			{
-				float target_light_flux = 1 + std::pow(i, 1.5);
+				float target_light_flux = 1 + std::pow((float)i, 1.5);
 				float light_flux = update_vigor_ratio_rec(stem.node); // get total available energy
 
 				if (target_light_flux > light_flux)

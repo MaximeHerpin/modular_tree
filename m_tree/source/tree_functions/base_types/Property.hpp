@@ -16,19 +16,13 @@ namespace Mtree
 
     struct ConstantProperty : Property
     {
-        float min;
-        float max;
         float value;
 
-        ConstantProperty(float min=0, float max=1, float value=1) : min(min), max(max), value(value) {};
+        ConstantProperty(float value=1) : value(value) {};
 
         float execute(float x) override
         {
-            if (max < min) // min max considered unbounded
-            {
-                return value;
-            }
-            return std::clamp(value, min, max);
+            return value;
         }
     };
     
@@ -72,7 +66,7 @@ namespace Mtree
     {
         std::shared_ptr<Property> property;
 
-        PropertyWrapper() { property = std::make_shared<ConstantProperty>(0, 100, 0); };
+        PropertyWrapper() { property = std::make_shared<ConstantProperty>(1); };
 
         template <class T>
         PropertyWrapper(T& property)

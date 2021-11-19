@@ -29,9 +29,7 @@ PYBIND11_MODULE(m_tree, m) {
 
     py::class_<ConstantProperty, std::shared_ptr<ConstantProperty>>(m, "ConstantProperty")
         .def(py::init<>())
-        .def(py::init<float, float, float>())
-        .def_readwrite("min", &ConstantProperty::min)
-        .def_readwrite("max", &ConstantProperty::max)
+        .def(py::init<float>())
         .def_readwrite("value", &ConstantProperty::value)
         ;
 

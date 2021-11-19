@@ -23,7 +23,7 @@ class MtreePropertySocket(bpy.types.NodeSocket, MtreeSocket):
             property = self.links[0].from_node.get_property()
             return PropertyWrapper(property)
         else:
-            property = ConstantProperty(0,-1,float(self.property_value))
+            property = ConstantProperty(float(self.property_value))
             wrapper = PropertyWrapper()
             wrapper.set_constant_property(property)
             return wrapper

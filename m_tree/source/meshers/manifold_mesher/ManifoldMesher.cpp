@@ -41,7 +41,7 @@ namespace
         auto& radius_attr = *static_cast<Attribute<float>*> (mesh.attributes[AttributeNames::radius].get());
         float smooth_amount = get_smooth_amount(radius, node.length);
         auto& direction_attr = *static_cast<Attribute<Vector3>*> (mesh.attributes[AttributeNames::direction].get());
-        for (int i = 0; i < radial_n_points; i++)
+        for (size_t i = 0; i < radial_n_points; i++)
         {
             float angle = (float)i / radial_n_points * 2 * M_PI;
             Vector3 point = cos(angle) * right + sin(angle) * up;
@@ -76,7 +76,7 @@ namespace
         return false;
     }
     
-    void bridge_circles(const CircleDesignator first_circle, const CircleDesignator second_circle, const int radial_n_points, Mesh& mesh, std::vector<IndexRange>* mask = nullptr)
+    void bridge_circles(const CircleDesignator& first_circle, const CircleDesignator& second_circle, const int radial_n_points, Mesh& mesh, std::vector<IndexRange>* mask = nullptr)
     {
         for (int i = 0; i < radial_n_points; i++)
         {
@@ -124,7 +124,7 @@ namespace
     std::vector<IndexRange> get_children_ranges(const Node& node, const int radial_n_points)
     {
         std::vector<IndexRange> ranges;
-        for (int i = 1; i < node.children.size(); i++)
+        for (size_t i = 1; i < node.children.size(); i++)
         {
             auto& child = node.children[i];
             float angle = get_branch_angle_around_parent(node, child->node);
@@ -138,7 +138,7 @@ namespace
     {
         int start = child_range.min_index + parent_base.vertex_index;
         std::vector<int> child_base_indices;
-        child_base_indices.resize(child_radial_n);
+        child_base_indices.resize((size_t)child_radial_n);
 
         for (int i = 0; i < child_radial_n / 2; i++)
         {
@@ -147,12 +147,12 @@ namespace
             int vertex_index = start + (i % (child_radial_n / 2));
 
             child_base_indices[i] = lower_index;
-            child_base_indices[child_radial_n - i - 1] = upper_index;
+            child_base_indices[(size_t)child_radial_n - i - 1] = upper_index;
         }
         return child_base_indices;
     }
     
-    void add_child_base_geometry(const std::vector<int> child_base_indices, const CircleDesignator child_base, const float child_radius, const Vector3& child_pos, const int offset, const float smooth_amount, Mesh& mesh)
+    void add_child_base_geometry(const std::vector<int>& child_base_indices, const CircleDesignator& child_base, const float child_radius, const Vector3& child_pos, const int offset, const float smooth_amount, Mesh& mesh)
     {
         auto& smooth_attr = *static_cast<Attribute<float>*> (mesh.attributes[ManifoldMesher::AttributeNames::smooth_amount].get());
         auto& radius_attr = *static_cast<Attribute<float>*> (mesh.attributes[ManifoldMesher::AttributeNames::radius].get());
@@ -162,13 +162,13 @@ namespace
         
         Vector3 child_base_center{ 0,0,0 };
         for (auto& i : child_base_indices)
-            child_base_center += mesh.vertices[i];
+            child_base_center += mesh.vertices[(size_t)i];
         child_base_center /= child_base_indices.size();
         
         for (int i = 0; i < child_base.radial_n; i++)
         {
             int index = (i + offset) % child_base.radial_n;
-            Vector3 vertex = mesh.vertices[child_base_indices[index]];
+            Vector3 vertex = mesh.vertices[child_base_indices[(size_t)index]];
             vertex = (vertex - child_base_center).normalized() * child_radius + child_pos;
             int added_vertex_index = mesh.add_vertex(vertex);
             smooth_attr.data[added_vertex_index] = smooth_amount;
@@ -238,7 +238,7 @@ namespace
         return circle_uv_start_index;
     }
 
-    CircleDesignator add_child_circle(const Node& parent, const NodeChild& child, const Vector3& child_pos, const Vector3& parent_pos, const CircleDesignator parent_base, const IndexRange child_range, const float uv_y, Mesh& mesh)
+    CircleDesignator add_child_circle(const Node& parent, const NodeChild& child, const Vector3& child_pos, const Vector3& parent_pos, const CircleDesignator& parent_base, const IndexRange child_range, const float uv_y, Mesh& mesh)
     {
         float smooth_amount = get_smooth_amount(child.node.radius, parent.length);
         
@@ -260,7 +260,7 @@ namespace
         return node_position + parent.direction * parent.length * child.position_in_parent + tangent * parent.radius;
     }
     
-    void mesh_node_rec(Node& node, Vector3 node_position, CircleDesignator base, Mesh& mesh, float uv_y)
+    void mesh_node_rec(const Node& node, const Vector3& node_position, const CircleDesignator& base, Mesh& mesh, const float uv_y)
     {
         if (node.children.size() == 0)
         {
