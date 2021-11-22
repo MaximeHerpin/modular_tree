@@ -316,7 +316,8 @@ namespace Mtree
             add_circle(stem.position, stem.node, 0, radial_resolution, mesh, 0);
             mesh_node_rec(stem.node, stem.position, start_circle, mesh, 0);
         }
-        MeshProcessing::Smoothing::smooth_mesh(mesh, 4, 1, &smooth_attr.data);
+        if (smooth_iterations > 0)
+            MeshProcessing::Smoothing::smooth_mesh(mesh, smooth_iterations, 1, &smooth_attr.data);
         return mesh;
     }
     

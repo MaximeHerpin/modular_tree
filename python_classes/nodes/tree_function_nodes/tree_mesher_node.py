@@ -4,11 +4,15 @@ import bpy
 from .... import m_tree
 from ..base_types.node import MtreeNode 
 
+def on_update_prop(node, context):
+    node.build_tree()
 
 class TreeMesherNode(bpy.types.Node, MtreeNode):
     bl_idname = "mt_MesherNode"
     bl_label = "Tree Mesher"
 
+    radial_resolution : bpy.props.IntProperty(name="Radial Resolution", default=32, min=3, update=on_update_prop)
+    smoothness : bpy.props.IntProperty(name="smoothness", default=4, min=0, update=on_update_prop)
 
     def init(self, context):
         self.add_output("mt_TreeSocket", "Tree", is_property=False)
@@ -18,23 +22,29 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         properties.node_tree_name = self.get_node_tree().name
         properties.node_name = self.name
         properties.function_name = "build_tree"
+        
+
+    def draw_properties(self, container):
+        container.prop(self, "radial_resolution")
+        container.prop(self, "smoothness")
 
     def draw_distribute_leaves(self, container):
         properties = container.operator("mtree.add_leaves", text="Add leaves")
         properties.object_id = self.get_current_tree_object().name
-
 
     def draw(self, context, layout):
         valid_tree = self.get_tree_validity()
         generate_row = layout.row()
         generate_row.enabled = valid_tree
         self.draw_generate(generate_row)
+        self.draw_properties(layout)
         leaves_row = layout.row()
         leaves_row.enabled = valid_tree
         self.draw_distribute_leaves(leaves_row)
 
-
     def build_tree(self):
+        if not self.get_tree_validity():
+            return
         tree = m_tree.Tree()
         trunk_function = self.outputs[0].links[0].to_node.construct_function()
         tree.set_trunk_function(trunk_function)
@@ -44,10 +54,10 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
     
     def mesh_tree(self, tree):
         mesher = m_tree.ManifoldMesher()
-        mesher.radial_n_points = 32
+        mesher.radial_n_points = self.radial_resolution
+        mesher.smooth_iterations = self.smoothness
         mesh_data = mesher.mesh_tree(tree)
         return mesh_data
-
 
     def get_current_tree_object(self):
         tree_obj = bpy.context.object

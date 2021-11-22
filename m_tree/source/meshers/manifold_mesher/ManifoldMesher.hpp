@@ -16,6 +16,7 @@ namespace Mtree
 		};
 		
 		int radial_resolution = 8;
+		int smooth_iterations = 4;
 		Mesh mesh_tree(Tree& tree) override;
 	};
 
