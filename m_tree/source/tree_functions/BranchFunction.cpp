@@ -5,35 +5,112 @@
 #include "source/utilities/NodeUtilities.hpp"
 #include "source/utilities/GeometryUtilities.hpp"
 
-namespace Mtree
+
+using namespace Mtree;
+
+namespace
 {
-	void BranchFunction::apply_gravity(Node& node)
+	void update_positions_rec(Node& node, const Vector3& position)
 	{
-		update_weight_rec(node);
-		apply_gravity_rec(node, Eigen::AngleAxisf::Identity());
-	}
-
-	void BranchFunction::apply_gravity_rec(Node& node, Eigen::AngleAxisf previous_rotations)
-	{
-		float horizontality = 1-abs(node.direction.z());
-		BranchGrowthInfo& info = static_cast<BranchGrowthInfo&>(*node.growthInfo);
-		info.age += 1/resolution;
-		float displacement =  horizontality * std::pow(info.cumulated_weight, .5f) * gravity_strength / resolution / resolution / 1000 / (1+info.age);
-		displacement *= std::exp(- std::abs(info.deviation_from_rest_pose / resolution * stiffness));
-		info.deviation_from_rest_pose += displacement;
-
-		Vector3 tangent = node.direction.cross(Vector3{0,0,-1}).normalized();
-		Eigen::AngleAxisf rot{displacement, tangent};
-		rot = rot * previous_rotations;
-
-		node.direction = rot * node.direction;
+		auto& info = static_cast<BranchFunction::BranchGrowthInfo&>(*node.growthInfo);
+		info.position = position;
 
 		for (auto& child : node.children)
 		{
-			apply_gravity_rec(child->node, rot);
+			Vector3 child_position = position + node.direction * node.length * child->position_in_parent;
+			update_positions_rec(child->node, child_position);
 		}
 	}
-		
+
+	bool avoid_floor(const Vector3& node_position, Vector3& node_direction, float parent_length) // return true if branch should be terminated
+	{
+		if (node_direction.z() < 0)
+		{
+			node_direction[2] -= node_direction[2] * 2 / (2 + node_position.z());
+		}
+		return (node_position + node_direction).z() * parent_length * 4 < 0; // is node heading to floor too fast
+	}
+
+	Vector3 get_main_child_direction(Node& parent, const Vector3& parent_position, const float up_attraction, const float flatness, const float randomness, const float resolution, bool& should_terminate)
+	{
+		Vector3 random_dir = Geometry::random_vec(flatness).normalized() + Vector3{ 0,0,1 } * up_attraction;
+		Vector3 child_direction = parent.direction + random_dir * randomness / resolution;
+		should_terminate = avoid_floor(parent_position, child_direction, parent.length);
+		child_direction.normalize();
+		return child_direction;
+	}
+
+	Vector3 get_split_direction(const Node& parent, const Vector3& parent_position, const float up_attraction, const float flatness, const float resolution, const float angle)
+	{
+		Vector3 child_direction = Geometry::random_vec();
+		child_direction = child_direction.cross(parent.direction) + Vector3{ 0,0,1 } *up_attraction * flatness;
+		Vector3 flat_normal = Vector3{ 0,0,1 }.cross(parent.direction).cross(parent.direction).normalized();
+		child_direction -= child_direction.dot(flat_normal) * flatness * flat_normal;
+		avoid_floor(parent_position, child_direction, parent.length);
+		child_direction = Geometry::lerp(parent.direction, child_direction, angle / 90); // TODO use slerp for correct angle
+		child_direction.normalize();
+		return child_direction;
+	}
+
+	void mark_inactive(Node& node)
+	{
+		auto& info = static_cast<BranchFunction::BranchGrowthInfo&>(*node.growthInfo);
+		info.inactive = true;
+	}
+
+	bool propagate_inactive_rec(Node& node)
+	{
+		auto* info = dynamic_cast<BranchFunction::BranchGrowthInfo*>(node.growthInfo.get());
+
+		if (node.children.size() == 0 || info->inactive)
+			return info->inactive;
+
+		bool inactive = false;
+		for (size_t i = 0; i < node.children.size(); i++)
+		{
+			if (propagate_inactive_rec(node.children[i]->node))
+				inactive = true;
+		}
+		info->inactive = inactive;
+		return inactive;
+	}
+}
+
+namespace Mtree
+{
+	void BranchFunction::apply_gravity_to_branch(Node& branch_origin)
+	{
+		propagate_inactive_rec(branch_origin);
+		update_weight_rec(branch_origin);
+		apply_gravity_rec(branch_origin, Eigen::AngleAxisf::Identity());
+		BranchGrowthInfo& info = static_cast<BranchGrowthInfo&>(*branch_origin.growthInfo);
+		update_positions_rec(branch_origin, info.position);
+	}
+
+	void BranchFunction::apply_gravity_rec(Node& node, Eigen::AngleAxisf curent_rotation)
+	{
+		BranchGrowthInfo& info = static_cast<BranchGrowthInfo&>(*node.growthInfo);
+		if (!info.inactive || true)
+		{
+			float horizontality = 1 - abs(node.direction.z());
+			info.age += 1 / resolution;
+			float displacement = horizontality * std::pow(info.cumulated_weight, .5f) * gravity_strength / resolution / resolution / 1000 / (1 + info.age);
+			displacement *= std::exp(-std::abs(info.deviation_from_rest_pose / resolution * stiffness));
+			info.deviation_from_rest_pose += displacement;
+
+			Vector3 tangent = node.direction.cross(Vector3{ 0,0,-1 }).normalized();
+			Eigen::AngleAxisf rot{ displacement, tangent };
+			curent_rotation = rot * curent_rotation;
+
+			node.direction = curent_rotation * node.direction;
+		}
+
+		for (auto& child : node.children)
+		{
+			apply_gravity_rec(child->node, curent_rotation);
+		}
+	}
+	
 	void BranchFunction::update_weight_rec(Node& node)
 	{
 		float node_weight = node.length;
@@ -48,54 +125,55 @@ namespace Mtree
 		info->cumulated_weight = node_weight;
 	}
 
-
 	// grow extremity by one level (add one or more children)
 	void BranchFunction::grow_node_once(Node& node, const int id, std::queue<std::reference_wrapper<Node>>& results) 
 	{
 		bool break_branch = rand_gen.get_0_1() * resolution < break_chance;
 		if (break_branch)
+		{
+			mark_inactive(node);
 			return;
-
-		bool split = rand_gen.get_0_1() * resolution < split_proba; // should the node split into two children
+		}
 
 		BranchGrowthInfo& info = static_cast<BranchGrowthInfo&>(*node.growthInfo);
 		float factor_in_branch = info.current_length / info.desired_length;
 		
-		Vector3 random_dir = Geometry::random_vec(flatness).normalized() + Vector3{0,0,1} * up_attraction;
-		Vector3 child_direction = node.direction + random_dir * randomness.execute(factor_in_branch) / resolution;		
-		// child_direction += Vector3{0,0,1} * up_attraction / resolution / 50 * (1 - node.direction.z());
-		child_direction.normalize();
 		float child_radius = Geometry::lerp(info.origin_radius, info.origin_radius * end_radius, factor_in_branch);
 		float child_length = std::min(1/resolution, info.desired_length - info.current_length);
-		
+		bool should_terminate;
+		Vector3 child_direction = get_main_child_direction(node, info.position, up_attraction, flatness, randomness.execute(factor_in_branch), resolution, should_terminate);
+
+		if (should_terminate)
+		{
+			mark_inactive(node);
+			return;
+		}
+
 		NodeChild child{ Node{child_direction, node.tangent, child_length, child_radius, id}, 1 };
 		node.children.push_back(std::make_shared<NodeChild>(std::move(child)));
 		auto& child_node = node.children.back()->node;
 
 		float current_length = info.current_length + child_length;
-		BranchGrowthInfo child_info{info.desired_length, info.origin_radius, current_length};
+		Vector3 child_position = info.position + child_direction * child_length;
+		BranchGrowthInfo child_info{info.desired_length, info.origin_radius, child_position, current_length};
 		child_node.growthInfo = std::make_unique<BranchGrowthInfo>(child_info);
 		if (current_length < info.desired_length)
 		{
 			results.push(std::ref<Node>(child_node));
 		}
 
+		bool split = rand_gen.get_0_1() * resolution < split_proba; // should the node split into two children
 		if (split)
 		{
-			child_direction = Geometry::random_vec();
-			child_direction = child_direction.cross(node.direction) + Vector3{0,0,1} * up_attraction * flatness;
-			Vector3 flat_normal = Vector3{ 0,0,1 }.cross(node.direction).cross(node.direction).normalized();
-			child_direction -= child_direction.dot(flat_normal) * flatness * flat_normal;
-			child_direction.normalize();
-			child_direction = Geometry::lerp(node.direction, child_direction, split_angle/90);
-			child_direction.normalize();
-			child_radius = node.radius * split_radius;
+			Vector3 split_child_direction = get_split_direction(node, info.position, up_attraction, flatness, resolution, split_angle);
+			float split_child_radius = node.radius * split_radius;
 			
-			NodeChild child{ Node{child_direction, node.tangent, child_length, child_radius, id}, rand_gen.get_0_1() };
+			NodeChild child{ Node{split_child_direction, node.tangent, child_length, split_child_radius, id}, rand_gen.get_0_1() };
 			node.children.push_back(std::make_shared<NodeChild>(std::move(child)));
 			auto& child_node = node.children.back()->node;
 
-			BranchGrowthInfo child_info{ info.desired_length, info.origin_radius * split_radius, current_length };
+			Vector3 split_child_position = info.position + split_child_direction * child_length;
+			BranchGrowthInfo child_info{ info.desired_length, info.origin_radius * split_radius, split_child_position, current_length};
 			child_node.growthInfo = std::make_unique<BranchGrowthInfo>(child_info);
 			if (current_length < info.desired_length)
 			{
@@ -104,7 +182,7 @@ namespace Mtree
 		}
 	}
 
-	void BranchFunction::grow_origins(NodeUtilities::NodeSelection& origins, const int id)
+	void BranchFunction::grow_origins(std::vector<std::reference_wrapper<Node>>& origins, const int id)
 	{
 		std::queue<std::reference_wrapper<Node>> extremities;
 		for (auto& node_ref : origins)
@@ -114,49 +192,50 @@ namespace Mtree
 		int batch_size = extremities.size();
 		while (!extremities.empty())
 		{
-			batch_size --;
-			auto& node = extremities.front().get();
-			extremities.pop();
-			grow_node_once(node, id, extremities);
-
 			if (batch_size == 0)
 			{
 				batch_size = extremities.size();
 				for (auto& node_ref : origins)
 				{
-					apply_gravity(node_ref.get());
+					apply_gravity_to_branch(node_ref.get());
 				}
 			}
+			auto& node = extremities.front().get();
+			extremities.pop();
+			grow_node_once(node, id, extremities);
+			batch_size --;
 		}
 	}
 
+
 	// get the origins of the branches that will be created.
 	// origins are created from the nodes made by the parent TreeFunction
-	NodeUtilities::NodeSelection BranchFunction::get_origins(std::vector<Stem>& stems, const int id, const int parent_id)
+	std::vector<std::reference_wrapper<Node>> BranchFunction::get_origins(std::vector<Stem>& stems, const int id, const int parent_id)
 	{
 		// get all nodes created by the parent TreeFunction, organised by branch
 		NodeUtilities::BranchSelection selection = NodeUtilities::select_from_tree(stems, parent_id);
-		NodeUtilities::NodeSelection origins;
+		std::vector<std::reference_wrapper<Node>> origins;
 
 		float origins_dist = 1 / (branches_density + .001); // distance between two consecutive origins
 
-		for (auto& branch : selection) // iterating over parent branches
+		for (auto& branch : selection) // parent branches
 		{
 			if (branch.size() == 0)
 			{
 				continue;
 			}
 
-			float branch_length = NodeUtilities::get_branch_length(branch[0].get());
+			float branch_length = NodeUtilities::get_branch_length(*branch[0].node);
 			float absolute_start = start * branch_length; // the length at which we can start adding new branch origins
 			float absolute_end = end * branch_length; // the length at which we stop adding new branch origins
 			float current_length = 0;
 			float dist_to_next_origin = absolute_start;
-			Vector3 tangent = Geometry::get_orthogonal_vector(branch[0].get().direction);
+			Vector3 tangent = Geometry::get_orthogonal_vector(branch[0].node->direction);
 
 			for	(size_t node_index = 0; node_index<branch.size(); node_index++)
 			{
-				auto& node = branch[node_index].get();
+				auto& node = *branch[node_index].node;
+				Vector3 node_position = branch[node_index].node_position;
 				if (node.children.size() == 0) // cant add children since it would "continue" the branch and not ad a split
 				{
 					continue;
@@ -192,7 +271,8 @@ namespace Mtree
 						NodeChild child{Node{child_direction, node.tangent, 1/(resolution+0.001f), child_radius, id}, position_in_parent};
 						node.children.push_back(std::make_shared<NodeChild>(std::move(child)));
 						auto& child_node = node.children.back()->node;
-						child_node.growthInfo = std::make_unique<BranchGrowthInfo>(length.execute(factor), child_radius, child_node.length);
+						Vector3 child_position = node_position + node.direction * node.length * position_in_parent;
+						child_node.growthInfo = std::make_unique<BranchGrowthInfo>(length.execute(factor), child_radius, child_position, child_node.length, 0);
 						origins.push_back(std::ref(child_node));
 						position_in_parent += position_in_parent_step;
 						if (i > 0)

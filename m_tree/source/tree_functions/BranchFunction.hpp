@@ -11,35 +11,6 @@ namespace Mtree
 {
 	class BranchFunction : public TreeFunction
 	{
-	private:
-
-		class BranchGrowthInfo:public GrowthInfo
-		{
-		public:
-			float desired_length;
-			float current_length;
-			float origin_radius;
-			float cumulated_weight=0;
-			float deviation_from_rest_pose;
-			float age=0;
-			BranchGrowthInfo(float desired_length, float origin_radius, float current_length=0, float deviation=0) : 
-				desired_length(desired_length), origin_radius(origin_radius),
-				current_length(current_length), deviation_from_rest_pose(deviation){};
-		};
-
-
-		NodeUtilities::NodeSelection get_origins(std::vector<Stem>& stems, const int id, const int parent_id);
-
-		void grow_origins(NodeUtilities::NodeSelection&, const int id);
-
-		void grow_node_once(Node& node, const int id, std::queue<std::reference_wrapper<Node>>& results);
-
-		void apply_gravity(Node& node);
-
-		void apply_gravity_rec(Node& node, Eigen::AngleAxisf previous_rotations);
-		
-		void update_weight_rec(Node& node);
-
 	public:
 		float start;
 		float end;
@@ -61,6 +32,38 @@ namespace Mtree
 		float split_proba = .05f; // 0 < x
 
 		void execute(std::vector<Stem>& stems, int id, int parent_id) override;
+
+		class BranchGrowthInfo :public GrowthInfo
+		{
+		public:
+			float desired_length;
+			float current_length;
+			float origin_radius;
+			float cumulated_weight = 0;
+			float deviation_from_rest_pose;
+			float age = 0;
+			bool inactive = false;
+			Vector3 position;
+			BranchGrowthInfo(float desired_length, float origin_radius, Vector3 position, float current_length = 0, float deviation = 0) :
+				desired_length(desired_length), origin_radius(origin_radius),
+				current_length(current_length), deviation_from_rest_pose(deviation),
+				position(position) {};
+		};
+
+	private:
+
+		std::vector<std::reference_wrapper<Node>> get_origins(std::vector<Stem>& stems, const int id, const int parent_id);
+
+		void grow_origins(std::vector<std::reference_wrapper<Node>>&, const int id);
+
+		void grow_node_once(Node& node, const int id, std::queue<std::reference_wrapper<Node>>& results);
+
+		void apply_gravity_to_branch(Node& node);
+
+		void apply_gravity_rec(Node& node, Eigen::AngleAxisf previous_rotations);
+		
+		void update_weight_rec(Node& node);
+
 	};
 
 }

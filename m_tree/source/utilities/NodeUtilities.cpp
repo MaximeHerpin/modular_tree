@@ -19,11 +19,11 @@ namespace Mtree
 			return length;
 		}
 
-		void select_from_tree_rec(BranchSelection& selection, Node& node, int id)
+		void select_from_tree_rec(BranchSelection& selection, Node& node, const Vector3& node_position, int id)
 		{
 			if (node.creator_id == id)
 			{
-				selection[selection.size() - 1].push_back(std::ref(node));
+				selection[selection.size() - 1].push_back(NodeSelectionElement{node, node_position});
 			}
 			bool first_child = true;
 			for (auto& child : node.children)
@@ -33,7 +33,8 @@ namespace Mtree
 					selection.emplace_back();
 				}
 				first_child = false;
-				select_from_tree_rec(selection, child->node, id);
+				Vector3 child_position = node_position + child->node.direction * child->position_in_parent * child->node.length;
+				select_from_tree_rec(selection, child->node, child_position, id);
 			}
 		}
 
@@ -43,7 +44,7 @@ namespace Mtree
 			selection.emplace_back();
 			for (Stem& stem : stems)
 			{
-				select_from_tree_rec(selection, stem.node, id);
+				select_from_tree_rec(selection, stem.node, stem.position, id);
 			}
 			return selection;
 		}
