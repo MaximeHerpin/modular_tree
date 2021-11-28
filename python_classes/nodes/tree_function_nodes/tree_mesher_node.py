@@ -13,6 +13,7 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
 
     radial_resolution : bpy.props.IntProperty(name="Radial Resolution", default=32, min=3, update=on_update_prop)
     smoothness : bpy.props.IntProperty(name="smoothness", default=4, min=0, update=on_update_prop)
+    tree_object : bpy.props.StringProperty(default="")
 
     def init(self, context):
         self.add_output("mt_TreeSocket", "Tree", is_property=False)
@@ -24,19 +25,28 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         properties.function_name = "build_tree"
         
 
+    def has_valid_tree_object(self):
+        return bpy.context.scene.objects.get(self.tree_object, None) is not None
+
+
     def draw_properties(self, container):
         container.prop(self, "radial_resolution")
         container.prop(self, "smoothness")
 
     def draw_distribute_leaves(self, container):
-        properties = container.operator("mtree.add_leaves", text="Add leaves")
-        properties.object_id = self.get_current_tree_object().name
+        if self.has_valid_tree_object():
+            properties = container.operator("mtree.add_leaves", text="Add leaves")
+            properties.object_id = self.get_current_tree_object().name
+
+    def draw_current_tree_object(self, container, context):
+        container.prop_search(self, property="tree_object", search_data=context.scene, search_property="objects", text="")
 
     def draw(self, context, layout):
         valid_tree = self.get_tree_validity()
         generate_row = layout.row()
         generate_row.enabled = valid_tree
         self.draw_generate(generate_row)
+        self.draw_current_tree_object(layout, context)
         self.draw_properties(layout)
         leaves_row = layout.row()
         leaves_row.enabled = valid_tree
@@ -60,11 +70,14 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         return mesh_data
 
     def get_current_tree_object(self):
-        tree_obj = bpy.context.object
+        tree_obj = bpy.context.scene.objects.get(self.tree_object, None)
         if tree_obj is None:
             tree_mesh = bpy.data.meshes.new('tree')
             tree_obj = bpy.data.objects.new("tree", tree_mesh)
             bpy.context.collection.objects.link(tree_obj)
+            self.tree_object = tree_obj.name
+            bpy.context.view_layer.objects.active = tree_obj
+            tree_obj.select_set(True)
         return tree_obj
 
     def output_object(self, cp_mesh):
