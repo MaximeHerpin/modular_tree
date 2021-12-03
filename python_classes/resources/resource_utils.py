@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import bpy
 
-MTREE_RESOURCE_DIR = r"./resources"
+MTREE_RESOURCE_DIR = (Path(__file__).parent.parent.parent / "resources").resolve()
 
 class ResourceUtils:
 
