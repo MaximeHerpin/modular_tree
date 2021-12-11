@@ -12,24 +12,24 @@ namespace Mtree
 	class BranchFunction : public TreeFunction
 	{
 	public:
-		float start;
-		float end;
+		float start = .1;
+		float end = 1;
 		float branches_density = 2; // 0 < x
-		PropertyWrapper length{ConstantProperty(14)}; // x > 0
+		PropertyWrapper length{ConstantProperty(9)}; // x > 0
 		PropertyWrapper start_radius { ConstantProperty(.4) }; // 0 > x > 1
 		float end_radius = .05;
-		float break_chance = .1; // 0 < x
-		float resolution = .5f; // 0 < x
+		float break_chance = .01; // 0 < x
+		float resolution = 3; // 0 < x
 		PropertyWrapper randomness { ConstantProperty(.4) };
 		float phillotaxis = 137.5f;
-		float gravity_strength = 1;
-		float stiffness = 1;
-		float up_attraction = 1;
-		float flatness = 0; // 0 < x  < 1
+		float gravity_strength = 10;
+		float stiffness = .1;
+		float up_attraction = .25;
+		float flatness = .5; // 0 < x  < 1
 		float split_radius = .9f; // 0 < x < 1
 		PropertyWrapper start_angle{ ConstantProperty(45) }; // -180 < x < 180
 		float split_angle = 45.0f;
-		float split_proba = .05f; // 0 < x
+		float split_proba = .5f; // 0 < x
 
 		void execute(std::vector<Stem>& stems, int id, int parent_id) override;
 
