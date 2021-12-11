@@ -19,7 +19,10 @@ def setup_addon_directory():
     Path(root).mkdir(exist_ok=True, parents=True)
 
     all_files = os.listdir(".")
+
+
     if not [i for i in all_files if i.endswith(".pyd") or i.endswith(".so")]:
+        list_files(".")
         raise Exception("no libraries were output")
     for f in all_files:
         if f.endswith(".py") or f.endswith(".pyd") or f.endswith(".so"):
@@ -34,6 +37,25 @@ def create_zip(input_dir, output_dir):
     filepath = shutil.make_archive(basename, "zip", input_dir)
     return filepath
 
+
+def list_files(root_directory):
+    excluded_directories = {"dependencies", "build", "__pycache__", ".github", ".git"}
+    for root, _, files in os.walk(root_directory):
+        should_skip = False
+        for exclusion in excluded_directories:
+            if exclusion in root:
+                should_skip = True
+                break
+        if should_skip:
+            continue
+
+
+        level = root.replace(root_directory, '').count(os.sep)
+        indent = ' ' * 4 * (level)
+        print('{}{}/'.format(indent, os.path.basename(root)))
+        subindent = ' ' * 4 * (level + 1)
+        for f in files:
+            print('{}{}'.format(subindent, f))
 
 def read_version():
     with open(VERSION_FILEPATH, "r") as f:
