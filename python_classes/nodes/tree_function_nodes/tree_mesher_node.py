@@ -89,7 +89,7 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
    
     def fill_blender_mesh(self, mesh, cpp_mesh):
         verts = cpp_mesh.get_vertices()
-        faces = cpp_mesh.get_polygons()
+        faces = np.copy(cpp_mesh.get_polygons()[::-1]) # reverse faces to flip normals
         radii = cpp_mesh.get_float_attribute("radius")
         directions = cpp_mesh.get_vector3_attribute("direction")
 
