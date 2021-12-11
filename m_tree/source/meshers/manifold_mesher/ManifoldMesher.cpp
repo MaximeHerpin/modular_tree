@@ -36,7 +36,7 @@ namespace
         int uv_index = mesh.uvs.size();
         Vector3 up = node.tangent.cross(node.direction);
         Vector3 circle_position = node_position + node.length * factor * node.direction;
-        float radius = Geometry::lerp(node.radius, node.children[0]->node.radius, factor);
+        float radius = node.is_leaf() ? node.radius : Geometry::lerp(node.radius, node.children[0]->node.radius, factor);
         auto& smooth_attr = *static_cast<Attribute<float>*> (mesh.attributes[AttributeNames::smooth_amount].get());
         auto& radius_attr = *static_cast<Attribute<float>*> (mesh.attributes[AttributeNames::radius].get());
         float smooth_amount = get_smooth_amount(radius, node.length);
@@ -114,7 +114,7 @@ namespace
     
     IndexRange get_branch_indices_on_circle(const int radial_n_points, const float circle_radius, const float branch_radius, const float branch_angle)
     {
-        float angle_delta = std::asin(branch_radius / circle_radius);
+        float angle_delta = std::asin(std::clamp(branch_radius / circle_radius, -1.f, 1.f));
         float increment = 2 * M_PI / radial_n_points;
         int min_index = (int)(std::fmod(branch_angle - angle_delta + 2*M_PI, 2 * M_PI) / increment);
         int max_index = (int)(std::fmod(branch_angle + angle_delta + increment + 2*M_PI, 2 * M_PI) / increment);
@@ -129,6 +129,7 @@ namespace
             auto& child = node.children[i];
             float angle = get_branch_angle_around_parent(node, child->node);
             IndexRange range = get_branch_indices_on_circle(radial_n_points, node.radius, child->node.radius, angle);
+
             ranges.push_back(range);
         }
         return ranges;
@@ -231,9 +232,9 @@ namespace
 
         for (int i = 0; i < child_radial_n; i++)
         {
-            mesh.uvs.emplace_back((float)i / child_radial_n, 0);
+            mesh.uvs.emplace_back((float)i / child_radial_n, parent_uv_y);
         }
-        mesh.uvs.emplace_back(1, 0);
+        mesh.uvs.emplace_back(1, parent_uv_y);
 
         return circle_uv_start_index;
     }
@@ -259,20 +260,32 @@ namespace
         Vector3 tangent = Geometry::projected_on_plane(child.node.direction, parent.direction).normalized();
         return node_position + parent.direction * parent.length * child.position_in_parent + tangent * parent.radius;
     }
+
+    bool has_side_branches(const Node& node)
+    {
+        if (node.children.size() < 2)
+            return false;
+
+        for (int i = 1; i < node.children.size(); i++)
+        {
+            if (node.children[i]->node.children.size() > 0)
+                return true;
+        }
+    }
     
     void mesh_node_rec(const Node& node, const Vector3& node_position, const CircleDesignator& base, Mesh& mesh, const float uv_y)
     {
-        if (node.children.size() == 0)
-        {
-            return;
-        }
-        else if (node.children.size() == 1)
+        if (node.children.size() < 2)
         {
             float uv_growth = node.length / (node.radius+.001f) / (2*M_PI);
             auto child_circle = add_circle(node_position, node, 1 , base.radial_n, mesh, uv_y + uv_growth);
             bridge_circles(base, child_circle, base.radial_n, mesh);
-            Vector3 child_pos = NodeUtilities::get_position_in_node(node_position, node, node.children[0]->position_in_parent);
-            mesh_node_rec(node.children[0]->node, child_pos, child_circle, mesh, uv_y + uv_growth);
+            Vector3 child_pos = NodeUtilities::get_position_in_node(node_position, node, 1);
+
+            if (!node.is_leaf())
+            {
+                mesh_node_rec(node.children[0]->node, child_pos, child_circle, mesh, uv_y + uv_growth);
+            }
         }
         else
         {
@@ -284,18 +297,21 @@ namespace
             {
                 if (i == 0) // first child is the continuity of the branch
                 {
-                    Vector3 child_pos = NodeUtilities::get_position_in_node(node_position, node, node.children[i]->position_in_parent);
-                    mesh_node_rec(node.children[0]->node, child_pos, end_circle, mesh, uv_y + uv_growth);
+                    Vector3 child_pos = NodeUtilities::get_position_in_node(node_position, node, 1);
+                    if (node.children.size() > 0)
+                    {
+                        mesh_node_rec(node.children[0]->node, child_pos, end_circle, mesh, uv_y + uv_growth);
+                    }
                 }
                 else
                 {
                     auto& child = *node.children[i];
                     Vector3 child_pos = get_side_child_position(node, child, node_position);
+
                     auto child_base = add_child_circle(node, child, child_pos, node_position, base, children_ranges[i - 1], uv_y, mesh);
-                    mesh_node_rec(node.children[i]->node, child_pos, child_base, mesh, 0);
+                    mesh_node_rec(node.children[i]->node, child_pos, child_base, mesh, uv_y + uv_growth);
                 }
             }
-
         }
     }
 }
@@ -312,6 +328,10 @@ namespace Mtree
         auto& direction_attr = mesh.add_attribute<Vector3>(AttributeNames::direction);
         for (auto& stem : tree.get_stems())
         {
+            //__debugbreak();
+
+            if (stem.node.children.size() == 0)
+                continue;
             CircleDesignator start_circle{ (int)mesh.vertices.size(), (int)mesh.uvs.size(), radial_resolution };
             add_circle(stem.position, stem.node, 0, radial_resolution, mesh, 0);
             mesh_node_rec(stem.node, stem.position, start_circle, mesh, 0);

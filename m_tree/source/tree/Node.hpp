@@ -21,6 +21,8 @@ namespace Mtree
 		int creator_id = 0;
 		std::unique_ptr<GrowthInfo> growthInfo = nullptr;
 
+		bool is_leaf() const;
+
 		Node(Vector3 direction, Vector3 parent_tangent, float length, float radius, int creator_id);
 	};
 

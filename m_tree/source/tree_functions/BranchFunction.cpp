@@ -267,12 +267,15 @@ namespace Mtree
 						Vector3 child_direction = Geometry::lerp(node.direction, tangent, start_angle.execute(factor) / 90);
 				 		child_direction.normalize();
 				 		float child_radius = node.radius * start_radius.execute(factor);
-
-						NodeChild child{Node{child_direction, node.tangent, 1/(resolution+0.001f), child_radius, id}, position_in_parent};
+						float branch_length = length.execute(factor);
+						float node_length = std::min(branch_length, 1 / (resolution + 0.001f));
+						NodeChild child{Node{child_direction, node.tangent, node_length, child_radius, id}, position_in_parent};
 						node.children.push_back(std::make_shared<NodeChild>(std::move(child)));
 						auto& child_node = node.children.back()->node;
 						Vector3 child_position = node_position + node.direction * node.length * position_in_parent;
-						child_node.growthInfo = std::make_unique<BranchGrowthInfo>(length.execute(factor), child_radius, child_position, child_node.length, 0);
+						child_node.growthInfo = std::make_unique<BranchGrowthInfo>(branch_length - node_length, child_radius, child_position, child_node.length, 0);
+						
+						if (branch_length - node_length > 1e-3)
 						origins.push_back(std::ref(child_node));
 						position_in_parent += position_in_parent_step;
 						if (i > 0)

@@ -18,6 +18,8 @@ int main()
     auto trunk = std::make_shared<TrunkFunction>();
     auto branch = std::make_shared<BranchFunction>();
     trunk->add_child(branch);
+    branch->start_radius = ConstantProperty{ 1.5 };
+    //trunk->length = 0.001;
     Tree tree(trunk);
     tree.execute_functions();
     ManifoldMesher mesher;

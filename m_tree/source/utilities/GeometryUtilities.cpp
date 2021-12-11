@@ -62,6 +62,7 @@ namespace Mtree {
 
 		float lerp(float a, float b, float t)
 		{
+			t = std::clamp(t, 0.f, 1.f);
 			return t * b + (1 - t) * a;
 		}
 
