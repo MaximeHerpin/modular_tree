@@ -21,7 +21,7 @@ bl_info = {
     "author" : "Maxime",
     "description" : "create trees",
     "blender" : (2, 83, 0),
-    "version" : (4, 0, 0),
+    "version" : (4, 0, 2),
     "location" : "",
     "warning" : "",
     "category" : "Generic"

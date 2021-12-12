@@ -113,7 +113,7 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         
         uv_data = cpp_mesh.get_uvs()
         uv_data.shape = (len(uv_data)//2, 2)
-        uv_loops = cpp_mesh.get_uv_loops()
+        uv_loops = np.copy(cpp_mesh.get_uv_loops()[::-1]) # need to be reversed since faces are reversed
         uvs = uv_data[uv_loops].flatten()
         uv_layer = mesh.uv_layers.new() if len(mesh.uv_layers) == 0 else mesh.uv_layers[0]
         uv_layer.data.foreach_set("uv", uvs)
