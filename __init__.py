@@ -20,7 +20,7 @@ bl_info = {
     "name" : "Modular Tree",
     "author" : "Maxime",
     "description" : "create trees",
-    "blender" : (3, 1, 0),
+    "blender" : (2, 93, 0),
     "version" : (4, 0, 2),
     "location" : "",
     "warning" : "",

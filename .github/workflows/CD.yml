@@ -7,13 +7,28 @@ jobs:
         include:
           - os: windows-latest
             extension: bat
-            name: windows
+            name: windows-blender293
+            python: 3.9
           - os: ubuntu-latest
             extension: sh
-            name: linux
+            name: linux-blender293
+            python: 3.9
           - os: macos-latest
             extension: osx
-            name: macOS
+            name: macOS-blender293
+            python: 3.9
+          - os: windows-latest
+            extension: bat
+            name: windows-blender31
+            python: 3.9
+          - os: ubuntu-latest
+            extension: sh
+            name: linux-blender31
+            python: 3.9
+          - os: macos-latest
+            extension: osx
+            name: macOS-blender31
+            python: 3.9
     runs-on: ${{ matrix.os }}
     steps:
       - name: checkout
@@ -23,7 +38,7 @@ jobs:
       - name: setup python
         uses: actions/setup-python@v2
         with:
-          python-version: 3.9
+          python-version: ${{ matrix.python }}
       - name: build
         run: ./build_mtree.${{ matrix.extension }}
       - name: package addon
@@ -53,7 +68,7 @@ jobs:
         uses: johnwbyrd/update-release@v1.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          files: ./modular_tree_windows/modular_tree_${{ steps.vars.outputs.version }}_windows.zip ./modular_tree_linux/modular_tree_${{ steps.vars.outputs.version }}_linux.zip ./modular_tree_macOS/modular_tree_${{ steps.vars.outputs.version }}_macOS.zip 
+          files: ./modular_tree_windows-blender293/modular_tree_${{ steps.vars.outputs.version }}_windows_blender293-30.zip ./modular_tree_windows-blender31/modular_tree_${{ steps.vars.outputs.version }}_windows_blender31.zip ./modular_tree_linux-blender293/modular_tree_${{ steps.vars.outputs.version }}_linux_blender293-30.zip ./modular_tree_linux-blender31/modular_tree_${{ steps.vars.outputs.version }}_linux_blender31.zip ./modular_tree_macOS-blender293/modular_tree_${{ steps.vars.outputs.version }}_macOS_blender293-30.zip ./modular_tree_macOS-blender31/modular_tree_${{ steps.vars.outputs.version }}_macOS_blender31.zip
           release: Release V${{ steps.vars.outputs.version }}${{ env.STATUS }}
           tag: ${{ steps.vars.outputs.version }}${{ env.STATUS }}
           message: V${{ steps.vars.outputs.version }}

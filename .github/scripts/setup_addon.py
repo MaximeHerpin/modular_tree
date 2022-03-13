@@ -4,6 +4,7 @@ import zipfile
 from pathlib import Path
 import shutil
 import platform
+import sys
 
 
 TMP_DIRPATH = r"./tmp"
@@ -14,7 +15,8 @@ VERSION_FILEPATH = os.path.join(Path(__file__).parent.parent.parent, "VERSION")
 def setup_addon_directory():
     plateform_name = "windows" if platform.system() == "Windows" else "linux" if platform.system() == "Linux" else "macOS"
     version = read_version()
-    addon_dirpath = os.path.join(TMP_DIRPATH, f"modular_tree_{version}_{plateform_name}")
+    blender_version_suffix = get_blender_version_suffix()
+    addon_dirpath = os.path.join(TMP_DIRPATH, f"modular_tree_{version}_{plateform_name}{blender_version_suffix}")
     root = os.path.join(addon_dirpath, "modular_tree")
     Path(root).mkdir(exist_ok=True, parents=True)
 
@@ -60,6 +62,9 @@ def list_files(root_directory):
 def read_version():
     with open(VERSION_FILEPATH, "r") as f:
         return f.read()
+
+def get_blender_version_suffix():
+    return "_blender31" if sys.version_info >= (3, 10) else "_blender293-30"
 
 if __name__ == "__main__":
     addon_dirpath = setup_addon_directory()
