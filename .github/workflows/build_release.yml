@@ -1,0 +1,62 @@
+name: build
+on:
+  push:
+    tags:
+      - '**'
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            extension: bat
+            name: windows
+          - os: ubuntu-latest
+            extension: sh
+            name: linux
+          - os: macos-latest
+            extension: osx
+            name: macOS
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+      - name: generate cmake files
+        run: cmake -S src -B build
+      - name: build
+        run: cmake --build build --config Release
+
+      - name: upload addon
+        uses: actions/upload-artifact@v4
+        with:
+          name: modular_tree_${{ matrix.name }}
+          path: addon
+  
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+      - name: Display structure of downloaded files
+        run: ls -R
+      - name: Zip artifacts
+        run: |
+          for dir in modular_tree_*; do
+            if [ -d "$dir" ]; then
+              zip -r "${dir}.zip" "${dir}"
+            fi
+          done
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag'
+        with:
+          files: modular_tree_*.zip
